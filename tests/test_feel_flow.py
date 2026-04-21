@@ -14,11 +14,12 @@
 import os
 import pytest
 import asyncio
+import pytest_asyncio
 
 # Feel flow tests use direct BucketManager calls, no LLM needed.
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def isolated_tools(test_config, tmp_path, monkeypatch):
     """
     Import server tools with config pointing to temp dir.

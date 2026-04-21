@@ -76,7 +76,7 @@
 
 | 工具 | 关键参数 | 功能 |
 |---|---|---|
-| `breath` | query, max_tokens, domain, valence, arousal, max_results | 检索/浮现记忆 |
+| `breath` | query, max_tokens, domain, valence, arousal, max_results, **importance_min** | 检索/浮现记忆 |
 | `hold` | content, tags, importance, pinned, feel, source_bucket, valence, arousal | 存储记忆 |
 | `grow` | content | 日记拆分归档 |
 | `trace` | bucket_id, name, domain, valence, arousal, importance, tags, resolved, pinned, digested, content, delete | 修改元数据/内容/删除 |
@@ -85,10 +85,11 @@
 
 **工具详细行为**
 
-**`breath`** — 两种模式：
-- **浮现模式**（无 query）：无参调用，按衰减引擎活跃度排序返回 top 记忆，permanent/pinned 始终浮现
+**`breath`** — 三种模式：
+- **浮现模式**（无 query）：无参调用，按衰减引擎活跃度排序返回 top 记忆，钉选桶始终展示；冷启动检测（`activation_count==0 && importance>=8`）的桶最多 2 个插入最前，再 Top-1 固定 + Top-20 随机打乱
 - **检索模式**（有 query）：关键词 + 向量双通道搜索，四维评分（topic×4 + emotion×2 + time×2.5 + importance×1），阈值过滤
 - **Feel 检索**（`domain="feel"`）：特殊通道，按创建时间倒序返回所有 feel 类型桶，不走评分逻辑
+- **重要度批量模式**（`importance_min>=1`）：跳过语义搜索，直接筛选 importance≥importance_min 的桶，按 importance 降序，最多 20 条
 - 若指定 valence，对匹配桶的 valence 微调 ±0.1（情感记忆重构）
 
 **`hold`** — 两种模式：
@@ -120,26 +121,41 @@
 | `/breath-hook` | GET | SessionStart 钩子 |
 | `/dream-hook` | GET | Dream 钩子 |
 | `/dashboard` | GET | Dashboard 页面 |
-| `/api/buckets` | GET | 桶列表 |
-| `/api/bucket/{id}` | GET | 桶详情 |
-| `/api/search?q=` | GET | 搜索 |
-| `/api/network` | GET | 向量相似网络 |
-| `/api/breath-debug` | GET | 评分调试 |
-| `/api/config` | GET | 配置查看（key 脱敏） |
-| `/api/config` | POST | 热更新配置 |
-| `/api/import/upload` | POST | 上传并启动历史对话导入 |
-| `/api/import/status` | GET | 导入进度查询 |
-| `/api/import/pause` | POST | 暂停/继续导入 |
-| `/api/import/patterns` | GET | 导入完成后词频规律检测 |
-| `/api/import/results` | GET | 已导入记忆桶列表 |
-| `/api/import/review` | POST | 批量审阅/批准导入结果 |
+| `/api/buckets` | GET | 桶列表 🔒 |
+| `/api/bucket/{id}` | GET | 桶详情 🔒 |
+| `/api/search?q=` | GET | 搜索 🔒 |
+| `/api/network` | GET | 向量相似网络 🔒 |
+| `/api/breath-debug` | GET | 评分调试 🔒 |
+| `/api/config` | GET | 配置查看（key 脱敏）🔒 |
+| `/api/config` | POST | 热更新配置 🔒 |
+| `/api/status` | GET | 系统状态（版本/桶数/引擎）🔒 |
+| `/api/import/upload` | POST | 上传并启动历史对话导入 🔒 |
+| `/api/import/status` | GET | 导入进度查询 🔒 |
+| `/api/import/pause` | POST | 暂停/继续导入 🔒 |
+| `/api/import/patterns` | GET | 导入完成后词频规律检测 🔒 |
+| `/api/import/results` | GET | 已导入记忆桶列表 🔒 |
+| `/api/import/review` | POST | 批量审阅/批准导入结果 🔒 |
+| `/auth/status` | GET | 认证状态（是否需要初始化密码）|
+| `/auth/setup` | POST | 首次设置密码 |
+| `/auth/login` | POST | 密码登录，颁发 session cookie |
+| `/auth/logout` | POST | 注销 session |
+| `/auth/change-password` | POST | 修改密码 🔒 |
 
-**Dashboard（5 个 Tab）**
+> 🔒 = 需要 Dashboard 认证（未认证返回 401 JSON）
+
+**Dashboard 认证**
+- 密码存储：SHA-256 + 随机 salt，保存于 `{buckets_dir}/.dashboard_auth.json`
+- 环境变量 `OMBRE_DASHBOARD_PASSWORD` 设置后，覆盖文件密码（只读，不可通过 Dashboard 修改）
+- Session：内存字典（服务重启失效），cookie `ombre_session`（HttpOnly, SameSite=Lax, 7天）
+- `/health`, `/breath-hook`, `/dream-hook`, `/mcp*` 路径不受保护（公开）
+
+**Dashboard（6 个 Tab）**
 1. 记忆桶列表：6 种过滤器 + 主题域过滤 + 搜索 + 详情面板
 2. Breath 模拟：输入参数 → 可视化五步流程 → 四维条形图
 3. 记忆网络：Canvas 力导向图（节点=桶，边=相似度）
 4. 配置：热更新脱水/embedding/合并参数
 5. 导入：历史对话拖拽上传 → 分块处理进度条 → 词频规律分析 → 导入结果审阅
+6. 设置：服务状态监控、修改密码、退出登录
 
 **部署选项**
 1. 本地 stdio（`python server.py`）
@@ -172,6 +188,7 @@
 | `OMBRE_BUCKETS_DIR` | 记忆桶存储目录路径 | 否 | `""` → 回退到 config 或 `./buckets` |
 | `OMBRE_HOOK_URL` | SessionStart 钩子调用的服务器 URL | 否 | `"http://localhost:8000"` |
 | `OMBRE_HOOK_SKIP` | 设为 `"1"` 跳过 SessionStart 钩子 | 否 | 未设置（不跳过） |
+| `OMBRE_DASHBOARD_PASSWORD` | 预设 Dashboard 访问密码；设置后覆盖文件密码，首次访问不弹设置向导 | 否 | `""` |
 
 环境变量优先级：`环境变量 > config.yaml > 硬编码默认值`。所有环境变量在 `utils.py` 中读取并注入 config dict。
 

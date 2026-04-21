@@ -54,7 +54,7 @@ class BucketManager:
     天然兼容 Obsidian 直接浏览和编辑。
     """
 
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, embedding_engine=None):
         # --- Read storage paths from config / 从配置中读取存储路径 ---
         self.base_dir = config["buckets_dir"]
         self.permanent_dir = os.path.join(self.base_dir, "permanent")
@@ -91,6 +91,9 @@ class BucketManager:
         self.w_time = scoring.get("time_proximity", 2.5)
         self.w_importance = scoring.get("importance", 1.0)
         self.content_weight = scoring.get("content_weight", 3.0)  # Added to allow better content-based matching during merge
+
+        # --- Optional embedding engine for pre-filtering / 可选 embedding 引擎，用于预筛候选集 ---
+        self.embedding_engine = embedding_engine
 
     # ---------------------------------------------------------
     # Create a new bucket
@@ -472,6 +475,20 @@ class BucketManager:
                 candidates = all_buckets
         else:
             candidates = all_buckets
+
+        # --- Layer 1.5: embedding pre-filter (optional, reduces multi-dim ranking set) ---
+        # --- 第1.5层：embedding 预筛（可选，缩小精排候选集）---
+        if self.embedding_engine and self.embedding_engine.enabled:
+            try:
+                vector_results = await self.embedding_engine.search_similar(query, top_k=50)
+                if vector_results:
+                    vector_ids = {bid for bid, _ in vector_results}
+                    emb_candidates = [b for b in candidates if b["id"] in vector_ids]
+                    if emb_candidates:  # only replace if there's non-empty overlap
+                        candidates = emb_candidates
+                    # else: keep original candidates as fallback
+            except Exception as e:
+                logger.warning(f"Embedding pre-filter failed, using fuzzy only / embedding 预筛失败: {e}")
 
         # --- Layer 2: weighted multi-dim ranking ---
         # --- 第二层：多维加权精排 ---

@@ -435,6 +435,27 @@ Sensitive config via env vars:
 - `OMBRE_API_KEY` — LLM API 密钥
 - `OMBRE_TRANSPORT` — 覆盖传输方式
 - `OMBRE_BUCKETS_DIR` — 覆盖存储路径
+- `OMBRE_DASHBOARD_PASSWORD` — Dashboard 访问密码（可选，见下）
+
+## Dashboard 认证 / Dashboard Auth
+
+自 v1.3.0 起，Dashboard 和所有 `/api/*` 端点均受密码保护。
+Since v1.3.0, the Dashboard and all `/api/*` endpoints are password-protected.
+
+**首次访问**：若未设置密码，浏览器会弹出设置向导，填写并确认密码后即可使用。
+**First visit**: If no password is set, a setup wizard will appear. Enter and confirm a password to get started.
+
+**通过环境变量预设密码**：在 `docker-compose.user.yml` 中添加：
+**Pre-set via env var** in your `docker-compose.user.yml`:
+```yaml
+environment:
+  - OMBRE_DASHBOARD_PASSWORD=your_password_here
+```
+设置后，Dashboard 的"修改密码"功能将被禁用，必须通过环境变量修改。
+When set, the in-Dashboard password change is disabled — modify the env var directly.
+
+完整环境变量说明见 [ENV_VARS.md](ENV_VARS.md)。
+Full env var reference: [ENV_VARS.md](ENV_VARS.md).
 
 ## 衰减公式 / Decay Formula
 
