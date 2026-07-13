@@ -1782,7 +1782,6 @@
   <div class="tab" data-tab="plan"><span>计划</span><span class="tab-en">Plans</span></div>
   <div class="tab" data-tab="letters"><span>信</span><span class="tab-en">Letters</span></div>
   <div class="tab" data-tab="anchors"><span>锚点</span><span class="tab-en">Anchors</span></div>
-  <div class="tab" data-tab="import"><span>导入</span><span class="tab-en">Import</span></div>
   <div class="tab" data-tab="logs"><span>日志</span><span class="tab-en">Logs</span></div>
   <div class="tab" data-tab="settings"><span>设置</span><span class="tab-en">Settings</span></div>
   <!-- v3-debug tab 暂时隐藏：后端 /api/v3/debug/* 路由已就位（只读、不写数据），
@@ -1913,76 +1912,6 @@
   </div>
 </div>
 
-<div class="content" id="import-view" style="display:none">
-  <div style="max-width:720px;margin:0 auto;">
-    <h3>历史对话导入</h3>
-    <p style="color:var(--text-dim);font-size:13px;">支持 Claude JSON、ChatGPT 导出、DeepSeek、Markdown、纯文本格式</p>
-
-    <div id="import-upload-zone" style="border:2px dashed var(--border);border-radius:16px;padding:40px;text-align:center;cursor:pointer;margin:20px 0;transition:border-color .2s;">
-      <div style="font-size:32px;margin-bottom:8px;color:var(--text-dim);"><i data-lucide="folder-up" style="width:32px;height:32px;"></i></div>
-      <div>拖拽文件到此处，或 <span style="color:var(--accent);text-decoration:underline;">点击选择</span></div>
-      <input type="file" id="import-file-input" accept=".json,.txt,.md,.jsonl" style="display:none" />
-    </div>
-
-    <div style="margin:12px 0;">
-      <div class="hw-toggle-row" style="gap:10px;align-items:center;">
-        <span class="hw-switch" id="import-preserve-raw-sw" role="switch" aria-checked="false"
-          onclick="syncHwSwitch(this,'import-preserve-raw')"></span>
-        <span style="font-size:13px;color:var(--text);cursor:pointer;" onclick="document.getElementById('import-preserve-raw-sw').click()">保留原文模式（特殊情境/暗号/仪式性内容不摘要）</span>
-        <input type="checkbox" id="import-preserve-raw" style="display:none"
-          onchange="syncSwFromCb('import-preserve-raw','import-preserve-raw-sw','')">
-      </div>
-    </div>
-
-    <div id="import-preflight-panel" style="display:none;margin:14px 0;padding:12px 14px;background:var(--surface-solid);border-radius:8px;font-size:12px;line-height:1.7;box-shadow:inset 2px 2px 5px var(--shadow-dark-subtle),inset -2px -2px 4px var(--shadow-light);">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
-        <strong style="font-size:13px;">导入预检</strong>
-        <span id="import-preflight-file" style="color:var(--text-light);word-break:break-all;"></span>
-      </div>
-      <div id="import-preflight-summary" style="color:var(--text-dim);">等待文件…</div>
-      <div id="import-preflight-warnings" style="display:none;color:var(--warning);margin-top:6px;"></div>
-      <pre id="import-preflight-preview" style="display:none;margin-top:8px;padding:10px;background:var(--surface);border-radius:6px;max-height:160px;overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:11px;color:var(--text-dim);font-family:'Share Tech Mono','SF Mono',Consolas,monospace;"></pre>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;">
-        <button id="import-start-confirm-btn" onclick="confirmStartImport()" style="display:inline-flex;align-items:center;gap:5px;padding:0 12px;height:32px;"><i data-lucide="play"></i> 开始导入</button>
-        <button onclick="clearImportPreflight()" style="display:inline-flex;align-items:center;gap:5px;padding:0 12px;height:32px;"><i data-lucide="x"></i> 取消</button>
-      </div>
-    </div>
-
-    <div id="import-progress" style="display:none;margin:20px 0;">
-      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-        <span id="import-status-text">准备中…</span>
-        <span id="import-progress-text">0/0</span>
-      </div>
-      <div class="progress-track">
-        <div id="import-progress-bar" class="progress-fill"></div>
-      </div>
-      <div style="display:flex;gap:16px;margin-top:8px;font-size:13px;color:var(--text-dim);">
-        <span>API调用: <b id="import-api-calls">0</b></span>
-        <span>新建: <b id="import-created">0</b></span>
-        <span>合并: <b id="import-merged">0</b></span>
-        <span>原文: <b id="import-raw">0</b></span>
-      </div>
-      <div style="margin-top:12px;">
-        <button id="import-pause-btn" onclick="pauseImport()" style="display:none;align-items:center;gap:4px;"><svg class="icon" aria-hidden="true"><use href="#i-pause"></use></svg> 暂停</button>
-      </div>
-    </div>
-
-    <div id="import-errors" style="display:none;margin:12px 0;padding:12px;background:var(--surface);border-radius:8px;font-size:12px;color:var(--negative);max-height:120px;overflow-y:auto;"></div>
-
-    <div id="import-results-section" style="margin:20px 0;">
-      <h3>已导入记忆 <button onclick="loadImportResults()" title="刷新" style="font-size:12px;padding:2px 8px;"><i data-lucide="refresh-cw"></i></button></h3>
-      <div id="import-results-list" style="max-height:500px;overflow-y:auto;"></div>
-    </div>
-
-    <hr style="border-color:var(--border);margin:24px 0;" />
-
-    <h3>高频模式检测</h3>
-    <button onclick="detectPatterns()" class="icon-btn"><i data-lucide="activity"></i> 检测高频模式</button>
-    <div id="import-patterns" style="margin-top:16px;"></div>
-  </div>
-</div>
-
-<!-- config-view 已并入 settings-view（2026-05-03 任务D 设置/配置合并），保留空容器避免 JS tab 切换报错 -->
 <div class="content" id="config-view" style="display:none"></div>
 
 <div class="detail-panel" id="detail-panel">
@@ -2192,7 +2121,7 @@
           <button class="btn-primary" onclick="downloadExport()" id="btn-export-before-update" style="height:34px;padding:0 14px;font-size:12px;display:inline-flex;align-items:center;gap:5px;">
             <i data-lucide="download"></i> ① 导出记忆备份
           </button>
-          <span style="font-size:11px;color:var(--text-dim);">下载 .zip，更新失败时可从「导入」恢复</span>
+          <span style="font-size:11px;color:var(--text-dim);">下载 .zip 备份</span>
         </div>
         <div style="font-size:11px;color:var(--text-dim);margin-bottom:16px;line-height:1.7;">
           ② 截图上方部署信息（端口、数据目录、访问地址），以备不时之需。
@@ -3895,7 +3824,6 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.getElementById('network-view').style.display = target === 'network' ? '' : 'none';
     document.getElementById('tools-view').style.display = target === 'tools' ? '' : 'none';
     document.getElementById('plan-view').style.display = target === 'plan' ? '' : 'none';
-    document.getElementById('import-view').style.display = target === 'import' ? '' : 'none';
     document.getElementById('logs-view').style.display = target === 'logs' ? '' : 'none';
     document.getElementById('v3-debug-view').style.display = target === 'v3-debug' ? '' : 'none';
     document.getElementById('settings-view').style.display = target === 'settings' ? '' : 'none';
@@ -3906,7 +3834,6 @@ document.querySelectorAll('.tab').forEach(tab => {
     if (target === 'network') loadNetwork();
     if (target === 'tools') loadToolsPanel();
     if (target === 'plan') loadPlans();
-    if (target === 'import') { pollImportStatus(); loadImportResults(); }
     if (target === 'logs') { loadLogs(); loadOBErrors(); }
     if (target === 'v3-debug') loadV3Debug();
     if (target === 'settings') {
@@ -6776,251 +6703,6 @@ async function checkEmptyMemoryBanner() {
     document.body.insertBefore(bar, document.body.firstChild);
   } catch (e) { /* ignore */ }
 }
-window.addEventListener('load', function() {
-  if (window.lucide) lucide.createIcons();
-  // iter 1.7 §D: auto-render any dynamically-inserted [data-lucide] icons
-  // 性能保护：debounce 50ms，避免在大量 innerHTML 时疯狂触发
-  if (window.MutationObserver && window.lucide) {
-    var rafToken = null;
-    var obs = new MutationObserver(function(muts) {
-      for (var i = 0; i < muts.length; i++) {
-        if (muts[i].addedNodes && muts[i].addedNodes.length) {
-          if (rafToken) clearTimeout(rafToken);
-          rafToken = setTimeout(function() { lucide.createIcons(); rafToken = null; }, 50);
-          break;
-        }
-      }
-    });
-    obs.observe(document.body, {childList: true, subtree: true});
-  }
-});
-
-// --- Import functions ---
-const uploadZone = document.getElementById('import-upload-zone');
-const fileInput = document.getElementById('import-file-input');
-let pendingImportFile = null;
-
-uploadZone.addEventListener('click', () => fileInput.click());
-uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.style.borderColor = 'var(--accent)'; });
-uploadZone.addEventListener('dragleave', () => { uploadZone.style.borderColor = 'var(--border)'; });
-uploadZone.addEventListener('drop', e => {
-  e.preventDefault();
-  uploadZone.style.borderColor = 'var(--border)';
-  if (e.dataTransfer.files.length) runImportPreflight(e.dataTransfer.files[0]);
-});
-fileInput.addEventListener('change', () => { if (fileInput.files.length) runImportPreflight(fileInput.files[0]); });
-
-function renderImportPreflight(data) {
-  const panel = document.getElementById('import-preflight-panel');
-  const fileEl = document.getElementById('import-preflight-file');
-  const summary = document.getElementById('import-preflight-summary');
-  const warn = document.getElementById('import-preflight-warnings');
-  const preview = document.getElementById('import-preflight-preview');
-  const btn = document.getElementById('import-start-confirm-btn');
-  if (!panel || !summary || !btn) return;
-  panel.style.display = '';
-  if (fileEl) fileEl.textContent = data.filename || (pendingImportFile ? pendingImportFile.name : '');
-  if (!data.ok) {
-    summary.style.color = 'var(--negative)';
-    summary.textContent = '预检失败：' + (data.error || '无法识别文件');
-    btn.disabled = true;
-    if (warn) warn.style.display = 'none';
-    if (preview) preview.style.display = 'none';
-    return;
-  }
-  summary.style.color = data.can_start ? 'var(--text-dim)' : 'var(--warning)';
-  summary.innerHTML =
-    '格式：<b>' + esc(data.detected_format || 'unknown') + '</b>'
-    + ' · 轮次：<b>' + (data.turns_count || 0) + '</b>'
-    + ' · 分块：<b>' + (data.chunks_count || 0) + '</b>'
-    + ' · 预计 API 调用：<b>' + (data.estimated_api_calls || 0) + '</b>'
-    + ' · 大小：<b>' + Math.round((data.size_bytes || 0) / 1024) + ' KB</b>'
-    + (!data.llm_ready ? '<br><span style="color:var(--negative)">压缩/打标 LLM 未就绪，暂不能导入。</span>' : '')
-    + (data.import_running ? '<br><span style="color:var(--negative)">已有导入任务运行中，请完成后再开始。</span>' : '');
-  const warnings = data.warnings || [];
-  if (warn) {
-    warn.style.display = warnings.length ? '' : 'none';
-    warn.innerHTML = warnings.map(function(w) { return '⚠ ' + esc(w); }).join('<br>');
-  }
-  if (preview) {
-    preview.style.display = data.first_chunk_preview ? '' : 'none';
-    preview.textContent = data.first_chunk_preview || '';
-  }
-  btn.disabled = !data.can_start;
-}
-
-async function runImportPreflight(file) {
-  pendingImportFile = file;
-  const panel = document.getElementById('import-preflight-panel');
-  const summary = document.getElementById('import-preflight-summary');
-  const btn = document.getElementById('import-start-confirm-btn');
-  if (panel) panel.style.display = '';
-  if (summary) { summary.style.color = 'var(--text-dim)'; summary.textContent = '预检中… / Pre-checking…'; }
-  if (btn) btn.disabled = true;
-  const fd = new FormData();
-  fd.append('file', file);
-  try {
-    const res = await fetch(BASE + '/api/import/preflight', { method: 'POST', body: fd });
-    const data = await res.json();
-    renderImportPreflight(data);
-  } catch (e) {
-    renderImportPreflight({ ok: false, error: e.message || String(e), filename: file.name });
-  }
-}
-
-function clearImportPreflight() {
-  pendingImportFile = null;
-  if (fileInput) fileInput.value = '';
-  const panel = document.getElementById('import-preflight-panel');
-  if (panel) panel.style.display = 'none';
-}
-
-async function confirmStartImport() {
-  if (!pendingImportFile) return;
-  const file = pendingImportFile;
-  pendingImportFile = null;
-  const btn = document.getElementById('import-start-confirm-btn');
-  if (btn) btn.disabled = true;
-  await startImport(file);
-}
-
-async function startImport(file) {
-  const preserveRaw = document.getElementById('import-preserve-raw').checked;
-  const fd = new FormData();
-  fd.append('file', file);
-  try {
-    const res = await fetch(BASE + '/api/import/upload?preserve_raw=' + (preserveRaw ? '1' : '0'), { method: 'POST', body: fd });
-    const data = await res.json();
-    if (data.error) { alert('导入失败: ' + data.error); return; }
-    clearImportPreflight();
-    document.getElementById('import-progress').style.display = '';
-    document.getElementById('import-pause-btn').style.display = '';
-    pollImportStatus();
-  } catch (e) { alert('上传失败: ' + e.message); }
-}
-
-let importPollTimer;
-async function pollImportStatus() {
-  clearInterval(importPollTimer);
-  try {
-    const res = await fetch(BASE + '/api/import/status');
-    const s = await res.json().catch(() => null);
-    if (!s) { alert('导入状态读取失败（服务器响应非 JSON）/ Failed to read import status (server response was not JSON)'); return; }
-    updateImportUI(s);
-    if (s.status === 'running') {
-      importPollTimer = setInterval(async () => {
-        try {
-          const r2 = await fetch(BASE + '/api/import/status');
-          const s2 = await r2.json().catch(() => null);
-          if (s2) updateImportUI(s2);
-        } catch(e) {}
-      }, 2000);
-    }
-  } catch(e) { alert('导入状态加载失败: ' + (e.message || e)); }
-}
-
-function updateImportUI(s) {
-  const prog = document.getElementById('import-progress');
-  if (s.status === 'idle') { prog.style.display = 'none'; return; }
-  prog.style.display = '';
-  const pct = s.total_chunks ? Math.round(s.processed / s.total_chunks * 100) : 0;
-  document.getElementById('import-progress-bar').style.width = pct + '%';
-  document.getElementById('import-progress-text').textContent = s.processed + '/' + s.total_chunks;
-  document.getElementById('import-api-calls').textContent = s.api_calls;
-  document.getElementById('import-created').textContent = s.memories_created;
-  document.getElementById('import-merged').textContent = s.memories_merged;
-  document.getElementById('import-raw').textContent = s.memories_raw;
-  const statusMap = { running: _SV.clock+' 导入中…', paused: _SV.pause+' 已暂停', completed: _SV.ok+' 完成', error: _SV.err+' 出错' };
-  document.getElementById('import-status-text').innerHTML = statusMap[s.status] || esc(s.status);
-  document.getElementById('import-pause-btn').style.display = s.status === 'running' ? '' : 'none';
-  if (s.status !== 'running') clearInterval(importPollTimer);
-  if (s.status === 'completed') loadImportResults();
-  const errDiv = document.getElementById('import-errors');
-  if (s.errors && s.errors.length) {
-    errDiv.style.display = '';
-    errDiv.textContent = s.errors.join('\n');
-  } else { errDiv.style.display = 'none'; }
-}
-
-async function pauseImport() {
-  try { await fetch(BASE + '/api/import/pause', { method: 'POST' }); } catch(e) { alert('暂停失败: ' + (e.message || e)); }
-}
-
-async function loadImportResults() {
-  const container = document.getElementById('import-results-list');
-  container.innerHTML = '<div class="loading">加载中…</div>';
-  try {
-    const res = await fetch(BASE + '/api/import/results?limit=30');
-    const data = await res.json();
-    if (!data.buckets || !data.buckets.length) {
-      container.innerHTML = '<p style="color:var(--text-dim)">暂无记忆桶</p>';
-      return;
-    }
-    container.innerHTML = data.buckets.map(b => `
-      <div id="ir-${b.id}" style="background:var(--surface);border-radius:12px;padding:14px;margin:8px 0;">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <b>${b.name || b.id}</b>
-          <span style="font-size:11px;color:var(--text-dim);">${b.type} | ${(b.domain||[]).join(',')} | imp:${b.importance}</span>
-        </div>
-        <p style="font-size:13px;margin:6px 0;white-space:pre-wrap;">${b.content}</p>
-        <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;">${(b.tags||[]).map(t=>'#'+t).join(' ')}</div>
-        <div style="display:flex;gap:8px;">
-          <button onclick="reviewAction('${b.id}','pin')" class="icon-btn" title="固定为永久记忆"><i data-lucide="pin"></i> 固定</button>
-          <button onclick="reviewAction('${b.id}','important')" class="icon-btn" title="标为重要"><i data-lucide="star"></i> 重要</button>
-          <button onclick="reviewAction('${b.id}','noise')" class="icon-btn" title="标为噪声并resolve"><i data-lucide="trash-2"></i> 噪声</button>
-          <button onclick="if(confirm('确定移入删除档案？ / Move to delete archive?'))reviewAction('${b.id}','delete')" class="icon-btn" title="删除到档案 / Move to archive" style="color:var(--negative);"><i data-lucide="x"></i> 删除到档案</button>
-        </div>
-      </div>
-    `).join('');
-  } catch(e) { container.innerHTML = '<p style="color:var(--negative)">加载失败: ' + e.message + '</p>'; }
-}
-
-async function detectPatterns() {
-  const container = document.getElementById('import-patterns');
-  container.innerHTML = '<div class="loading">检测中…</div>';
-  try {
-    const res = await fetch(BASE + '/api/import/patterns');
-    const data = await res.json();
-    if (!data.patterns || !data.patterns.length) { container.innerHTML = '<p style="color:var(--text-dim)">未检测到高频模式</p>'; return; }
-    container.innerHTML = data.patterns.map(p => `
-      <div style="background:var(--surface);border-radius:12px;padding:14px;margin:8px 0;">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <b>${p.pattern_name}</b>
-          <span style="font-size:12px;color:var(--text-dim);">出现 ${p.count} 次</span>
-        </div>
-        <p style="font-size:13px;margin:6px 0;">${p.pattern_content}</p>
-        <div style="display:flex;gap:8px;">
-          <button onclick="reviewAction('${p.bucket_ids[0]}','pin')" class="icon-btn"><i data-lucide="pin"></i> 固定</button>
-          <button onclick="reviewAction('${p.bucket_ids[0]}','important')" class="icon-btn"><i data-lucide="star"></i> 重要</button>
-          <button onclick="batchReview('${JSON.stringify(p.bucket_ids).replace(/'/g, "\\'").replace(/"/g, '&quot;')}','noise')" class="icon-btn"><i data-lucide="trash-2"></i> 噪声</button>
-        </div>
-      </div>
-    `).join('');
-  } catch(e) { container.innerHTML = '<p style="color:var(--negative)">检测失败: ' + e.message + '</p>'; }
-}
-
-async function reviewAction(bid, action) {
-  try {
-    await fetch(BASE + '/api/import/review', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ decisions: [{ bucket_id: bid, action }] })
-    });
-    // Remove card from UI
-    const card = document.getElementById('ir-' + bid);
-    if (card) card.style.display = 'none';
-  } catch(e) { alert('操作失败: ' + (e.message || e)); }
-}
-
-async function batchReview(idsJson, action) {
-  try {
-    const ids = JSON.parse(idsJson);
-    await fetch(BASE + '/api/import/review', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ decisions: ids.map(id => ({ bucket_id: id, action })) })
-    });
-    detectPatterns();
-  } catch(e) { alert('批量操作失败: ' + (e.message || e)); }
-}
 
 // ========================================
 // iter 1.6 §3 — heartbeat indicator + log viewer
@@ -7230,6 +6912,30 @@ async function clearOBErrors() {
     if (d.error) { alert('清空失败：' + d.error); return; }
     await loadOBErrors();
   } catch (e) { alert('清空失败：' + e.message); }
+}
+
+async function checkEmptyMemoryBanner() {
+  try {
+    var sr = await authFetch('/api/status');
+    if (!sr) return;
+    var s = await sr.json();
+    var b = s.buckets || {};
+    var live = (b.permanent || 0) + (b.dynamic || 0);
+    if (live > 0) { var ex = document.getElementById('empty-mem-banner'); if (ex) ex.remove(); return; }
+    // 是否配置了 GitHub（有才提恢复）
+    var ghOk = false;
+    try { var gr = await authFetch('/api/github/status'); if (gr) { var gd = await gr.json(); ghOk = !!(gd && (gd.configured || gd.token_set)); } } catch (e) {}
+    if (document.getElementById('empty-mem-banner')) return;
+    var bar = document.createElement('div');
+    bar.id = 'empty-mem-banner';
+    bar.style.cssText = 'position:sticky;top:0;z-index:9999;background:#b85c3c;color:#fff;padding:10px 16px;font-size:13px;line-height:1.6;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 2px 8px rgba(0,0,0,.25);';
+    bar.innerHTML = '<b>⚠️ 检测到当前没有任何记忆</b>'
+      + (ghOk
+          ? '<span>可从 GitHub 备份恢复（会写入本地，导入前自动备份）。</span><button onclick="runGithubImport()" style="background:#fff;color:#b85c3c;border:none;border-radius:4px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;">从 GitHub 恢复记忆</button>'
+          : '<span>若你在 GitHub 备份过记忆，去「⑦ GitHub 同步」填好配置后即可一键恢复。</span>')
+      + '<button onclick="this.parentNode.remove()" style="margin-left:auto;background:transparent;color:#fff;border:1px solid rgba(255,255,255,.6);border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;">忽略</button>';
+    document.body.insertBefore(bar, document.body.firstChild);
+  } catch (e) { /* ignore */ }
 }
 
 // ========================================
@@ -7617,6 +7323,30 @@ async function loadDuplicates() {
   } catch (e) { box.innerHTML = '<p style="color:var(--negative)">加载失败: ' + e.message + '</p>'; }
 }
 
+async function checkEmptyMemoryBanner() {
+  try {
+    var sr = await authFetch('/api/status');
+    if (!sr) return;
+    var s = await sr.json();
+    var b = s.buckets || {};
+    var live = (b.permanent || 0) + (b.dynamic || 0);
+    if (live > 0) { var ex = document.getElementById('empty-mem-banner'); if (ex) ex.remove(); return; }
+    // 是否配置了 GitHub（有才提恢复）
+    var ghOk = false;
+    try { var gr = await authFetch('/api/github/status'); if (gr) { var gd = await gr.json(); ghOk = !!(gd && (gd.configured || gd.token_set)); } } catch (e) {}
+    if (document.getElementById('empty-mem-banner')) return;
+    var bar = document.createElement('div');
+    bar.id = 'empty-mem-banner';
+    bar.style.cssText = 'position:sticky;top:0;z-index:9999;background:#b85c3c;color:#fff;padding:10px 16px;font-size:13px;line-height:1.6;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 2px 8px rgba(0,0,0,.25);';
+    bar.innerHTML = '<b>⚠️ 检测到当前没有任何记忆</b>'
+      + (ghOk
+          ? '<span>可从 GitHub 备份恢复（会写入本地，导入前自动备份）。</span><button onclick="runGithubImport()" style="background:#fff;color:#b85c3c;border:none;border-radius:4px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;">从 GitHub 恢复记忆</button>'
+          : '<span>若你在 GitHub 备份过记忆，去「⑦ GitHub 同步」填好配置后即可一键恢复。</span>')
+      + '<button onclick="this.parentNode.remove()" style="margin-left:auto;background:transparent;color:#fff;border:1px solid rgba(255,255,255,.6);border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;">忽略</button>';
+    document.body.insertBefore(bar, document.body.firstChild);
+  } catch (e) { /* ignore */ }
+}
+
 // ========================================
 // iter 1.6 §6 — trace 编辑表单（注入到 detail 面板）
 // 在 showDetail 渲染完后调用，给「编辑」按钮挂事件
@@ -7705,6 +7435,30 @@ async function bucketSaveEdit(bid) {
     msg.innerHTML = _SV.err + ' ' + esc(e.message);
     msg.style.color = 'var(--negative)';
   }
+}
+
+async function checkEmptyMemoryBanner() {
+  try {
+    var sr = await authFetch('/api/status');
+    if (!sr) return;
+    var s = await sr.json();
+    var b = s.buckets || {};
+    var live = (b.permanent || 0) + (b.dynamic || 0);
+    if (live > 0) { var ex = document.getElementById('empty-mem-banner'); if (ex) ex.remove(); return; }
+    // 是否配置了 GitHub（有才提恢复）
+    var ghOk = false;
+    try { var gr = await authFetch('/api/github/status'); if (gr) { var gd = await gr.json(); ghOk = !!(gd && (gd.configured || gd.token_set)); } } catch (e) {}
+    if (document.getElementById('empty-mem-banner')) return;
+    var bar = document.createElement('div');
+    bar.id = 'empty-mem-banner';
+    bar.style.cssText = 'position:sticky;top:0;z-index:9999;background:#b85c3c;color:#fff;padding:10px 16px;font-size:13px;line-height:1.6;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 2px 8px rgba(0,0,0,.25);';
+    bar.innerHTML = '<b>⚠️ 检测到当前没有任何记忆</b>'
+      + (ghOk
+          ? '<span>可从 GitHub 备份恢复（会写入本地，导入前自动备份）。</span><button onclick="runGithubImport()" style="background:#fff;color:#b85c3c;border:none;border-radius:4px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;">从 GitHub 恢复记忆</button>'
+          : '<span>若你在 GitHub 备份过记忆，去「⑦ GitHub 同步」填好配置后即可一键恢复。</span>')
+      + '<button onclick="this.parentNode.remove()" style="margin-left:auto;background:transparent;color:#fff;border:1px solid rgba(255,255,255,.6);border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;">忽略</button>';
+    document.body.insertBefore(bar, document.body.firstChild);
+  } catch (e) { /* ignore */ }
 }
 
 // ========================================

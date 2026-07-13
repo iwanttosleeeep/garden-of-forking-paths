@@ -314,7 +314,7 @@ def register(mcp) -> None:
                 rebuild_embedding = True
 
             # One request may change several fields. Rebuild once, then publish
-            # the same instance to web routes, BucketManager, ImportEngine and
+            # the same instance to web routes, BucketManager and
             # the MCP tools runtime so reads and writes cannot split models.
             if rebuild_embedding:
                 try:

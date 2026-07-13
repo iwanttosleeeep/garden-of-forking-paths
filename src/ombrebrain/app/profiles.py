@@ -79,23 +79,6 @@ def build_default_legacy_profiles() -> LegacyModuleRegistry:
             safety_tier=SafetyTier.FILESYSTEM_WRITE,
         ),
         LegacyModuleProfile(
-            module="import_memory",
-            files=("src/import_memory.py",),
-            responsibilities=("conversation-import", "chunking", "memory-extraction"),
-            side_effects=("bucket-create", "import-state-write"),
-            permissions=("memory:write", "llm:call"),
-            safety_tier=SafetyTier.MEMORY_WRITE,
-        ),
-        LegacyModuleProfile(
-            module="migrate_engine",
-            files=("src/migrate_engine.py",),
-            responsibilities=("memory-package-import", "conflict-resolution", "reindex-planning"),
-            side_effects=("bucket-file-write", "embedding-db-merge"),
-            protected_surfaces=("buckets", "vector-database"),
-            permissions=("memory:write", "embedding:write"),
-            safety_tier=SafetyTier.FILESYSTEM_WRITE,
-        ),
-        LegacyModuleProfile(
             module="migration_engine",
             files=("src/migration_engine.py",),
             responsibilities=("embedding-backend-migration", "checkpoint-resume", "atomic-db-swap"),

@@ -4,7 +4,7 @@ server.py — MCP 服务入口 + 启动装配
 ========================================
 
 启动整个 Ombre Brain 进程：加载配置、创建 BucketManager / Dehydrator /
-DecayEngine / EmbeddingEngine / ImportEngine，把它们注入 tools._runtime 与
+DecayEngine / EmbeddingEngine，把它们注入 tools._runtime 与
 web._shared，然后以 @mcp.tool() 注册薄封装（真正的实现在 src/tools/<工具>/ 下面）。
 
 关键行为：
@@ -44,8 +44,6 @@ from dehydrator import Dehydrator
 from decay_engine import DecayEngine
 from embedding_engine import EmbeddingEngine
 from embedding_outbox import EmbeddingOutbox
-from import_memory import ImportEngine
-from migrate_engine import MigrateEngine
 from utils import get_version, load_config, setup_logging
 
 # --- iter 2.1：MCP 工具实现已按代码路径拆分到 tools/ 子包 ---
@@ -212,8 +210,6 @@ embedding_outbox = EmbeddingOutbox(config, bucket_mgr, embedding_engine)
 bucket_mgr.attach_embedding_outbox(embedding_outbox)
 dehydrator = Dehydrator(config)                      # Dehydrator / 脱水器
 decay_engine = DecayEngine(config, bucket_mgr)       # Decay engine / 衰减引擎
-import_engine = ImportEngine(config, bucket_mgr, dehydrator, embedding_engine)  # Import engine / 导入引擎
-migrate_engine = MigrateEngine(config, bucket_mgr, embedding_engine)              # Migrate engine / 记忆包迁移引擎
 
 # --- GitHub Sync / GitHub 同步 ---
 from github_sync import GitHubSync  # type: ignore
@@ -350,8 +346,6 @@ _wsh.init_runtime(
     decay_engine=decay_engine,
     embedding_engine=embedding_engine,
     embedding_outbox=embedding_outbox,
-    import_engine=import_engine,
-    migrate_engine=migrate_engine,
     github_sync_instance=github_sync_instance,
     restart_github_auto_task=_restart_github_auto_task,
 )
@@ -512,7 +506,6 @@ _tools_runtime.init(
     dehydrator=dehydrator,
     decay_engine=decay_engine,
     embedding_engine=embedding_engine,
-    import_engine=import_engine,
     logger=logger,
     fire_webhook=_fire_webhook,
     mark_op=_mark_op,

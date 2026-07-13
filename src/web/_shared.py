@@ -116,8 +116,6 @@ dehydrator = None
 decay_engine = None
 embedding_engine = None
 embedding_outbox = None
-import_engine = None
-migrate_engine = None
 github_sync_instance = None
 v3_runtime = None
 
@@ -144,8 +142,6 @@ def replace_embedding_engine(engine) -> None:
 
     for holder_name, attribute in (
         ("bucket_mgr", "embedding_engine"),
-        ("import_engine", "embedding_engine"),
-        ("migrate_engine", "_embedding_engine"),
     ):
         holder = globals().get(holder_name)
         if holder is not None:

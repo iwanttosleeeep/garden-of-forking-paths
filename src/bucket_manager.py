@@ -123,7 +123,7 @@ _atomic_write_text = atomic_write_text  # Backward-compatible private alias.
 # 修改这些数值 → 请同步跑 tests/regression 验证评分行为。
 # ============================================================
 
-# --- 默认元数据值（与 dehydrator/import_memory 保持一致）---
+# --- 默认元数据值（与 dehydrator 保持一致）---
 _DEFAULT_VALENCE = 0.5
 _DEFAULT_AROUSAL = 0.3
 _DEFAULT_IMPORTANCE = 5

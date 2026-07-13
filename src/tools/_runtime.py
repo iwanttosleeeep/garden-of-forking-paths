@@ -20,7 +20,7 @@ server.py（会循环 import）。
 - 不做线程安全保护：写入只发生在 server.py 启动期，单次
 
 对外暴露：init() / config / bucket_mgr / dehydrator / decay_engine /
-         embedding_engine / import_engine / logger / fire_webhook / mark_op
+         embedding_engine / logger / fire_webhook / mark_op
 ========================================
 """
 
@@ -34,7 +34,6 @@ bucket_mgr: Any = None
 dehydrator: Any = None
 decay_engine: Any = None
 embedding_engine: Any = None
-import_engine: Any = None
 logger: Any = None
 v3_runtime: Any = None
 
