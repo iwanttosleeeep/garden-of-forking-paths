@@ -208,7 +208,6 @@ class RuntimeLifecycle:
     stop_tunnel: Callable[[], Any] | None = None
     restart_github_auto_task: Callable[[int], Any] | None = None
     github_auto_interval: int = 0
-    boot_marker_path: str = ""
     keepalive_url: str = ""
     keepalive_initial_delay: float = DEFAULT_KEEPALIVE_INITIAL_DELAY_SECONDS
     keepalive_interval: float = DEFAULT_KEEPALIVE_INTERVAL_SECONDS
@@ -239,16 +238,6 @@ class RuntimeLifecycle:
                 self.restart_github_auto_task(self.github_auto_interval)
             except Exception as exc:
                 self.logger.warning("github auto-sync start failed: %s", exc)
-
-    def _reset_boot_marker(self) -> None:
-        if not self.boot_marker_path or not os.path.exists(self.boot_marker_path):
-            return
-        try:
-            with open(self.boot_marker_path, "w", encoding="utf-8") as marker:
-                marker.write("0")
-            self.logger.info("boot ok -> reset .boot_fails")
-        except Exception as exc:
-            self.logger.warning("reset .boot_fails failed: %s", exc)
 
     async def _keepalive_loop(self) -> None:
         await asyncio.sleep(max(0.0, self.keepalive_initial_delay))
@@ -285,7 +274,6 @@ class RuntimeLifecycle:
                 self._keepalive_loop(),
                 name="ombre-health-keepalive",
             )
-        self._reset_boot_marker()
 
     async def stop(self) -> None:
         if not self._started:

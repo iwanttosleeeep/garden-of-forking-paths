@@ -778,7 +778,7 @@ async def dream(window_hours: Optional[int] = 48) -> str:
 
 
 # =============================================================
-# /api/version、/api/update-info、/api/do-update、/api/author、
+# /api/version、/api/update-info、/api/author、
 # /api/onboarding/status、/api/status —— 已拆分到 web/meta.py
 # =============================================================
 
@@ -843,10 +843,6 @@ if __name__ == "__main__":
             stop_tunnel=_stop_tunnel,
             restart_github_auto_task=_restart_github_auto_task,
             github_auto_interval=_gh_auto_interval,
-            boot_marker_path=os.path.join(
-                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                ".boot_fails",
-            ),
             # Explicit IPv4 avoids localhost resolving to ::1 in Proot/Termux.
             keepalive_url=f"http://127.0.0.1:{OMBRE_PORT}/health",
         )
