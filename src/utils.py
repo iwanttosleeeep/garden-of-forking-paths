@@ -566,7 +566,7 @@ def extract_wikilinks(text: str) -> list[str]:
 def get_version() -> str:
     """Read project version from `<repo_root>/VERSION`.
 
-    存在两份 VERSION：src/VERSION 与根目录 VERSION。读取顺序：src/VERSION 优先。
+    存在两份 VERSION：src/VERSION 与根目录 VERSION。读取顺序：仅读根目录 VERSION(热更新已拆,单一事实源)。
     任何路径都读不到时返回 "0.0.0+unknown"，方便排查。
 
     ⚠️ 为什么是 src 优先（别再改成根目录优先）：

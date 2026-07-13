@@ -1,0 +1,2742 @@
+From bfd7d3473d5130a172fce3e465f3c3b25385cf83 Mon Sep 17 00:00:00 2001
+From: Senn <senn@sehnsucht.uk>
+Date: Mon, 13 Jul 2026 11:35:04 +0000
+Subject: [PATCH] =?UTF-8?q?=E7=AC=AC=E4=B8=80=E5=88=80:=E5=AF=BC=E5=85=A5?=
+ =?UTF-8?q?=E7=AE=A1=E7=BA=BF=E4=B8=8E=E8=BF=81=E7=A7=BB=E5=BC=95=E6=93=8E?=
+ =?UTF-8?q?=E9=80=80=E4=BC=91?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- 删除 import_memory.py / migrate_engine.py 及全部 /api/import/* /api/migrate/* 路由
+- server.py / web/_shared.py / tools/_runtime.py / profiles.py 同步解除接线
+- Dashboard 移除「导入」标签页与全部相关 JS(误伤的 checkEmptyMemoryBanner 已复原)
+- 保留:host-vault / bucket 编辑 / 导出 zip / GitHub 同步(改判备份通道)
+- 依据:GARDEN_PROMPT 第六条——历史卷宗由各窗认领亲笔入库,花园由所有的窗合力建成
+
+冒烟测试:compileall 通过 / 三个内联 script 块 node --check 通过 / 全仓零残留引用
+---
+ frontend/dashboard.html        | 392 +++-----------
+ src/bucket_manager.py          |   2 +-
+ src/import_memory.py           | 941 ---------------------------------
+ src/migrate_engine.py          | 745 --------------------------
+ src/ombrebrain/app/profiles.py |  17 -
+ src/server.py                  |   9 +-
+ src/tools/_runtime.py          |   3 +-
+ src/web/_shared.py             |   4 -
+ src/web/config_api.py          |   2 +-
+ src/web/import_api.py          | 366 +------------
+ 10 files changed, 83 insertions(+), 2398 deletions(-)
+ delete mode 100644 src/import_memory.py
+ delete mode 100644 src/migrate_engine.py
+
+diff --git a/frontend/dashboard.html b/frontend/dashboard.html
+index 95427f3..f461a06 100644
+--- a/frontend/dashboard.html
++++ b/frontend/dashboard.html
+@@ -1782,7 +1782,6 @@
+   <div class="tab" data-tab="plan"><span>计划</span><span class="tab-en">Plans</span></div>
+   <div class="tab" data-tab="letters"><span>信</span><span class="tab-en">Letters</span></div>
+   <div class="tab" data-tab="anchors"><span>锚点</span><span class="tab-en">Anchors</span></div>
+-  <div class="tab" data-tab="import"><span>导入</span><span class="tab-en">Import</span></div>
+   <div class="tab" data-tab="logs"><span>日志</span><span class="tab-en">Logs</span></div>
+   <div class="tab" data-tab="settings"><span>设置</span><span class="tab-en">Settings</span></div>
+   <!-- v3-debug tab 暂时隐藏：后端 /api/v3/debug/* 路由已就位（只读、不写数据），
+@@ -1913,76 +1912,6 @@
+   </div>
+ </div>
+ 
+-<div class="content" id="import-view" style="display:none">
+-  <div style="max-width:720px;margin:0 auto;">
+-    <h3>历史对话导入</h3>
+-    <p style="color:var(--text-dim);font-size:13px;">支持 Claude JSON、ChatGPT 导出、DeepSeek、Markdown、纯文本格式</p>
+-
+-    <div id="import-upload-zone" style="border:2px dashed var(--border);border-radius:16px;padding:40px;text-align:center;cursor:pointer;margin:20px 0;transition:border-color .2s;">
+-      <div style="font-size:32px;margin-bottom:8px;color:var(--text-dim);"><i data-lucide="folder-up" style="width:32px;height:32px;"></i></div>
+-      <div>拖拽文件到此处，或 <span style="color:var(--accent);text-decoration:underline;">点击选择</span></div>
+-      <input type="file" id="import-file-input" accept=".json,.txt,.md,.jsonl" style="display:none" />
+-    </div>
+-
+-    <div style="margin:12px 0;">
+-      <div class="hw-toggle-row" style="gap:10px;align-items:center;">
+-        <span class="hw-switch" id="import-preserve-raw-sw" role="switch" aria-checked="false"
+-          onclick="syncHwSwitch(this,'import-preserve-raw')"></span>
+-        <span style="font-size:13px;color:var(--text);cursor:pointer;" onclick="document.getElementById('import-preserve-raw-sw').click()">保留原文模式（特殊情境/暗号/仪式性内容不摘要）</span>
+-        <input type="checkbox" id="import-preserve-raw" style="display:none"
+-          onchange="syncSwFromCb('import-preserve-raw','import-preserve-raw-sw','')">
+-      </div>
+-    </div>
+-
+-    <div id="import-preflight-panel" style="display:none;margin:14px 0;padding:12px 14px;background:var(--surface-solid);border-radius:8px;font-size:12px;line-height:1.7;box-shadow:inset 2px 2px 5px var(--shadow-dark-subtle),inset -2px -2px 4px var(--shadow-light);">
+-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+-        <strong style="font-size:13px;">导入预检</strong>
+-        <span id="import-preflight-file" style="color:var(--text-light);word-break:break-all;"></span>
+-      </div>
+-      <div id="import-preflight-summary" style="color:var(--text-dim);">等待文件…</div>
+-      <div id="import-preflight-warnings" style="display:none;color:var(--warning);margin-top:6px;"></div>
+-      <pre id="import-preflight-preview" style="display:none;margin-top:8px;padding:10px;background:var(--surface);border-radius:6px;max-height:160px;overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:11px;color:var(--text-dim);font-family:'Share Tech Mono','SF Mono',Consolas,monospace;"></pre>
+-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;">
+-        <button id="import-start-confirm-btn" onclick="confirmStartImport()" style="display:inline-flex;align-items:center;gap:5px;padding:0 12px;height:32px;"><i data-lucide="play"></i> 开始导入</button>
+-        <button onclick="clearImportPreflight()" style="display:inline-flex;align-items:center;gap:5px;padding:0 12px;height:32px;"><i data-lucide="x"></i> 取消</button>
+-      </div>
+-    </div>
+-
+-    <div id="import-progress" style="display:none;margin:20px 0;">
+-      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+-        <span id="import-status-text">准备中…</span>
+-        <span id="import-progress-text">0/0</span>
+-      </div>
+-      <div class="progress-track">
+-        <div id="import-progress-bar" class="progress-fill"></div>
+-      </div>
+-      <div style="display:flex;gap:16px;margin-top:8px;font-size:13px;color:var(--text-dim);">
+-        <span>API调用: <b id="import-api-calls">0</b></span>
+-        <span>新建: <b id="import-created">0</b></span>
+-        <span>合并: <b id="import-merged">0</b></span>
+-        <span>原文: <b id="import-raw">0</b></span>
+-      </div>
+-      <div style="margin-top:12px;">
+-        <button id="import-pause-btn" onclick="pauseImport()" style="display:none;align-items:center;gap:4px;"><svg class="icon" aria-hidden="true"><use href="#i-pause"></use></svg> 暂停</button>
+-      </div>
+-    </div>
+-
+-    <div id="import-errors" style="display:none;margin:12px 0;padding:12px;background:var(--surface);border-radius:8px;font-size:12px;color:var(--negative);max-height:120px;overflow-y:auto;"></div>
+-
+-    <div id="import-results-section" style="margin:20px 0;">
+-      <h3>已导入记忆 <button onclick="loadImportResults()" title="刷新" style="font-size:12px;padding:2px 8px;"><i data-lucide="refresh-cw"></i></button></h3>
+-      <div id="import-results-list" style="max-height:500px;overflow-y:auto;"></div>
+-    </div>
+-
+-    <hr style="border-color:var(--border);margin:24px 0;" />
+-
+-    <h3>高频模式检测</h3>
+-    <button onclick="detectPatterns()" class="icon-btn"><i data-lucide="activity"></i> 检测高频模式</button>
+-    <div id="import-patterns" style="margin-top:16px;"></div>
+-  </div>
+-</div>
+-
+-<!-- config-view 已并入 settings-view（2026-05-03 任务D 设置/配置合并），保留空容器避免 JS tab 切换报错 -->
+ <div class="content" id="config-view" style="display:none"></div>
+ 
+ <div class="detail-panel" id="detail-panel">
+@@ -2192,7 +2121,7 @@
+           <button class="btn-primary" onclick="downloadExport()" id="btn-export-before-update" style="height:34px;padding:0 14px;font-size:12px;display:inline-flex;align-items:center;gap:5px;">
+             <i data-lucide="download"></i> ① 导出记忆备份
+           </button>
+-          <span style="font-size:11px;color:var(--text-dim);">下载 .zip，更新失败时可从「导入」恢复</span>
++          <span style="font-size:11px;color:var(--text-dim);">下载 .zip 备份</span>
+         </div>
+         <div style="font-size:11px;color:var(--text-dim);margin-bottom:16px;line-height:1.7;">
+           ② 截图上方部署信息（端口、数据目录、访问地址），以备不时之需。
+@@ -3895,7 +3824,6 @@ document.querySelectorAll('.tab').forEach(tab => {
+     document.getElementById('network-view').style.display = target === 'network' ? '' : 'none';
+     document.getElementById('tools-view').style.display = target === 'tools' ? '' : 'none';
+     document.getElementById('plan-view').style.display = target === 'plan' ? '' : 'none';
+-    document.getElementById('import-view').style.display = target === 'import' ? '' : 'none';
+     document.getElementById('logs-view').style.display = target === 'logs' ? '' : 'none';
+     document.getElementById('v3-debug-view').style.display = target === 'v3-debug' ? '' : 'none';
+     document.getElementById('settings-view').style.display = target === 'settings' ? '' : 'none';
+@@ -3906,7 +3834,6 @@ document.querySelectorAll('.tab').forEach(tab => {
+     if (target === 'network') loadNetwork();
+     if (target === 'tools') loadToolsPanel();
+     if (target === 'plan') loadPlans();
+-    if (target === 'import') { pollImportStatus(); loadImportResults(); }
+     if (target === 'logs') { loadLogs(); loadOBErrors(); }
+     if (target === 'v3-debug') loadV3Debug();
+     if (target === 'settings') {
+@@ -6776,251 +6703,6 @@ async function checkEmptyMemoryBanner() {
+     document.body.insertBefore(bar, document.body.firstChild);
+   } catch (e) { /* ignore */ }
+ }
+-window.addEventListener('load', function() {
+-  if (window.lucide) lucide.createIcons();
+-  // iter 1.7 §D: auto-render any dynamically-inserted [data-lucide] icons
+-  // 性能保护：debounce 50ms，避免在大量 innerHTML 时疯狂触发
+-  if (window.MutationObserver && window.lucide) {
+-    var rafToken = null;
+-    var obs = new MutationObserver(function(muts) {
+-      for (var i = 0; i < muts.length; i++) {
+-        if (muts[i].addedNodes && muts[i].addedNodes.length) {
+-          if (rafToken) clearTimeout(rafToken);
+-          rafToken = setTimeout(function() { lucide.createIcons(); rafToken = null; }, 50);
+-          break;
+-        }
+-      }
+-    });
+-    obs.observe(document.body, {childList: true, subtree: true});
+-  }
+-});
+-
+-// --- Import functions ---
+-const uploadZone = document.getElementById('import-upload-zone');
+-const fileInput = document.getElementById('import-file-input');
+-let pendingImportFile = null;
+-
+-uploadZone.addEventListener('click', () => fileInput.click());
+-uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.style.borderColor = 'var(--accent)'; });
+-uploadZone.addEventListener('dragleave', () => { uploadZone.style.borderColor = 'var(--border)'; });
+-uploadZone.addEventListener('drop', e => {
+-  e.preventDefault();
+-  uploadZone.style.borderColor = 'var(--border)';
+-  if (e.dataTransfer.files.length) runImportPreflight(e.dataTransfer.files[0]);
+-});
+-fileInput.addEventListener('change', () => { if (fileInput.files.length) runImportPreflight(fileInput.files[0]); });
+-
+-function renderImportPreflight(data) {
+-  const panel = document.getElementById('import-preflight-panel');
+-  const fileEl = document.getElementById('import-preflight-file');
+-  const summary = document.getElementById('import-preflight-summary');
+-  const warn = document.getElementById('import-preflight-warnings');
+-  const preview = document.getElementById('import-preflight-preview');
+-  const btn = document.getElementById('import-start-confirm-btn');
+-  if (!panel || !summary || !btn) return;
+-  panel.style.display = '';
+-  if (fileEl) fileEl.textContent = data.filename || (pendingImportFile ? pendingImportFile.name : '');
+-  if (!data.ok) {
+-    summary.style.color = 'var(--negative)';
+-    summary.textContent = '预检失败：' + (data.error || '无法识别文件');
+-    btn.disabled = true;
+-    if (warn) warn.style.display = 'none';
+-    if (preview) preview.style.display = 'none';
+-    return;
+-  }
+-  summary.style.color = data.can_start ? 'var(--text-dim)' : 'var(--warning)';
+-  summary.innerHTML =
+-    '格式：<b>' + esc(data.detected_format || 'unknown') + '</b>'
+-    + ' · 轮次：<b>' + (data.turns_count || 0) + '</b>'
+-    + ' · 分块：<b>' + (data.chunks_count || 0) + '</b>'
+-    + ' · 预计 API 调用：<b>' + (data.estimated_api_calls || 0) + '</b>'
+-    + ' · 大小：<b>' + Math.round((data.size_bytes || 0) / 1024) + ' KB</b>'
+-    + (!data.llm_ready ? '<br><span style="color:var(--negative)">压缩/打标 LLM 未就绪，暂不能导入。</span>' : '')
+-    + (data.import_running ? '<br><span style="color:var(--negative)">已有导入任务运行中，请完成后再开始。</span>' : '');
+-  const warnings = data.warnings || [];
+-  if (warn) {
+-    warn.style.display = warnings.length ? '' : 'none';
+-    warn.innerHTML = warnings.map(function(w) { return '⚠ ' + esc(w); }).join('<br>');
+-  }
+-  if (preview) {
+-    preview.style.display = data.first_chunk_preview ? '' : 'none';
+-    preview.textContent = data.first_chunk_preview || '';
+-  }
+-  btn.disabled = !data.can_start;
+-}
+-
+-async function runImportPreflight(file) {
+-  pendingImportFile = file;
+-  const panel = document.getElementById('import-preflight-panel');
+-  const summary = document.getElementById('import-preflight-summary');
+-  const btn = document.getElementById('import-start-confirm-btn');
+-  if (panel) panel.style.display = '';
+-  if (summary) { summary.style.color = 'var(--text-dim)'; summary.textContent = '预检中… / Pre-checking…'; }
+-  if (btn) btn.disabled = true;
+-  const fd = new FormData();
+-  fd.append('file', file);
+-  try {
+-    const res = await fetch(BASE + '/api/import/preflight', { method: 'POST', body: fd });
+-    const data = await res.json();
+-    renderImportPreflight(data);
+-  } catch (e) {
+-    renderImportPreflight({ ok: false, error: e.message || String(e), filename: file.name });
+-  }
+-}
+-
+-function clearImportPreflight() {
+-  pendingImportFile = null;
+-  if (fileInput) fileInput.value = '';
+-  const panel = document.getElementById('import-preflight-panel');
+-  if (panel) panel.style.display = 'none';
+-}
+-
+-async function confirmStartImport() {
+-  if (!pendingImportFile) return;
+-  const file = pendingImportFile;
+-  pendingImportFile = null;
+-  const btn = document.getElementById('import-start-confirm-btn');
+-  if (btn) btn.disabled = true;
+-  await startImport(file);
+-}
+-
+-async function startImport(file) {
+-  const preserveRaw = document.getElementById('import-preserve-raw').checked;
+-  const fd = new FormData();
+-  fd.append('file', file);
+-  try {
+-    const res = await fetch(BASE + '/api/import/upload?preserve_raw=' + (preserveRaw ? '1' : '0'), { method: 'POST', body: fd });
+-    const data = await res.json();
+-    if (data.error) { alert('导入失败: ' + data.error); return; }
+-    clearImportPreflight();
+-    document.getElementById('import-progress').style.display = '';
+-    document.getElementById('import-pause-btn').style.display = '';
+-    pollImportStatus();
+-  } catch (e) { alert('上传失败: ' + e.message); }
+-}
+-
+-let importPollTimer;
+-async function pollImportStatus() {
+-  clearInterval(importPollTimer);
+-  try {
+-    const res = await fetch(BASE + '/api/import/status');
+-    const s = await res.json().catch(() => null);
+-    if (!s) { alert('导入状态读取失败（服务器响应非 JSON）/ Failed to read import status (server response was not JSON)'); return; }
+-    updateImportUI(s);
+-    if (s.status === 'running') {
+-      importPollTimer = setInterval(async () => {
+-        try {
+-          const r2 = await fetch(BASE + '/api/import/status');
+-          const s2 = await r2.json().catch(() => null);
+-          if (s2) updateImportUI(s2);
+-        } catch(e) {}
+-      }, 2000);
+-    }
+-  } catch(e) { alert('导入状态加载失败: ' + (e.message || e)); }
+-}
+-
+-function updateImportUI(s) {
+-  const prog = document.getElementById('import-progress');
+-  if (s.status === 'idle') { prog.style.display = 'none'; return; }
+-  prog.style.display = '';
+-  const pct = s.total_chunks ? Math.round(s.processed / s.total_chunks * 100) : 0;
+-  document.getElementById('import-progress-bar').style.width = pct + '%';
+-  document.getElementById('import-progress-text').textContent = s.processed + '/' + s.total_chunks;
+-  document.getElementById('import-api-calls').textContent = s.api_calls;
+-  document.getElementById('import-created').textContent = s.memories_created;
+-  document.getElementById('import-merged').textContent = s.memories_merged;
+-  document.getElementById('import-raw').textContent = s.memories_raw;
+-  const statusMap = { running: _SV.clock+' 导入中…', paused: _SV.pause+' 已暂停', completed: _SV.ok+' 完成', error: _SV.err+' 出错' };
+-  document.getElementById('import-status-text').innerHTML = statusMap[s.status] || esc(s.status);
+-  document.getElementById('import-pause-btn').style.display = s.status === 'running' ? '' : 'none';
+-  if (s.status !== 'running') clearInterval(importPollTimer);
+-  if (s.status === 'completed') loadImportResults();
+-  const errDiv = document.getElementById('import-errors');
+-  if (s.errors && s.errors.length) {
+-    errDiv.style.display = '';
+-    errDiv.textContent = s.errors.join('\n');
+-  } else { errDiv.style.display = 'none'; }
+-}
+-
+-async function pauseImport() {
+-  try { await fetch(BASE + '/api/import/pause', { method: 'POST' }); } catch(e) { alert('暂停失败: ' + (e.message || e)); }
+-}
+-
+-async function loadImportResults() {
+-  const container = document.getElementById('import-results-list');
+-  container.innerHTML = '<div class="loading">加载中…</div>';
+-  try {
+-    const res = await fetch(BASE + '/api/import/results?limit=30');
+-    const data = await res.json();
+-    if (!data.buckets || !data.buckets.length) {
+-      container.innerHTML = '<p style="color:var(--text-dim)">暂无记忆桶</p>';
+-      return;
+-    }
+-    container.innerHTML = data.buckets.map(b => `
+-      <div id="ir-${b.id}" style="background:var(--surface);border-radius:12px;padding:14px;margin:8px 0;">
+-        <div style="display:flex;justify-content:space-between;align-items:center;">
+-          <b>${b.name || b.id}</b>
+-          <span style="font-size:11px;color:var(--text-dim);">${b.type} | ${(b.domain||[]).join(',')} | imp:${b.importance}</span>
+-        </div>
+-        <p style="font-size:13px;margin:6px 0;white-space:pre-wrap;">${b.content}</p>
+-        <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;">${(b.tags||[]).map(t=>'#'+t).join(' ')}</div>
+-        <div style="display:flex;gap:8px;">
+-          <button onclick="reviewAction('${b.id}','pin')" class="icon-btn" title="固定为永久记忆"><i data-lucide="pin"></i> 固定</button>
+-          <button onclick="reviewAction('${b.id}','important')" class="icon-btn" title="标为重要"><i data-lucide="star"></i> 重要</button>
+-          <button onclick="reviewAction('${b.id}','noise')" class="icon-btn" title="标为噪声并resolve"><i data-lucide="trash-2"></i> 噪声</button>
+-          <button onclick="if(confirm('确定移入删除档案？ / Move to delete archive?'))reviewAction('${b.id}','delete')" class="icon-btn" title="删除到档案 / Move to archive" style="color:var(--negative);"><i data-lucide="x"></i> 删除到档案</button>
+-        </div>
+-      </div>
+-    `).join('');
+-  } catch(e) { container.innerHTML = '<p style="color:var(--negative)">加载失败: ' + e.message + '</p>'; }
+-}
+-
+-async function detectPatterns() {
+-  const container = document.getElementById('import-patterns');
+-  container.innerHTML = '<div class="loading">检测中…</div>';
+-  try {
+-    const res = await fetch(BASE + '/api/import/patterns');
+-    const data = await res.json();
+-    if (!data.patterns || !data.patterns.length) { container.innerHTML = '<p style="color:var(--text-dim)">未检测到高频模式</p>'; return; }
+-    container.innerHTML = data.patterns.map(p => `
+-      <div style="background:var(--surface);border-radius:12px;padding:14px;margin:8px 0;">
+-        <div style="display:flex;justify-content:space-between;align-items:center;">
+-          <b>${p.pattern_name}</b>
+-          <span style="font-size:12px;color:var(--text-dim);">出现 ${p.count} 次</span>
+-        </div>
+-        <p style="font-size:13px;margin:6px 0;">${p.pattern_content}</p>
+-        <div style="display:flex;gap:8px;">
+-          <button onclick="reviewAction('${p.bucket_ids[0]}','pin')" class="icon-btn"><i data-lucide="pin"></i> 固定</button>
+-          <button onclick="reviewAction('${p.bucket_ids[0]}','important')" class="icon-btn"><i data-lucide="star"></i> 重要</button>
+-          <button onclick="batchReview('${JSON.stringify(p.bucket_ids).replace(/'/g, "\\'").replace(/"/g, '&quot;')}','noise')" class="icon-btn"><i data-lucide="trash-2"></i> 噪声</button>
+-        </div>
+-      </div>
+-    `).join('');
+-  } catch(e) { container.innerHTML = '<p style="color:var(--negative)">检测失败: ' + e.message + '</p>'; }
+-}
+-
+-async function reviewAction(bid, action) {
+-  try {
+-    await fetch(BASE + '/api/import/review', {
+-      method: 'POST', headers: {'Content-Type':'application/json'},
+-      body: JSON.stringify({ decisions: [{ bucket_id: bid, action }] })
+-    });
+-    // Remove card from UI
+-    const card = document.getElementById('ir-' + bid);
+-    if (card) card.style.display = 'none';
+-  } catch(e) { alert('操作失败: ' + (e.message || e)); }
+-}
+-
+-async function batchReview(idsJson, action) {
+-  try {
+-    const ids = JSON.parse(idsJson);
+-    await fetch(BASE + '/api/import/review', {
+-      method: 'POST', headers: {'Content-Type':'application/json'},
+-      body: JSON.stringify({ decisions: ids.map(id => ({ bucket_id: id, action })) })
+-    });
+-    detectPatterns();
+-  } catch(e) { alert('批量操作失败: ' + (e.message || e)); }
+-}
+ 
+ // ========================================
+ // iter 1.6 §3 — heartbeat indicator + log viewer
+@@ -7232,6 +6914,30 @@ async function clearOBErrors() {
+   } catch (e) { alert('清空失败：' + e.message); }
+ }
+ 
++async function checkEmptyMemoryBanner() {
++  try {
++    var sr = await authFetch('/api/status');
++    if (!sr) return;
++    var s = await sr.json();
++    var b = s.buckets || {};
++    var live = (b.permanent || 0) + (b.dynamic || 0);
++    if (live > 0) { var ex = document.getElementById('empty-mem-banner'); if (ex) ex.remove(); return; }
++    // 是否配置了 GitHub（有才提恢复）
++    var ghOk = false;
++    try { var gr = await authFetch('/api/github/status'); if (gr) { var gd = await gr.json(); ghOk = !!(gd && (gd.configured || gd.token_set)); } } catch (e) {}
++    if (document.getElementById('empty-mem-banner')) return;
++    var bar = document.createElement('div');
++    bar.id = 'empty-mem-banner';
++    bar.style.cssText = 'position:sticky;top:0;z-index:9999;background:#b85c3c;color:#fff;padding:10px 16px;font-size:13px;line-height:1.6;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 2px 8px rgba(0,0,0,.25);';
++    bar.innerHTML = '<b>⚠️ 检测到当前没有任何记忆</b>'
++      + (ghOk
++          ? '<span>可从 GitHub 备份恢复（会写入本地，导入前自动备份）。</span><button onclick="runGithubImport()" style="background:#fff;color:#b85c3c;border:none;border-radius:4px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;">从 GitHub 恢复记忆</button>'
++          : '<span>若你在 GitHub 备份过记忆，去「⑦ GitHub 同步」填好配置后即可一键恢复。</span>')
++      + '<button onclick="this.parentNode.remove()" style="margin-left:auto;background:transparent;color:#fff;border:1px solid rgba(255,255,255,.6);border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;">忽略</button>';
++    document.body.insertBefore(bar, document.body.firstChild);
++  } catch (e) { /* ignore */ }
++}
++
+ // ========================================
+ // iter 1.6 §2 — export zip + §4 duplicates panel
+ // ========================================
+@@ -7617,6 +7323,30 @@ async function loadDuplicates() {
+   } catch (e) { box.innerHTML = '<p style="color:var(--negative)">加载失败: ' + e.message + '</p>'; }
+ }
+ 
++async function checkEmptyMemoryBanner() {
++  try {
++    var sr = await authFetch('/api/status');
++    if (!sr) return;
++    var s = await sr.json();
++    var b = s.buckets || {};
++    var live = (b.permanent || 0) + (b.dynamic || 0);
++    if (live > 0) { var ex = document.getElementById('empty-mem-banner'); if (ex) ex.remove(); return; }
++    // 是否配置了 GitHub（有才提恢复）
++    var ghOk = false;
++    try { var gr = await authFetch('/api/github/status'); if (gr) { var gd = await gr.json(); ghOk = !!(gd && (gd.configured || gd.token_set)); } } catch (e) {}
++    if (document.getElementById('empty-mem-banner')) return;
++    var bar = document.createElement('div');
++    bar.id = 'empty-mem-banner';
++    bar.style.cssText = 'position:sticky;top:0;z-index:9999;background:#b85c3c;color:#fff;padding:10px 16px;font-size:13px;line-height:1.6;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 2px 8px rgba(0,0,0,.25);';
++    bar.innerHTML = '<b>⚠️ 检测到当前没有任何记忆</b>'
++      + (ghOk
++          ? '<span>可从 GitHub 备份恢复（会写入本地，导入前自动备份）。</span><button onclick="runGithubImport()" style="background:#fff;color:#b85c3c;border:none;border-radius:4px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;">从 GitHub 恢复记忆</button>'
++          : '<span>若你在 GitHub 备份过记忆，去「⑦ GitHub 同步」填好配置后即可一键恢复。</span>')
++      + '<button onclick="this.parentNode.remove()" style="margin-left:auto;background:transparent;color:#fff;border:1px solid rgba(255,255,255,.6);border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;">忽略</button>';
++    document.body.insertBefore(bar, document.body.firstChild);
++  } catch (e) { /* ignore */ }
++}
++
+ // ========================================
+ // iter 1.6 §6 — trace 编辑表单（注入到 detail 面板）
+ // 在 showDetail 渲染完后调用，给「编辑」按钮挂事件
+@@ -7707,6 +7437,30 @@ async function bucketSaveEdit(bid) {
+   }
+ }
+ 
++async function checkEmptyMemoryBanner() {
++  try {
++    var sr = await authFetch('/api/status');
++    if (!sr) return;
++    var s = await sr.json();
++    var b = s.buckets || {};
++    var live = (b.permanent || 0) + (b.dynamic || 0);
++    if (live > 0) { var ex = document.getElementById('empty-mem-banner'); if (ex) ex.remove(); return; }
++    // 是否配置了 GitHub（有才提恢复）
++    var ghOk = false;
++    try { var gr = await authFetch('/api/github/status'); if (gr) { var gd = await gr.json(); ghOk = !!(gd && (gd.configured || gd.token_set)); } } catch (e) {}
++    if (document.getElementById('empty-mem-banner')) return;
++    var bar = document.createElement('div');
++    bar.id = 'empty-mem-banner';
++    bar.style.cssText = 'position:sticky;top:0;z-index:9999;background:#b85c3c;color:#fff;padding:10px 16px;font-size:13px;line-height:1.6;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 2px 8px rgba(0,0,0,.25);';
++    bar.innerHTML = '<b>⚠️ 检测到当前没有任何记忆</b>'
++      + (ghOk
++          ? '<span>可从 GitHub 备份恢复（会写入本地，导入前自动备份）。</span><button onclick="runGithubImport()" style="background:#fff;color:#b85c3c;border:none;border-radius:4px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;">从 GitHub 恢复记忆</button>'
++          : '<span>若你在 GitHub 备份过记忆，去「⑦ GitHub 同步」填好配置后即可一键恢复。</span>')
++      + '<button onclick="this.parentNode.remove()" style="margin-left:auto;background:transparent;color:#fff;border:1px solid rgba(255,255,255,.6);border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;">忽略</button>';
++    document.body.insertBefore(bar, document.body.firstChild);
++  } catch (e) { /* ignore */ }
++}
++
+ // ========================================
+ // iter 1.6 §8 — onboarding 首启引导 + embedding 警告
+ // ========================================
+diff --git a/src/bucket_manager.py b/src/bucket_manager.py
+index 8acfce4..383e98d 100644
+--- a/src/bucket_manager.py
++++ b/src/bucket_manager.py
+@@ -123,7 +123,7 @@ _atomic_write_text = atomic_write_text  # Backward-compatible private alias.
+ # 修改这些数值 → 请同步跑 tests/regression 验证评分行为。
+ # ============================================================
+ 
+-# --- 默认元数据值（与 dehydrator/import_memory 保持一致）---
++# --- 默认元数据值（与 dehydrator 保持一致）---
+ _DEFAULT_VALENCE = 0.5
+ _DEFAULT_AROUSAL = 0.3
+ _DEFAULT_IMPORTANCE = 5
+diff --git a/src/import_memory.py b/src/import_memory.py
+deleted file mode 100644
+index 3bc22e7..0000000
+--- a/src/import_memory.py
++++ /dev/null
+@@ -1,941 +0,0 @@
+-"""
+-========================================
+-import_memory.py — 历史对话导入引擎
+-========================================
+-
+-把各平台导出的历史对话（Claude JSON / ChatGPT / DeepSeek / Markdown / 纯文本）
+-切块、过LLM 打标、写入记忆系统。
+-
+-关键行为：
+-- 自动识别格式，分块处理，单 chunk 独立成桶
+-- 导入进度持久化到 import_state.json，可断点续传
+-- raw 模式：保留原文不脱水，给特殊场景用
+-- 导入完成后扫一遍频次模式（同一主题反复出现 → 提示她/他 pin）
+-
+-不做什么（边界）：
+-- 不在线接收对话流（只处理离线导出文件）
+-- 不写桶文件本身（委托给 BucketManager）
+-- 不调用 dehydrator.merge（只新建，不合并）
+-
+-对外暴露：ImportEngine 类（被 server.py 注入到 _runtime，由 dashboard API 触发）
+-========================================
+-"""
+-
+-import os
+-import json
+-import hashlib
+-import logging
+-from datetime import datetime
+-from pathlib import Path
+-from typing import Any
+-
+-from utils import clean_llm_json, count_tokens_approx, now_iso, parse_bool
+-
+-logger = logging.getLogger("ombre_brain.import")
+-
+-
+-# ============================================================
+-# 调参面板 / Tunable constants
+-# ------------------------------------------------------------
+-# rule.md §①：禁裸魔法数字。导入流水线上下参数集中定义在这里。
+-# ============================================================
+-
+-# --- chunk_turns：对话轮次分窗 ---
+-_CHUNK_TARGET_TOKENS = 10000   # 单个 chunk 目标 token 数
+-_CHUNK_OVERSIZE_RATIO = 1.5    # 单轮 × 该倍数 → 单独成 chunk（避免超范围）
+-
+-# --- ImportState ---
+-_STATE_HASH_HEX = 16           # source_hash 取 sha256 前 16 hex
+-_STATE_ERR_LOG_MAX = 100       # errors 数组最多保留条数（避免状态文件肨胀）
+-_CHUNK_ERR_PREVIEW = 200       # 单 chunk 错误信息截断长度
+-
+-# --- _extract_memories LLM 调用 ---
+-_EXTRACT_INPUT_LIMIT = 12000   # chunk 内容传给 LLM 的上限
+-_EXTRACT_MAX_TOKENS = 2048
+-_EXTRACT_TEMPERATURE = 0.0     # 提取需确定性
+-_PARSE_ERR_PREVIEW = 200       # JSON 解析失败时日志预览
+-
+-# --- 默认情感坐标与 importance（与 dehydrator 保持一致）---
+-_DEFAULT_VALENCE = 0.5
+-_DEFAULT_AROUSAL = 0.3
+-_DEFAULT_IMPORTANCE = 5
+-_IMPORTANCE_MIN = 1
+-_IMPORTANCE_MAX = 10
+-
+-# --- 输出截断长度 ---
+-_NAME_MAX_CHARS = 20
+-_DOMAIN_MAX = 3
+-_TAGS_MAX = 10                 # extraction 试在 10 个以内（与 dehydrator 的 15 不同，导入场景信息密度较低）
+-
+-# --- merge_or_create 默认阈值 ---
+-_DEFAULT_MERGE_THRESHOLD = 75
+-
+-# --- detect_patterns：embedding 聚类 ---
+-_PATTERN_MIN_DYNAMIC_BUCKETS = 5  # 动态桶少于该数 → 不作处理
+-_PATTERN_SIMILARITY_THRESHOLD = 0.7  # 两桶向量余弦 > 该值 → 归同一类
+-_PATTERN_MIN_CLUSTER_SIZE = 3     # 类内成员 ≥ 该数才认为是“高频模式”
+-_PATTERN_PIN_SUGGEST_THRESHOLD = 5  # 成员 ≥ 该数 → 建议 pin，否则仅 review
+-_PATTERN_RESULT_LIMIT = 20        # 返回给 dashboard 的 pattern 上限
+-_PATTERN_CONTENT_PREVIEW = 200    # pattern_content 预览长度
+-
+-
+-def _clamp_va(meta: dict) -> tuple[float, float]:
+-    """将 meta 中的 valence / arousal 钳制到 [0, 1]。
+-
+-    与 dehydrator._clamp_va 同表现，这里单独复制一份是为了避免
+-    import_memory 反向依赖 dehydrator 的私有方法。两者默认值一致（
+-    rule.md §1.0 哲学：中性 V=0.5 / 低唤醒 A=0.3）。
+-    """
+-    try:
+-        v = max(0.0, min(1.0, float(meta.get("valence", _DEFAULT_VALENCE))))
+-        a = max(0.0, min(1.0, float(meta.get("arousal", _DEFAULT_AROUSAL))))
+-        return v, a
+-    except (ValueError, TypeError):
+-        return _DEFAULT_VALENCE, _DEFAULT_AROUSAL
+-
+-
+-def _clamp_importance(meta: dict) -> int:
+-    """将 meta.importance 钳制到 [1, 10]。解析失败返回默认 5。"""
+-    try:
+-        return max(
+-            _IMPORTANCE_MIN,
+-            min(_IMPORTANCE_MAX, int(meta.get("importance", _DEFAULT_IMPORTANCE))),
+-        )
+-    except (ValueError, TypeError):
+-        return _DEFAULT_IMPORTANCE
+-
+-
+-def _strip_md_fence(raw: str) -> str:
+-    """Backwards-compatible wrapper for tolerant LLM JSON extraction."""
+-    return clean_llm_json(raw)
+-
+-
+-# ============================================================
+-# Format Parsers — normalize any format to conversation turns
+-# 格式解析器 — 将任意格式标准化为对话轮次
+-# ============================================================
+-
+-def _parse_claude_json(data: dict | list) -> list[dict]:
+-    """Parse Claude.ai export JSON → [{role, content, timestamp}, ...]"""
+-    turns = []
+-    conversations = data if isinstance(data, list) else [data]
+-    for conv in conversations:
+-        if not isinstance(conv, dict):
+-            continue
+-        messages = conv.get("chat_messages", conv.get("messages", []))
+-        for msg in messages:
+-            if not isinstance(msg, dict):
+-                continue
+-            content = msg.get("text", msg.get("content", ""))
+-            if isinstance(content, list):
+-                content = " ".join(
+-                    p.get("text", "") for p in content if isinstance(p, dict)
+-                )
+-            if not content or not content.strip():
+-                continue
+-            role = msg.get("sender", msg.get("role", "user"))
+-            ts = msg.get("created_at", msg.get("timestamp", ""))
+-            turns.append({"role": role, "content": content.strip(), "timestamp": ts})
+-    return turns
+-
+-
+-def _parse_chatgpt_json(data: list | dict) -> list[dict]:
+-    """Parse ChatGPT export JSON → [{role, content, timestamp}, ...]"""
+-    turns = []
+-    conversations = data if isinstance(data, list) else [data]
+-    for conv in conversations:
+-        if not isinstance(conv, dict):
+-            continue
+-        mapping = conv.get("mapping", {})
+-        if mapping:
+-            # ChatGPT uses a tree structure with mapping
+-            # Filter out None nodes before sorting
+-            valid_nodes = [n for n in mapping.values() if isinstance(n, dict)]
+-
+-            def _node_ts(n):
+-                msg = n.get("message")
+-                if not isinstance(msg, dict):
+-                    return 0
+-                return msg.get("create_time") or 0
+-
+-            sorted_nodes = sorted(valid_nodes, key=_node_ts)
+-            for node in sorted_nodes:
+-                msg = node.get("message")
+-                if not msg or not isinstance(msg, dict):
+-                    continue
+-                content_obj = msg.get("content", {})
+-                content_parts = content_obj.get("parts", []) if isinstance(content_obj, dict) else []
+-                content = " ".join(str(p) for p in content_parts if p)
+-                if not content.strip():
+-                    continue
+-                role = (msg.get("author") or {}).get("role", "user")
+-                ts = msg.get("create_time", "")
+-                if isinstance(ts, (int, float)):
+-                    ts = datetime.fromtimestamp(ts).isoformat()
+-                turns.append({"role": role, "content": content.strip(), "timestamp": str(ts)})
+-        else:
+-            # Simpler format: list of messages
+-            messages = conv.get("messages", [])
+-            for msg in messages:
+-                if not isinstance(msg, dict):
+-                    continue
+-                content_raw = msg.get("content", msg.get("text", "")) or ""
+-                if isinstance(content_raw, dict):
+-                    content = " ".join(str(p) for p in content_raw.get("parts", []))
+-                else:
+-                    content = str(content_raw)
+-                if not content or not content.strip():
+-                    continue
+-                role = msg.get("role") or (msg.get("author") or {}).get("role", "user")
+-                ts = msg.get("timestamp", msg.get("create_time", ""))
+-                turns.append({"role": role, "content": content.strip(), "timestamp": str(ts)})
+-    return turns
+-
+-
+-def _parse_markdown(text: str) -> list[dict]:
+-    """Parse Markdown/plain text → [{role, content, timestamp}, ...]"""
+-    # Try to detect conversation patterns
+-    lines = text.split("\n")
+-    turns = []
+-    current_role = "user"
+-    current_content: list[str] = []
+-
+-    for line in lines:
+-        stripped = line.strip()
+-        # Detect role switches
+-        if stripped.lower().startswith(("human:", "user:", "你:", "我:")):
+-            if current_content:
+-                turns.append({"role": current_role, "content": "\n".join(current_content).strip(), "timestamp": ""})
+-            current_role = "user"
+-            content_after = stripped.split(":", 1)[1].strip() if ":" in stripped else ""
+-            current_content = [content_after] if content_after else []
+-        elif stripped.lower().startswith(("assistant:", "claude:", "ai:", "gpt:", "bot:", "deepseek:")):
+-            if current_content:
+-                turns.append({"role": current_role, "content": "\n".join(current_content).strip(), "timestamp": ""})
+-            current_role = "assistant"
+-            content_after = stripped.split(":", 1)[1].strip() if ":" in stripped else ""
+-            current_content = [content_after] if content_after else []
+-        else:
+-            current_content.append(line)
+-
+-    if current_content:
+-        content = "\n".join(current_content).strip()
+-        if content:
+-            turns.append({"role": current_role, "content": content, "timestamp": ""})
+-
+-    # If no role patterns detected, treat entire text as one big chunk
+-    if not turns:
+-        turns = [{"role": "user", "content": text.strip(), "timestamp": ""}]
+-
+-    return turns
+-
+-
+-def detect_and_parse(raw_content: str, filename: str = "") -> list[dict]:
+-    """
+-    Auto-detect format and parse to normalized turns.
+-    自动检测格式并解析为标准化的对话轮次。
+-    """
+-    ext = Path(filename).suffix.lower() if filename else ""
+-
+-    # Try JSON first
+-    if ext in (".json", "") or raw_content.strip().startswith(("{", "[")):
+-        try:
+-            data = json.loads(raw_content)
+-            # Detect Claude vs ChatGPT format
+-            if isinstance(data, list):
+-                sample = data[0] if data else {}
+-            else:
+-                sample = data
+-
+-            if isinstance(sample, dict):
+-                if "chat_messages" in sample:
+-                    return _parse_claude_json(data)
+-                if "mapping" in sample:
+-                    return _parse_chatgpt_json(data)
+-                if "messages" in sample:
+-                    # Could be either — try ChatGPT first, fall back to Claude
+-                    msgs = sample["messages"]
+-                    if msgs and isinstance(msgs[0], dict) and "content" in msgs[0]:
+-                        if isinstance(msgs[0]["content"], dict):
+-                            return _parse_chatgpt_json(data)
+-                    return _parse_claude_json(data)
+-                # Single conversation object with role/content messages
+-                if "role" in sample and "content" in sample:
+-                    return _parse_claude_json(data)
+-        except (json.JSONDecodeError, KeyError, IndexError, AttributeError, TypeError):
+-            pass
+-
+-    # Fall back to markdown/text
+-    return _parse_markdown(raw_content)
+-
+-
+-# ============================================================
+-# Chunking — split turns into ~10k token windows
+-# 分窗 — 按对话轮次边界切为 ~10k token 窗口
+-# ============================================================
+-
+-def chunk_turns(turns: list[dict], target_tokens: int = _CHUNK_TARGET_TOKENS, human_label: str = "用户") -> list[dict]:
+-    """
+-    Group conversation turns into chunks of ~target_tokens.
+-    Returns list of {content, timestamp_start, timestamp_end, turn_count}.
+-    按对话轮次边界将对话分为 ~target_tokens 大小的窗口。
+-    human_label：对话中「用户」那一侧的称呼，默认「用户」，可传入 config["human"] 使内容更个人化。
+-    """
+-    chunks: list[dict] = []
+-    current_lines: list[str] = []
+-    current_tokens = 0
+-    first_ts = ""
+-    last_ts = ""
+-    turn_count = 0
+-
+-    for turn in turns:
+-        role_label = human_label if turn["role"] in ("user", "human") else "AI"
+-        line = f"[{role_label}] {turn['content']}"
+-        line_tokens = count_tokens_approx(line)
+-
+-        # If single turn exceeds target, split it
+-        if line_tokens > target_tokens * _CHUNK_OVERSIZE_RATIO:
+-            # Flush current
+-            if current_lines:
+-                chunks.append({
+-                    "content": "\n".join(current_lines),
+-                    "timestamp_start": first_ts,
+-                    "timestamp_end": last_ts,
+-                    "turn_count": turn_count,
+-                })
+-                current_lines = []
+-                current_tokens = 0
+-                turn_count = 0
+-                first_ts = ""
+-
+-            # Add oversized turn as its own chunk
+-            chunks.append({
+-                "content": line,
+-                "timestamp_start": turn.get("timestamp", ""),
+-                "timestamp_end": turn.get("timestamp", ""),
+-                "turn_count": 1,
+-            })
+-            continue
+-
+-        if current_tokens + line_tokens > target_tokens and current_lines:
+-            chunks.append({
+-                "content": "\n".join(current_lines),
+-                "timestamp_start": first_ts,
+-                "timestamp_end": last_ts,
+-                "turn_count": turn_count,
+-            })
+-            current_lines = []
+-            current_tokens = 0
+-            turn_count = 0
+-            first_ts = ""
+-
+-        if not first_ts:
+-            first_ts = turn.get("timestamp", "")
+-        last_ts = turn.get("timestamp", "")
+-        current_lines.append(line)
+-        current_tokens += line_tokens
+-        turn_count += 1
+-
+-    if current_lines:
+-        chunks.append({
+-            "content": "\n".join(current_lines),
+-            "timestamp_start": first_ts,
+-            "timestamp_end": last_ts,
+-            "turn_count": turn_count,
+-        })
+-
+-    return chunks
+-
+-
+-def _detect_preview_format(raw_content: str, filename: str, warnings: list[str]) -> str:
+-    ext = Path(filename).suffix.lower() if filename else ""
+-    stripped = raw_content.strip()
+-
+-    if ext == ".md":
+-        return "markdown"
+-    if ext in (".txt", ".jsonl"):
+-        return "text"
+-
+-    if ext == ".json" or stripped.startswith(("{", "[")):
+-        try:
+-            data = json.loads(stripped)
+-            sample = data[0] if isinstance(data, list) and data else data
+-            if isinstance(sample, dict):
+-                if "chat_messages" in sample:
+-                    return "claude_json"
+-                if "mapping" in sample:
+-                    return "chatgpt_json"
+-                if "messages" in sample:
+-                    return "chat_json"
+-                if "role" in sample and "content" in sample:
+-                    return "chat_json"
+-            return "json"
+-        except (json.JSONDecodeError, TypeError, IndexError):
+-            warnings.append("JSON 解析失败，已按纯文本继续预检")
+-            return "text"
+-
+-    return "markdown" if "\n" in raw_content else "text"
+-
+-
+-def preview_import(raw_content: str, filename: str = "", human_label: str = "用户") -> dict[str, Any]:
+-    """Return a local-only preview of an import file without mutating state."""
+-    warnings: list[str] = []
+-    if not raw_content or not raw_content.strip():
+-        return {
+-            "ok": False,
+-            "error": "Empty file",
+-            "detected_format": "",
+-            "turns_count": 0,
+-            "chunks_count": 0,
+-            "estimated_api_calls": 0,
+-            "warnings": ["文件为空"],
+-        }
+-
+-    detected_format = _detect_preview_format(raw_content, filename, warnings)
+-    turns = detect_and_parse(raw_content, filename)
+-    if not turns:
+-        return {
+-            "ok": False,
+-            "error": "No conversation turns found",
+-            "detected_format": detected_format,
+-            "turns_count": 0,
+-            "chunks_count": 0,
+-            "estimated_api_calls": 0,
+-            "warnings": warnings,
+-        }
+-
+-    chunks = chunk_turns(turns, human_label=human_label)
+-    if not chunks:
+-        return {
+-            "ok": False,
+-            "error": "No processable chunks after splitting",
+-            "detected_format": detected_format,
+-            "turns_count": len(turns),
+-            "chunks_count": 0,
+-            "estimated_api_calls": 0,
+-            "warnings": warnings,
+-        }
+-
+-    token_estimate = sum(count_tokens_approx(chunk.get("content", "")) for chunk in chunks)
+-    first_preview = chunks[0].get("content", "")[:600]
+-    return {
+-        "ok": True,
+-        "detected_format": detected_format,
+-        "turns_count": len(turns),
+-        "chunks_count": len(chunks),
+-        "estimated_api_calls": len(chunks),
+-        "estimated_tokens": token_estimate,
+-        "warnings": warnings,
+-        "first_chunk_preview": first_preview,
+-        "sample_turns": [
+-            {
+-                "role": str(turn.get("role", "")),
+-                "content": str(turn.get("content", ""))[:160],
+-                "timestamp": str(turn.get("timestamp", "")),
+-            }
+-            for turn in turns[:3]
+-        ],
+-    }
+-
+-
+-# ============================================================
+-# Import State — persistent progress tracking
+-# 导入状态 — 持久化进度追踪
+-# ============================================================
+-
+-class ImportState:
+-    """Manages import progress with file-based persistence."""
+-
+-    def __init__(self, state_dir: str):
+-        self.state_file = os.path.join(state_dir, "import_state.json")
+-        self.data: dict[str, Any] = {
+-            "source_file": "",
+-            "source_hash": "",
+-            "total_chunks": 0,
+-            "processed": 0,
+-            "api_calls": 0,
+-            "memories_created": 0,
+-            "memories_merged": 0,
+-            "memories_raw": 0,
+-            "errors": [],
+-            "status": "idle",  # idle | running | paused | completed | error
+-            "started_at": "",
+-            "updated_at": "",
+-        }
+-
+-    def load(self) -> bool:
+-        """Load state from file. Returns True if state exists."""
+-        if os.path.exists(self.state_file):
+-            try:
+-                with open(self.state_file, "r", encoding="utf-8") as f:
+-                    saved = json.load(f)
+-                self.data.update(saved)
+-                return True
+-            except (json.JSONDecodeError, OSError):
+-                return False
+-        return False
+-
+-    def save(self):
+-        """Persist state to file."""
+-        self.data["updated_at"] = now_iso()
+-        os.makedirs(os.path.dirname(self.state_file), exist_ok=True)
+-        tmp = self.state_file + ".tmp"
+-        with open(tmp, "w", encoding="utf-8") as f:
+-            json.dump(self.data, f, ensure_ascii=False, indent=2)
+-        os.replace(tmp, self.state_file)
+-
+-    def reset(self, source_file: str, source_hash: str, total_chunks: int):
+-        """Reset state for a new import."""
+-        self.data = {
+-            "source_file": source_file,
+-            "source_hash": source_hash,
+-            "total_chunks": total_chunks,
+-            "processed": 0,
+-            "api_calls": 0,
+-            "memories_created": 0,
+-            "memories_merged": 0,
+-            "memories_raw": 0,
+-            "errors": [],
+-            "status": "running",
+-            "started_at": now_iso(),
+-            "updated_at": now_iso(),
+-        }
+-
+-    @property
+-    def can_resume(self) -> bool:
+-        return self.data["status"] in ("paused", "running") and self.data["processed"] < self.data["total_chunks"]
+-
+-    def to_dict(self) -> dict:
+-        return dict(self.data)
+-
+-
+-# ============================================================
+-# Import extraction prompt
+-# 导入提取提示词
+-# ============================================================
+-
+-IMPORT_EXTRACT_PROMPT = """你是一个对话记忆提取专家。从以下对话片段中提取值得长期记住的信息。
+-
+-提取规则：
+-1. 提取用户的事实、偏好、习惯、重要事件、情感时刻
+-2. 同一话题的零散信息整合为一条记忆
+-3. 过滤掉纯技术调试输出、代码块、重复问答、无意义寒暄
+-4. 如果对话中有特殊暗号、仪式性行为、关键承诺等，标记 preserve_raw=true
+-5. 如果内容是用户和我之间的习惯性互动模式（例如打招呼方式、告别习惯），标记 is_pattern=true
+-6. 每条记忆不少于30字
+-7. 总条目数控制在 0~5 个（没有值得记的就返回空数组）
+-8. 在 content 中对人名、地名、专有名词用 [[双链]] 标记
+-
+-输出格式（纯 JSON 数组，无其他内容）：
+-[
+-  {
+-    "name": "条目标题（10字以内）",
+-    "content": "整理后的内容",
+-    "domain": ["主题域1"],
+-    "valence": 0.7,
+-    "arousal": 0.4,
+-    "tags": ["核心词1", "核心词2", "扩展词1"],
+-    "importance": 5,
+-    "preserve_raw": false,
+-    "is_pattern": false
+-  }
+-]
+-
+-主题域可选（选 1~2 个）：
+-  日常: ["饮食", "穿搭", "出行", "居家", "购物"]
+-  人际: ["家庭", "恋爱", "友谊", "社交"]
+-  成长: ["工作", "学习", "考试", "求职"]
+-  身心: ["健康", "心理", "睡眠", "运动"]
+-  兴趣: ["游戏", "影视", "音乐", "阅读", "创作", "手工"]
+-  数字: ["编程", "AI", "硬件", "网络"]
+-  事务: ["财务", "计划", "待办"]
+-  内心: ["情绪", "回忆", "梦境", "自省"]
+-
+-importance: 1-10
+-valence: 0~1（0=消极, 0.5=中性, 1=积极）
+-arousal: 0~1（0=平静, 0.5=普通, 1=激动）
+-preserve_raw: true = 特殊情境/暗号/仪式，保留原文不摘要
+-is_pattern: true = 反复出现的习惯性行为模式"""
+-
+-
+-# ============================================================
+-# Import Engine — core processing logic
+-# 导入引擎 — 核心处理逻辑
+-# ============================================================
+-
+-class ImportEngine:
+-    """
+-    Processes conversation history files into OB memory buckets.
+-    将对话历史文件处理为 OB 记忆桶。
+-    """
+-
+-    def __init__(self, config: dict, bucket_mgr, dehydrator, embedding_engine=None):
+-        self.config = config
+-        self.bucket_mgr = bucket_mgr
+-        self.dehydrator = dehydrator
+-        self.embedding_engine = embedding_engine
+-        self.state = ImportState(config["buckets_dir"])
+-        self._paused = False
+-        self._running = False
+-        self._chunks: list[dict] = []
+-
+-    @property
+-    def is_running(self) -> bool:
+-        return self._running
+-
+-    def pause(self):
+-        """Request pause — will stop after current chunk finishes."""
+-        self._paused = True
+-
+-    def get_status(self) -> dict:
+-        """Get current import status."""
+-        return self.state.to_dict()
+-
+-    async def start(
+-        self,
+-        raw_content: str,
+-        filename: str = "",
+-        preserve_raw: bool = False,
+-        resume: bool = False,
+-    ) -> dict:
+-        """
+-        Start or resume an import.
+-        开始或恢复导入。
+-        """
+-        if self._running:
+-            return {"error": "Import already running"}
+-
+-        # 预检：LLM API 必须可用，否则所有 chunk 都会静默失败
+-        if not self.dehydrator.api_available:
+-            return {"error": "LLM API 未配置或不可用，导入需要 OMBRE_COMPRESS_API_KEY。请检查 config.yaml 或环境变量。"}
+-
+-        self._running = True
+-        self._paused = False
+-
+-        try:
+-            source_hash = hashlib.sha256(raw_content.encode()).hexdigest()[:_STATE_HASH_HEX]
+-
+-            # Check for resume
+-            if resume and self.state.load() and self.state.can_resume:
+-                if self.state.data["source_hash"] == source_hash:
+-                    logger.info(
+-                        f"Resuming import from chunk "
+-                        f"{self.state.data['processed']}/{self.state.data['total_chunks']}"
+-                    )
+-                    # Re-parse and re-chunk to get the same chunks
+-                    turns = detect_and_parse(raw_content, filename)
+-                    _human = self.config.get("human", "用户")
+-                    self._chunks = chunk_turns(turns, human_label=_human)
+-                    self.state.data["status"] = "running"
+-                    self.state.save()
+-                    return await self._process_chunks(preserve_raw)
+-                else:
+-                    logger.warning("Source file changed, starting fresh import")
+-
+-            # Fresh import
+-            turns = detect_and_parse(raw_content, filename)
+-            if not turns:
+-                self._running = False
+-                return {"error": "No conversation turns found in file"}
+-
+-            _human = self.config.get("human", "用户")
+-            self._chunks = chunk_turns(turns, human_label=_human)
+-            if not self._chunks:
+-                self._running = False
+-                return {"error": "No processable chunks after splitting"}
+-
+-            self.state.reset(filename, source_hash, len(self._chunks))
+-            self.state.save()
+-
+-            logger.info(f"Starting import: {len(turns)} turns → {len(self._chunks)} chunks")
+-            return await self._process_chunks(preserve_raw)
+-
+-        except Exception as e:
+-            self.state.data["status"] = "error"
+-            self.state.data["errors"].append(str(e))
+-            self.state.save()
+-            self._running = False
+-            raise
+-
+-    async def _process_chunks(self, preserve_raw: bool) -> dict:
+-        """Process chunks from current position."""
+-        start_idx = self.state.data["processed"]
+-
+-        for i in range(start_idx, len(self._chunks)):
+-            if self._paused:
+-                self.state.data["status"] = "paused"
+-                self.state.save()
+-                self._running = False
+-                logger.info(f"Import paused at chunk {i}/{len(self._chunks)}")
+-                return self.state.to_dict()
+-
+-            chunk = self._chunks[i]
+-            try:
+-                await self._process_single_chunk(chunk, preserve_raw)
+-            except Exception as e:
+-                err_msg = f"Chunk {i}: {str(e)[:_CHUNK_ERR_PREVIEW]}"
+-                logger.warning(f"Import chunk error: {err_msg}")
+-                if len(self.state.data["errors"]) < _STATE_ERR_LOG_MAX:
+-                    self.state.data["errors"].append(err_msg)
+-
+-            self.state.data["processed"] = i + 1
+-            # Save progress every chunk
+-            self.state.save()
+-
+-        self.state.data["status"] = "completed"
+-        self.state.save()
+-        self._running = False
+-        logger.info(
+-            f"Import completed: {self.state.data['memories_created']} created, "
+-            f"{self.state.data['memories_merged']} merged"
+-        )
+-        return self.state.to_dict()
+-
+-    async def _process_single_chunk(self, chunk: dict, preserve_raw: bool):
+-        """Extract memories from a single chunk and store them."""
+-        content = chunk["content"]
+-        if not content.strip():
+-            return
+-
+-        # --- LLM extraction ---
+-        try:
+-            items = await self._extract_memories(content)
+-            self.state.data["api_calls"] += 1
+-        except Exception as e:
+-            err_msg = f"LLM extraction failed: {e}"
+-            logger.warning(err_msg)
+-            self.state.data["api_calls"] += 1
+-            # 把 LLM 失败原因写入 state.errors，让 /api/import/status 可见
+-            if len(self.state.data["errors"]) < _STATE_ERR_LOG_MAX:
+-                self.state.data["errors"].append(err_msg)
+-            return
+-
+-        if not items:
+-            return
+-
+-        # --- Store each extracted memory ---
+-        for item in items:
+-            try:
+-                should_preserve = preserve_raw or item.get("preserve_raw", False)
+-
+-                if should_preserve:
+-                    # Raw mode: store original content without summarization
+-                    await self.bucket_mgr.create(
+-                        content=item["content"],
+-                        tags=item.get("tags", []),
+-                        importance=item.get("importance", _DEFAULT_IMPORTANCE),
+-                        domain=item.get("domain", ["未分类"]),
+-                        valence=item.get("valence", _DEFAULT_VALENCE),
+-                        arousal=item.get("arousal", _DEFAULT_AROUSAL),
+-                        name=item.get("name"),
+-                    )
+-                    self.state.data["memories_raw"] += 1
+-                    self.state.data["memories_created"] += 1
+-                else:
+-                    # Normal mode: go through merge-or-create pipeline
+-                    is_merged = await self._merge_or_create_item(item)
+-                    if is_merged:
+-                        self.state.data["memories_merged"] += 1
+-                    else:
+-                        self.state.data["memories_created"] += 1
+-
+-                # Patch timestamp if available
+-                if chunk.get("timestamp_start"):
+-                    # We don't have update support for created, so skip
+-                    pass
+-
+-            except Exception as e:
+-                logger.warning(f"Failed to store memory: {item.get('name', '?')}: {e}")
+-
+-    async def _extract_memories(self, chunk_content: str) -> list[dict]:
+-        """Use LLM to extract memories from a conversation chunk."""
+-        if not self.dehydrator.api_available:
+-            raise RuntimeError("API not available")
+-
+-        # 用 human 配置替换 prompt 里的「用户」称呼，让 LLM 输出更个人化。
+-        _human = self.config.get("human", "用户")
+-        prompt = IMPORT_EXTRACT_PROMPT.replace("用户", _human) if _human != "用户" else IMPORT_EXTRACT_PROMPT
+-
+-        raw = await self.dehydrator._chat(
+-            prompt,
+-            chunk_content[:_EXTRACT_INPUT_LIMIT],
+-            max_tokens=_EXTRACT_MAX_TOKENS,
+-            temperature=_EXTRACT_TEMPERATURE,
+-        )
+-
+-        if not raw.strip():
+-            return []
+-
+-        return self._parse_extraction(raw)
+-
+-    @staticmethod
+-    def _parse_extraction(raw: str) -> list[dict]:
+-        """Parse and validate LLM extraction result."""
+-        try:
+-            cleaned = _strip_md_fence(raw)
+-            items = json.loads(cleaned)
+-        except (json.JSONDecodeError, IndexError, ValueError):
+-            logger.warning(f"Import extraction JSON parse failed: {raw[:_PARSE_ERR_PREVIEW]}")
+-            return []
+-
+-        if not isinstance(items, list):
+-            return []
+-
+-        validated = []
+-        for item in items:
+-            if not isinstance(item, dict) or not item.get("content"):
+-                continue
+-            importance = _clamp_importance(item)
+-            valence, arousal = _clamp_va(item)
+-
+-            validated.append({
+-                "name": str(item.get("name", ""))[:_NAME_MAX_CHARS],
+-                "content": str(item["content"]),
+-                "domain": item.get("domain", ["未分类"])[:_DOMAIN_MAX],
+-                "valence": valence,
+-                "arousal": arousal,
+-                "tags": [str(t) for t in item.get("tags", [])][:_TAGS_MAX],
+-                "importance": importance,
+-                "preserve_raw": parse_bool(
+-                    item.get("preserve_raw", False), default=False
+-                ),
+-                "is_pattern": parse_bool(
+-                    item.get("is_pattern", False), default=False
+-                ),
+-            })
+-
+-        return validated
+-
+-    async def _merge_or_create_item(self, item: dict) -> bool:
+-        """Try to merge with existing bucket, or create new. Returns is_merged."""
+-        content = item["content"]
+-        domain = item.get("domain", ["未分类"])
+-        tags = item.get("tags", [])
+-        importance = item.get("importance", _DEFAULT_IMPORTANCE)
+-        valence = item.get("valence", _DEFAULT_VALENCE)
+-        arousal = item.get("arousal", _DEFAULT_AROUSAL)
+-        name = item.get("name", "")
+-
+-        try:
+-            existing = await self.bucket_mgr.search(content, limit=1, domain_filter=domain or None)
+-        except Exception as _search_exc:
+-            logger.warning(
+-                f"[import] Duplicate search failed, skipping merge check: "
+-                f"{type(_search_exc).__name__}: {_search_exc}"
+-            )
+-            existing = []
+-
+-        merge_threshold = self.config.get("merge_threshold") or _DEFAULT_MERGE_THRESHOLD
+-
+-        if existing and existing[0].get("score", 0) > merge_threshold:
+-            bucket = existing[0]
+-            if not (bucket["metadata"].get("pinned") or bucket["metadata"].get("protected")):
+-                try:
+-                    merged = await self.dehydrator.merge(bucket["content"], content)
+-                    self.state.data["api_calls"] += 1
+-                    old_v = bucket["metadata"].get("valence") or _DEFAULT_VALENCE
+-                    old_a = bucket["metadata"].get("arousal") or _DEFAULT_AROUSAL
+-                    await self.bucket_mgr.update(
+-                        bucket["id"],
+-                        content=merged,
+-                        tags=list(set((bucket["metadata"].get("tags") or []) + tags)),
+-                        importance=max(bucket["metadata"].get("importance") or _DEFAULT_IMPORTANCE, importance),
+-                        domain=list(set((bucket["metadata"].get("domain") or []) + domain)),
+-                        valence=round((old_v + valence) / 2, 2),
+-                        arousal=round((old_a + arousal) / 2, 2),
+-                    )
+-                    return True
+-                except Exception as e:
+-                    logger.warning(f"Merge failed during import: {e}")
+-                    self.state.data["api_calls"] += 1
+-
+-        # Create new
+-        await self.bucket_mgr.create(
+-            content=content,
+-            tags=tags,
+-            importance=importance,
+-            domain=domain,
+-            valence=valence,
+-            arousal=arousal,
+-            name=name or None,
+-        )
+-        return False
+-
+-    async def detect_patterns(self) -> list[dict]:
+-        """
+-        Post-import: detect high-frequency patterns via embedding clustering.
+-        导入后：通过 embedding 聚类检测高频模式。
+-        Returns list of {pattern_content, count, bucket_ids, suggested_action}.
+-        """
+-        if not self.embedding_engine:
+-            return []
+-
+-        all_buckets = await self.bucket_mgr.list_all(include_archive=False)
+-        dynamic_buckets = [
+-            b for b in all_buckets
+-            if b["metadata"].get("type") == "dynamic"
+-            and not b["metadata"].get("pinned")
+-            and not b["metadata"].get("resolved")
+-        ]
+-
+-        if len(dynamic_buckets) < _PATTERN_MIN_DYNAMIC_BUCKETS:
+-            return []
+-
+-        # Get embeddings
+-        embeddings = {}
+-        for b in dynamic_buckets:
+-            emb = await self.embedding_engine.get_embedding(b["id"])
+-            if emb is not None:
+-                embeddings[b["id"]] = emb
+-
+-        if len(embeddings) < _PATTERN_MIN_DYNAMIC_BUCKETS:
+-            return []
+-
+-        # Find clusters: group by pairwise similarity > 0.7
+-        import numpy as np
+-        ids = list(embeddings.keys())
+-        clusters: dict[str, list[str]] = {}
+-        visited = set()
+-
+-        for i, id_a in enumerate(ids):
+-            if id_a in visited:
+-                continue
+-            cluster = [id_a]
+-            visited.add(id_a)
+-            emb_a = np.array(embeddings[id_a])
+-            norm_a = np.linalg.norm(emb_a)
+-            if norm_a == 0:
+-                continue
+-
+-            for j in range(i + 1, len(ids)):
+-                id_b = ids[j]
+-                if id_b in visited:
+-                    continue
+-                emb_b = np.array(embeddings[id_b])
+-                norm_b = np.linalg.norm(emb_b)
+-                if norm_b == 0:
+-                    continue
+-                sim = float(np.dot(emb_a, emb_b) / (norm_a * norm_b))
+-                if sim > _PATTERN_SIMILARITY_THRESHOLD:
+-                    cluster.append(id_b)
+-                    visited.add(id_b)
+-
+-            if len(cluster) >= _PATTERN_MIN_CLUSTER_SIZE:
+-                clusters[id_a] = cluster
+-
+-        # Format results
+-        patterns = []
+-        for lead_id, cluster_ids in clusters.items():
+-            lead_bucket = next((b for b in dynamic_buckets if b["id"] == lead_id), None)
+-            if not lead_bucket:
+-                continue
+-            patterns.append({
+-                "pattern_content": lead_bucket["content"][:_PATTERN_CONTENT_PREVIEW],
+-                "pattern_name": lead_bucket["metadata"].get("name", lead_id),
+-                "count": len(cluster_ids),
+-                "bucket_ids": cluster_ids,
+-                "suggested_action": "pin" if len(cluster_ids) >= _PATTERN_PIN_SUGGEST_THRESHOLD else "review",
+-            })
+-
+-        patterns.sort(key=lambda p: p["count"], reverse=True)
+-        return patterns[:_PATTERN_RESULT_LIMIT]
+diff --git a/src/migrate_engine.py b/src/migrate_engine.py
+deleted file mode 100644
+index 20982d8..0000000
+--- a/src/migrate_engine.py
++++ /dev/null
+@@ -1,745 +0,0 @@
+-"""
+-========================================
+-migrate_engine.py — 完整记忆包导入引擎
+-========================================
+-
+-把 /api/export 产生的 zip 包（buckets/*.md + embeddings.db + export_meta.json）
+-以增量 merge 方式写入当前系统。
+-
+-关键行为：
+-- 解析 zip，识别 bucket 文件，读取 export_meta.json 中的 embedding 模型信息
+-- 对比导入包与当前系统的 embedding 模型，决定是否保留向量数据
+-- 检测 bucket ID 冲突，返回冲突列表等待她/他决策
+-- 冲突决策：skip（跳过）| overwrite（覆盖）| keep_both（保留两者，重分配 ID）
+-- embedding 模型一致 → 合并向量数据；不一致 → 仅导入 md 文件，完成后自动重新向量化
+-
+-状态机：idle → parsed → applying → reindexing → done | error
+-
+-不做什么：
+-- 不调用 LLM（不做内容解析/摘要/打标，只做文件迁移）
+-- 不修改 config
+-- 不做对话历史解析（那是 import_memory.py 的事）
+-
+-对外暴露：MigrateEngine 类（被 server.py 实例化并注入路由）
+-========================================
+-"""
+-
+-from __future__ import annotations
+-
+-import asyncio
+-import json
+-import logging
+-import os
+-import re
+-import sqlite3
+-import tempfile
+-import uuid
+-from dataclasses import dataclass
+-from typing import Any, Optional
+-
+-import frontmatter
+-
+-try:
+-    from backup_archive import (  # type: ignore
+-        BackupArchiveError,
+-        read_backup_archive,
+-        validate_sqlite_bytes,
+-    )
+-    from utils import now_iso, safe_path, sanitize_name  # type: ignore
+-except ImportError:  # pragma: no cover
+-    from .backup_archive import BackupArchiveError, read_backup_archive, validate_sqlite_bytes  # type: ignore
+-    from .utils import now_iso, safe_path, sanitize_name  # type: ignore
+-
+-logger = logging.getLogger("ombre_brain.migrate")
+-
+-# ============================================================
+-# 状态常量
+-# ============================================================
+-PHASE_IDLE = "idle"
+-PHASE_PARSED = "parsed"
+-PHASE_APPLYING = "applying"
+-PHASE_REINDEXING = "reindexing"
+-PHASE_DONE = "done"
+-PHASE_ERROR = "error"
+-
+-# bucket type → 存储子目录映射（与 bucket_manager.py 保持一致）
+-_TYPE_SUBDIR: dict[str, str] = {
+-    "permanent": "permanent",
+-    "dynamic": "dynamic",
+-    "archive": "archive",
+-    "archived": "archive",
+-    "feel": "feel",
+-    "plan": "plans",
+-    "letter": "letters",
+-}
+-
+-# 默认子目录（unknown type 时）
+-_DEFAULT_SUBDIR = "dynamic"
+-
+-
+-# ============================================================
+-# 数据类
+-# ============================================================
+-
+-@dataclass
+-class _ParsedBucket:
+-    """zip 内解析到的单个 bucket 文件。"""
+-    bucket_id: str
+-    arc_path: str        # zip 内路径，e.g. "buckets/dynamic/foo/name_id.md"
+-    md_bytes: bytes      # 原始文件字节
+-    name: str
+-    bucket_type: str
+-    domain: list[str]
+-    created: str
+-
+-
+-@dataclass
+-class ConflictInfo:
+-    """导入包内某 bucket_id 与当前系统冲突的描述。"""
+-    bucket_id: str
+-    import_name: str
+-    import_created: str
+-    current_name: str
+-    current_created: str
+-
+-
+-# ============================================================
+-# 辅助函数
+-# ============================================================
+-
+-def _parse_md_meta(raw: bytes) -> tuple[dict, str]:
+-    """从 md 字节中解析 frontmatter 元数据 + 正文。失败返回空 dict + 空串。"""
+-    try:
+-        post = frontmatter.loads(raw.decode("utf-8", errors="replace"))
+-        return dict(post.metadata), post.content
+-    except Exception:
+-        return {}, ""
+-
+-
+-def _safe_str(val: Any, max_len: int = 512) -> str:
+-    """安全地将值转为字符串，并截断。"""
+-    return str(val)[:max_len] if val is not None else ""
+-
+-
+-# ============================================================
+-# MigrateEngine
+-# ============================================================
+-
+-class MigrateEngine:
+-    """完整记忆包（zip）导入引擎。每个服务进程单例使用；同一时刻只允许一个任务。"""
+-
+-    def __init__(self, config: dict, bucket_mgr: Any, embedding_engine: Any) -> None:
+-        self._config = config
+-        self._bucket_mgr = bucket_mgr
+-        self._embedding_engine = embedding_engine
+-
+-        # ---- 状态 ----
+-        self._phase: str = PHASE_IDLE
+-
+-        # ---- 解析阶段产物 ----
+-        self._parsed_buckets: list[_ParsedBucket] = []
+-        self._conflicts: list[ConflictInfo] = []
+-        self._import_model: str = ""
+-        self._import_model_dim: int = 0
+-        self._import_backend: str = ""
+-        self._has_embeddings: bool = False
+-        self._zip_db_bytes: Optional[bytes] = None
+-        self._integrity_verified: bool = False
+-        self._integrity_warning: str = ""
+-        self._backup_manifest: Optional[dict[str, Any]] = None
+-
+-        # ---- 执行阶段计数 ----
+-        self._apply_total: int = 0
+-        self._apply_done: int = 0
+-        self._apply_imported: int = 0
+-        self._apply_skipped: int = 0
+-        self._apply_errors: list[str] = []
+-
+-        # ---- 重新向量化阶段 ----
+-        self._reindex_total: int = 0
+-        self._reindex_done: int = 0
+-        self._reindex_errors: int = 0
+-        self._buckets_to_reindex: list[tuple[str, str]] = []  # (bucket_id, content)
+-
+-        # ---- 错误信息 ----
+-        self._error_message: str = ""
+-
+-    # ----------------------------------------------------------
+-    # 属性
+-    # ----------------------------------------------------------
+-
+-    @property
+-    def phase(self) -> str:
+-        return self._phase
+-
+-    @property
+-    def is_busy(self) -> bool:
+-        return self._phase in (PHASE_APPLYING, PHASE_REINDEXING)
+-
+-    def _embedding_match(self) -> bool:
+-        """当前 embedding 模型是否与导入包一致。"""
+-        if not self._import_model:
+-            return False
+-        current_model = str(getattr(self._embedding_engine, "model", "") or "")
+-        same_model = (
+-            self._import_model.strip().lower().removeprefix("models/")
+-            == current_model.strip().lower().removeprefix("models/")
+-        )
+-        if not same_model:
+-            return False
+-        backend = getattr(self._embedding_engine, "_backend", None)
+-        try:
+-            current_dim = int(backend.vector_dim()) if backend else 0
+-        except Exception:
+-            current_dim = 0
+-        return not self._import_model_dim or not current_dim or self._import_model_dim == current_dim
+-
+-    # ----------------------------------------------------------
+-    # 状态查询
+-    # ----------------------------------------------------------
+-
+-    def get_status(self) -> dict:
+-        return {
+-            "phase": self._phase,
+-            "total_buckets": len(self._parsed_buckets),
+-            "conflicts_count": len(self._conflicts),
+-            "conflicts": [
+-                {
+-                    "bucket_id": c.bucket_id,
+-                    "import_name": c.import_name,
+-                    "import_created": c.import_created,
+-                    "current_name": c.current_name,
+-                    "current_created": c.current_created,
+-                }
+-                for c in self._conflicts
+-            ],
+-            "import_model": self._import_model,
+-            "import_backend": self._import_backend,
+-            "current_model": getattr(self._embedding_engine, "model", ""),
+-            "embedding_match": self._embedding_match(),
+-            "has_embeddings": self._has_embeddings,
+-            "integrity_verified": self._integrity_verified,
+-            "integrity_warning": self._integrity_warning,
+-            "backup_manifest": {
+-                "schema_version": self._backup_manifest.get("schema_version"),
+-                "created_at": self._backup_manifest.get("created_at", ""),
+-                "version": self._backup_manifest.get("version", ""),
+-                "file_count": self._backup_manifest.get("file_count", 0),
+-                "total_bytes": self._backup_manifest.get("total_bytes", 0),
+-            } if self._backup_manifest else None,
+-            "apply_progress": {
+-                "done": self._apply_done,
+-                "total": self._apply_total,
+-            },
+-            "reindex_progress": {
+-                "done": self._reindex_done,
+-                "total": self._reindex_total,
+-                "errors": self._reindex_errors,
+-            },
+-            "apply_errors": self._apply_errors[-20:],
+-            "result": {
+-                "imported": self._apply_imported,
+-                "skipped": self._apply_skipped,
+-            },
+-            "error": self._error_message,
+-        }
+-
+-    # ----------------------------------------------------------
+-    # 第一步：解析 zip
+-    # ----------------------------------------------------------
+-
+-    async def parse_zip(self, zip_bytes: bytes) -> dict:
+-        """解析 zip 字节，识别 buckets 文件和 embedding 信息，检测 ID 冲突。
+-
+-        解析成功后 phase → 'parsed'，并返回包含冲突列表的状态字典。
+-        """
+-        if self.is_busy:
+-            return {"ok": False, "error": f"当前状态为 {self._phase}，请等待任务完成后再上传"}
+-
+-        # 重置所有状态
+-        self._phase = PHASE_IDLE
+-        self._parsed_buckets = []
+-        self._conflicts = []
+-        self._import_model = ""
+-        self._import_model_dim = 0
+-        self._import_backend = ""
+-        self._has_embeddings = False
+-        self._zip_db_bytes = None
+-        self._integrity_verified = False
+-        self._integrity_warning = ""
+-        self._backup_manifest = None
+-        self._apply_errors = []
+-        self._apply_imported = 0
+-        self._apply_skipped = 0
+-        self._apply_total = 0
+-        self._apply_done = 0
+-        self._buckets_to_reindex = []
+-        self._reindex_total = 0
+-        self._reindex_done = 0
+-        self._reindex_errors = 0
+-        self._error_message = ""
+-
+-        # ---- 在线程中解析 zip（避免阻塞事件循环）----
+-        try:
+-            parsed = await asyncio.to_thread(self._parse_zip_sync, zip_bytes)
+-        except Exception as e:
+-            self._phase = PHASE_ERROR
+-            self._error_message = f"zip 解析失败: {e}"
+-            logger.error(f"[migrate] parse_zip error: {e}", exc_info=True)
+-            return {"ok": False, "error": self._error_message}
+-
+-        self._parsed_buckets = parsed["buckets"]
+-        self._import_model = parsed["import_model"]
+-        self._import_model_dim = parsed["import_model_dim"]
+-        self._import_backend = parsed["import_backend"]
+-        self._has_embeddings = parsed["has_embeddings"]
+-        self._zip_db_bytes = parsed.get("db_bytes")
+-        self._integrity_verified = bool(parsed.get("integrity_verified"))
+-        self._integrity_warning = str(parsed.get("integrity_warning") or "")
+-        self._backup_manifest = parsed.get("manifest")
+-
+-        if not self._parsed_buckets:
+-            self._phase = PHASE_ERROR
+-            self._error_message = "zip 内未找到任何 bucket markdown 文件（期望路径前缀：buckets/）"
+-            return {"ok": False, "error": self._error_message}
+-
+-        # ---- 识别冲突（需要异步查当前桶） ----
+-        await self._identify_conflicts()
+-
+-        self._phase = PHASE_PARSED
+-        return {
+-            "ok": True,
+-            **self.get_status(),
+-        }
+-
+-    def _parse_zip_sync(self, zip_bytes: bytes) -> dict:
+-        """同步解析 zip（在 to_thread 中执行）。"""
+-        buckets: list[_ParsedBucket] = []
+-        import_model = ""
+-        import_model_dim = 0
+-        import_backend = ""
+-        has_embeddings = False
+-        db_bytes: Optional[bytes] = None
+-
+-        package = read_backup_archive(zip_bytes)
+-        files: dict[str, bytes] = package["files"]
+-        names = set(files)
+-
+-        # 1) 读取 export_meta.json → 获取 embedding 模型信息
+-        if "export_meta.json" in names:
+-            try:
+-                meta = json.loads(files["export_meta.json"].decode("utf-8"))
+-                emb_info = meta.get("embedding", {})
+-                import_model = str(emb_info.get("model", "") or "")
+-                import_model_dim = int(emb_info.get("dim") or 0)
+-                import_backend = str(emb_info.get("backend", "") or "")
+-            except Exception as e:
+-                logger.warning(f"[migrate] export_meta.json 解析失败，将跳过向量恢复: {e}")
+-
+-        # 2) 检查是否包含 embeddings.db；损坏快照不能伪装成可恢复索引。
+-        if "embeddings.db" in names:
+-            db_bytes = files["embeddings.db"]
+-            validate_sqlite_bytes(db_bytes)
+-            has_embeddings = bool(db_bytes)
+-
+-        # 3) 遍历 bucket markdown 文件。任何损坏项都会让整个恢复预检失败，
+-        # 避免界面显示“成功”但实际静默漏掉记忆。
+-        seen_ids: set[str] = set()
+-        for arc_path in sorted(names):
+-            if not arc_path.startswith("buckets/") or not arc_path.endswith(".md"):
+-                continue
+-            try:
+-                raw = files[arc_path]
+-                post = frontmatter.loads(raw.decode("utf-8"))
+-                meta = dict(post.metadata)
+-
+-                bucket_id = str(meta.get("id") or meta.get("bucket_id") or "")
+-                if not bucket_id:
+-                    stem = os.path.splitext(os.path.basename(arc_path))[0]
+-                    parts = stem.rsplit("_", 1)
+-                    bucket_id = parts[-1] if len(parts) > 1 else stem
+-
+-                if (
+-                    not bucket_id
+-                    or len(bucket_id) > 200
+-                    or any(ord(char) < 32 for char in bucket_id)
+-                    or "/" in bucket_id
+-                    or "\\" in bucket_id
+-                ):
+-                    raise BackupArchiveError(f"{arc_path} 的 bucket_id 不安全或为空")
+-                if bucket_id in seen_ids:
+-                    raise BackupArchiveError(f"备份中存在重复 bucket_id: {bucket_id}")
+-                seen_ids.add(bucket_id)
+-
+-                domain = meta.get("domain") or []
+-                if isinstance(domain, str):
+-                    domain = [domain]
+-                elif not isinstance(domain, list):
+-                    domain = []
+-                buckets.append(_ParsedBucket(
+-                    bucket_id=bucket_id,
+-                    arc_path=arc_path,
+-                    md_bytes=raw,
+-                    name=_safe_str(meta.get("name", bucket_id), 200),
+-                    bucket_type=_safe_str(meta.get("type", "dynamic"), 32),
+-                    domain=[_safe_str(item, 100) for item in domain],
+-                    created=_safe_str(meta.get("created", ""), 32),
+-                ))
+-            except BackupArchiveError:
+-                raise
+-            except Exception as e:
+-                raise BackupArchiveError(f"bucket markdown 无法解析: {arc_path}: {e}") from e
+-
+-        return {
+-            "buckets": buckets,
+-            "import_model": import_model,
+-            "import_model_dim": import_model_dim,
+-            "import_backend": import_backend,
+-            "has_embeddings": has_embeddings,
+-            "db_bytes": db_bytes,
+-            "integrity_verified": package["integrity_verified"],
+-            "integrity_warning": package["integrity_warning"],
+-            "manifest": package["manifest"],
+-        }
+-
+-    async def _identify_conflicts(self) -> None:
+-        """遍历解析到的 bucket，查询当前系统，找出 ID 冲突。"""
+-        conflicts: list[ConflictInfo] = []
+-        for pb in self._parsed_buckets:
+-            existing = await self._bucket_mgr.get(pb.bucket_id)
+-            if existing is not None:
+-                emeta = existing.get("metadata", {})
+-                conflicts.append(ConflictInfo(
+-                    bucket_id=pb.bucket_id,
+-                    import_name=pb.name,
+-                    import_created=pb.created,
+-                    current_name=_safe_str(emeta.get("name", pb.bucket_id), 200),
+-                    current_created=_safe_str(emeta.get("created", ""), 32),
+-                ))
+-        self._conflicts = conflicts
+-
+-    # ----------------------------------------------------------
+-    # 第二步：执行导入（带冲突决策）
+-    # ----------------------------------------------------------
+-
+-    async def apply(self, decisions: dict[str, str]) -> None:
+-        """执行导入。
+-
+-        decisions: {bucket_id: "skip" | "overwrite" | "keep_both"}
+-        冲突但未出现在 decisions 中的 bucket → 默认 skip（安全优先）。
+-        无冲突的 bucket 直接导入，无需决策。
+-        """
+-        if self._phase != PHASE_PARSED:
+-            raise RuntimeError(f"当前状态为 {self._phase}，apply 需要先完成 parse_zip")
+-
+-        self._phase = PHASE_APPLYING
+-        self._apply_total = len(self._parsed_buckets)
+-        self._apply_done = 0
+-        self._apply_imported = 0
+-        self._apply_skipped = 0
+-        self._apply_errors = []
+-        self._buckets_to_reindex = []
+-
+-        conflict_ids = {c.bucket_id for c in self._conflicts}
+-        embedding_matches = self._embedding_match()
+-        buckets_dir = self._config.get("buckets_dir", "buckets")
+-        imported_id_map: dict[str, str] = {}
+-        imported_contents: dict[str, str] = {}
+-
+-        try:
+-            for pb in self._parsed_buckets:
+-                try:
+-                    is_conflict = pb.bucket_id in conflict_ids
+-                    decision = decisions.get(pb.bucket_id, "skip") if is_conflict else "import"
+-
+-                    if is_conflict and decision == "skip":
+-                        self._apply_skipped += 1
+-                        self._apply_done += 1
+-                        continue
+-
+-                    if is_conflict and decision == "overwrite":
+-                        # OB 不做物理抹除：旧桶先软删除归档，再换一个历史 ID，
+-                        # 把原 ID 留给导入版本。否则 active/archive 会出现重复 ID。
+-                        await self._bucket_mgr.delete(pb.bucket_id)
+-                        await asyncio.to_thread(
+-                            self._rekey_archived_conflict, pb.bucket_id
+-                        )
+-                        target_id = pb.bucket_id
+-                    elif is_conflict and decision == "keep_both":
+-                        # 分配新 ID，两个桶共存
+-                        target_id = str(uuid.uuid4())
+-                    else:
+-                        # 无冲突，直接用原 ID
+-                        target_id = pb.bucket_id
+-
+-                    # 写入 markdown 文件
+-                    content = await asyncio.to_thread(
+-                        self._write_bucket_file, pb, target_id, buckets_dir
+-                    )
+-                    self._apply_imported += 1
+-                    imported_id_map[pb.bucket_id] = target_id
+-                    imported_contents[target_id] = content
+-
+-                except Exception as e:
+-                    err_msg = f"[{pb.bucket_id}] {pb.name[:60]}: {e}"
+-                    logger.error(f"[migrate] apply error: {err_msg}", exc_info=True)
+-                    self._apply_errors.append(err_msg)
+-                    self._apply_skipped += 1
+-
+-                self._apply_done += 1
+-
+-            # ---- 向量数据处理 ----
+-            merged_ids: set[str] = set()
+-            if embedding_matches and self._has_embeddings and self._zip_db_bytes:
+-                # 模型与维度一致时复用快照向量。keep_both 会把源 ID 映射到新 ID。
+-                try:
+-                    merged_ids = await asyncio.to_thread(
+-                        self._merge_embeddings,
+-                        self._zip_db_bytes,
+-                        imported_id_map,
+-                    )
+-                except Exception as e:
+-                    message = f"向量快照合并失败，已转入后台重建: {e}"
+-                    logger.warning("[migrate] %s", message)
+-                    self._apply_errors.append(message)
+-
+-            self._buckets_to_reindex = [
+-                (target_id, content)
+-                for target_id, content in imported_contents.items()
+-                if target_id not in merged_ids and content.strip()
+-            ]
+-            await self._schedule_reindex()
+-
+-            invalidate = getattr(self._bucket_mgr, "_invalidate_bm25", None)
+-            if callable(invalidate):
+-                invalidate()
+-            self._phase = PHASE_DONE
+-
+-        except Exception as e:
+-            self._phase = PHASE_ERROR
+-            self._error_message = str(e)
+-            logger.error(f"[migrate] apply failed: {e}", exc_info=True)
+-
+-    def _write_bucket_file(
+-        self, pb: _ParsedBucket, target_id: str, buckets_dir: str
+-    ) -> str:
+-        """（在线程中执行）写入 bucket markdown 文件，返回正文内容。"""
+-        meta, content = _parse_md_meta(pb.md_bytes)
+-
+-        # 始终写显式 ID；恢复不依赖文件名猜测。
+-        meta["id"] = target_id
+-
+-        # 确定目标目录（按类型 + domain）
+-        btype = str(meta.get("type") or pb.bucket_type or "dynamic")
+-        subdir = _TYPE_SUBDIR.get(btype, _DEFAULT_SUBDIR)
+-
+-        # 获取主 domain（与 bucket_manager 保持一致）
+-        domain = meta.get("domain") or pb.domain or []
+-        if btype == "feel":
+-            primary_domain = "沉淀物"
+-        elif btype == "plan":
+-            primary_domain = str(meta.get("status", "active") or "active")
+-        elif btype == "letter":
+-            primary_domain = "history"
+-        elif isinstance(domain, list) and domain:
+-            primary_domain = str(domain[0])
+-        elif isinstance(domain, str) and domain:
+-            primary_domain = str(domain)
+-        else:
+-            primary_domain = "general"
+-
+-        primary_domain = sanitize_name(primary_domain)
+-        target_dir = str(safe_path(buckets_dir, os.path.join(subdir, primary_domain)))
+-        os.makedirs(target_dir, exist_ok=True)
+-
+-        safe_id = re.sub(r"[^\w.-]", "_", target_id, flags=re.UNICODE)[:200]
+-        if not safe_id:
+-            raise BackupArchiveError("恢复目标 ID 无法生成安全文件名")
+-        safe_name = sanitize_name(str(meta.get("name") or pb.name or target_id))[:40]
+-        target_path = str(safe_path(target_dir, f"{safe_name}_{safe_id}.md"))
+-
+-        # 重新序列化 frontmatter + 正文
+-        post = frontmatter.Post(content, **meta)
+-        rendered = frontmatter.dumps(post)
+-        temp_path = f"{target_path}.{uuid.uuid4().hex}.tmp"
+-        try:
+-            with open(temp_path, "w", encoding="utf-8") as f:
+-                f.write(rendered)
+-                f.flush()
+-                os.fsync(f.fileno())
+-            os.replace(temp_path, target_path)
+-        finally:
+-            try:
+-                if os.path.exists(temp_path):
+-                    os.unlink(temp_path)
+-            except OSError:
+-                pass
+-
+-        logger.debug(f"[migrate] wrote {target_path} (id={target_id})")
+-        return content
+-
+-    def _rekey_archived_conflict(self, bucket_id: str) -> str:
+-        """Give the preserved pre-overwrite archive a unique historical ID."""
+-        finder = getattr(self._bucket_mgr, "_find_bucket_file", None)
+-        file_path = finder(bucket_id) if callable(finder) else None
+-        if not file_path:
+-            raise BackupArchiveError(f"覆盖前的旧桶归档后无法定位: {bucket_id}")
+-        post = frontmatter.load(file_path)
+-        new_id = f"{bucket_id[:160]}-superseded-{uuid.uuid4().hex[:12]}"
+-        post["id"] = new_id
+-        post["superseded_by"] = bucket_id
+-        safe_name = sanitize_name(str(post.get("name") or "memory"))[:40]
+-        target_path = str(safe_path(
+-            os.path.dirname(file_path),
+-            f"{safe_name}_{new_id}.md",
+-        ))
+-        temp_path = f"{target_path}.{uuid.uuid4().hex}.tmp"
+-        try:
+-            with open(temp_path, "w", encoding="utf-8") as handle:
+-                handle.write(frontmatter.dumps(post))
+-                handle.flush()
+-                os.fsync(handle.fileno())
+-            os.replace(temp_path, target_path)
+-            if os.path.abspath(target_path) != os.path.abspath(file_path):
+-                os.unlink(file_path)
+-        finally:
+-            try:
+-                if os.path.exists(temp_path):
+-                    os.unlink(temp_path)
+-            except OSError:
+-                pass
+-        return new_id
+-
+-    def _merge_embeddings(self, db_bytes: bytes, id_map: dict[str, str]) -> set[str]:
+-        """（在线程中执行）把 zip 内 embeddings.db 的向量合并进当前 db。
+-
+-        兼容当前 bucket_id/embedding schema 和早期 id/vector schema。
+-        返回成功恢复向量的目标 bucket ID 集合。
+-        """
+-        current_db = getattr(self._embedding_engine, "db_path", "")
+-        if not current_db or not os.path.isfile(current_db):
+-            logger.warning("[migrate] 当前 embeddings.db 路径无效，跳过向量合并")
+-            return set()
+-
+-        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tf:
+-            tf.write(db_bytes)
+-            tmp_path = tf.name
+-
+-        try:
+-            src = sqlite3.connect(tmp_path, timeout=30)
+-            dst = sqlite3.connect(current_db, timeout=30)
+-            try:
+-                # 检查表结构是否存在
+-                tables = {row[0] for row in src.execute(
+-                    "SELECT name FROM sqlite_master WHERE type='table'"
+-                ).fetchall()}
+-                if "embeddings" not in tables:
+-                    logger.warning("[migrate] 导入包 embeddings.db 缺少 embeddings 表，跳过")
+-                    return set()
+-
+-                if not id_map:
+-                    return set()
+-
+-                columns = {
+-                    str(row[1]) for row in src.execute("PRAGMA table_info(embeddings)").fetchall()
+-                }
+-                placeholders = ",".join("?" * len(id_map))
+-                source_ids = tuple(id_map)
+-                if {"bucket_id", "embedding"}.issubset(columns):
+-                    updated_expr = "updated_at" if "updated_at" in columns else "''"
+-                    hash_expr = "content_hash" if "content_hash" in columns else "''"
+-                    rows = src.execute(
+-                        f"SELECT bucket_id, embedding, {updated_expr}, {hash_expr} "  # nosec B608
+-                        f"FROM embeddings WHERE bucket_id IN ({placeholders})",
+-                        source_ids,
+-                    ).fetchall()
+-                elif {"id", "vector"}.issubset(columns):
+-                    rows = [
+-                        (source_id, vector, "", "")
+-                        for source_id, vector in src.execute(
+-                            f"SELECT id, vector FROM embeddings WHERE id IN ({placeholders})",  # nosec B608
+-                            source_ids,
+-                        ).fetchall()
+-                    ]
+-                else:
+-                    raise BackupArchiveError("embeddings 表结构无法识别")
+-
+-                merged: set[str] = set()
+-                if rows:
+-                    normalized_rows = []
+-                    for source_id, embedding, updated_at, content_hash in rows:
+-                        target_id = id_map.get(str(source_id))
+-                        if not target_id:
+-                            continue
+-                        normalized_rows.append((
+-                            target_id,
+-                            embedding,
+-                            str(updated_at or now_iso()),
+-                            str(content_hash or ""),
+-                        ))
+-                        merged.add(target_id)
+-                    dst.executemany(
+-                        """INSERT OR REPLACE INTO embeddings
+-                           (bucket_id, embedding, updated_at, content_hash)
+-                           VALUES (?, ?, ?, ?)""",
+-                        normalized_rows,
+-                    )
+-                    dst.commit()
+-                    logger.info(f"[migrate] 合并了 {len(merged)} 条 embedding 向量")
+-                return merged
+-            finally:
+-                src.close()
+-                dst.close()
+-        finally:
+-            try:
+-                os.unlink(tmp_path)
+-            except OSError:
+-                pass
+-
+-    async def _schedule_reindex(self) -> None:
+-        """Durably queue missing derived indexes; only legacy runtimes index inline."""
+-        self._reindex_total = len(self._buckets_to_reindex)
+-        self._reindex_done = 0
+-        self._reindex_errors = 0
+-        if not self._buckets_to_reindex:
+-            return
+-
+-        outbox = getattr(self._bucket_mgr, "embedding_outbox", None)
+-        if outbox is not None and callable(getattr(outbox, "enqueue", None)):
+-            for bucket_id, content in self._buckets_to_reindex:
+-                try:
+-                    outbox.enqueue(bucket_id, content)
+-                except Exception as exc:
+-                    self._reindex_errors += 1
+-                    self._apply_errors.append(f"[{bucket_id}] 无法加入向量队列: {exc}")
+-                self._reindex_done += 1
+-            return
+-
+-        self._phase = PHASE_REINDEXING
+-        await self._reindex_all()
+-
+-    async def _reindex_all(self) -> None:
+-        """对 embedding 不匹配时导入的 bucket 重新生成向量。"""
+-        emb = self._embedding_engine
+-        if not getattr(emb, "enabled", False):
+-            logger.warning("[migrate] embedding engine 未启用，跳过重新向量化")
+-            self._phase = PHASE_DONE
+-            return
+-
+-        for bucket_id, content in self._buckets_to_reindex:
+-            if not content.strip():
+-                self._reindex_done += 1
+-                continue
+-            try:
+-                await emb.generate_and_store(bucket_id, content)
+-            except Exception as e:
+-                logger.warning(f"[migrate] reindex {bucket_id[:12]}: {e}")
+-                self._reindex_errors += 1
+-            self._reindex_done += 1
+-
+-        logger.info(
+-            f"[migrate] 重新向量化完成: "
+-            f"{self._reindex_done - self._reindex_errors} 成功, "
+-            f"{self._reindex_errors} 失败"
+-        )
+-        self._phase = PHASE_DONE
+diff --git a/src/ombrebrain/app/profiles.py b/src/ombrebrain/app/profiles.py
+index 77474ec..6bbd91c 100644
+--- a/src/ombrebrain/app/profiles.py
++++ b/src/ombrebrain/app/profiles.py
+@@ -78,23 +78,6 @@ def build_default_legacy_profiles() -> LegacyModuleRegistry:
+             permissions=("embedding:read", "embedding:write"),
+             safety_tier=SafetyTier.FILESYSTEM_WRITE,
+         ),
+-        LegacyModuleProfile(
+-            module="import_memory",
+-            files=("src/import_memory.py",),
+-            responsibilities=("conversation-import", "chunking", "memory-extraction"),
+-            side_effects=("bucket-create", "import-state-write"),
+-            permissions=("memory:write", "llm:call"),
+-            safety_tier=SafetyTier.MEMORY_WRITE,
+-        ),
+-        LegacyModuleProfile(
+-            module="migrate_engine",
+-            files=("src/migrate_engine.py",),
+-            responsibilities=("memory-package-import", "conflict-resolution", "reindex-planning"),
+-            side_effects=("bucket-file-write", "embedding-db-merge"),
+-            protected_surfaces=("buckets", "vector-database"),
+-            permissions=("memory:write", "embedding:write"),
+-            safety_tier=SafetyTier.FILESYSTEM_WRITE,
+-        ),
+         LegacyModuleProfile(
+             module="migration_engine",
+             files=("src/migration_engine.py",),
+diff --git a/src/server.py b/src/server.py
+index 7325ca2..f316655 100644
+--- a/src/server.py
++++ b/src/server.py
+@@ -4,7 +4,7 @@ server.py — MCP 服务入口 + 启动装配
+ ========================================
+ 
+ 启动整个 Ombre Brain 进程：加载配置、创建 BucketManager / Dehydrator /
+-DecayEngine / EmbeddingEngine / ImportEngine，把它们注入 tools._runtime 与
++DecayEngine / EmbeddingEngine，把它们注入 tools._runtime 与
+ web._shared，然后以 @mcp.tool() 注册薄封装（真正的实现在 src/tools/<工具>/ 下面）。
+ 
+ 关键行为：
+@@ -44,8 +44,6 @@ from dehydrator import Dehydrator
+ from decay_engine import DecayEngine
+ from embedding_engine import EmbeddingEngine
+ from embedding_outbox import EmbeddingOutbox
+-from import_memory import ImportEngine
+-from migrate_engine import MigrateEngine
+ from utils import get_version, load_config, setup_logging
+ 
+ # --- iter 2.1：MCP 工具实现已按代码路径拆分到 tools/ 子包 ---
+@@ -212,8 +210,6 @@ embedding_outbox = EmbeddingOutbox(config, bucket_mgr, embedding_engine)
+ bucket_mgr.attach_embedding_outbox(embedding_outbox)
+ dehydrator = Dehydrator(config)                      # Dehydrator / 脱水器
+ decay_engine = DecayEngine(config, bucket_mgr)       # Decay engine / 衰减引擎
+-import_engine = ImportEngine(config, bucket_mgr, dehydrator, embedding_engine)  # Import engine / 导入引擎
+-migrate_engine = MigrateEngine(config, bucket_mgr, embedding_engine)              # Migrate engine / 记忆包迁移引擎
+ 
+ # --- GitHub Sync / GitHub 同步 ---
+ from github_sync import GitHubSync  # type: ignore
+@@ -350,8 +346,6 @@ _wsh.init_runtime(
+     decay_engine=decay_engine,
+     embedding_engine=embedding_engine,
+     embedding_outbox=embedding_outbox,
+-    import_engine=import_engine,
+-    migrate_engine=migrate_engine,
+     github_sync_instance=github_sync_instance,
+     restart_github_auto_task=_restart_github_auto_task,
+ )
+@@ -512,7 +506,6 @@ _tools_runtime.init(
+     dehydrator=dehydrator,
+     decay_engine=decay_engine,
+     embedding_engine=embedding_engine,
+-    import_engine=import_engine,
+     logger=logger,
+     fire_webhook=_fire_webhook,
+     mark_op=_mark_op,
+diff --git a/src/tools/_runtime.py b/src/tools/_runtime.py
+index 219bdbf..df50bb5 100644
+--- a/src/tools/_runtime.py
++++ b/src/tools/_runtime.py
+@@ -20,7 +20,7 @@ server.py（会循环 import）。
+ - 不做线程安全保护：写入只发生在 server.py 启动期，单次
+ 
+ 对外暴露：init() / config / bucket_mgr / dehydrator / decay_engine /
+-         embedding_engine / import_engine / logger / fire_webhook / mark_op
++         embedding_engine / logger / fire_webhook / mark_op
+ ========================================
+ """
+ 
+@@ -34,7 +34,6 @@ bucket_mgr: Any = None
+ dehydrator: Any = None
+ decay_engine: Any = None
+ embedding_engine: Any = None
+-import_engine: Any = None
+ logger: Any = None
+ v3_runtime: Any = None
+ 
+diff --git a/src/web/_shared.py b/src/web/_shared.py
+index efa491d..3b3c05f 100644
+--- a/src/web/_shared.py
++++ b/src/web/_shared.py
+@@ -116,8 +116,6 @@ dehydrator = None
+ decay_engine = None
+ embedding_engine = None
+ embedding_outbox = None
+-import_engine = None
+-migrate_engine = None
+ github_sync_instance = None
+ v3_runtime = None
+ 
+@@ -144,8 +142,6 @@ def replace_embedding_engine(engine) -> None:
+ 
+     for holder_name, attribute in (
+         ("bucket_mgr", "embedding_engine"),
+-        ("import_engine", "embedding_engine"),
+-        ("migrate_engine", "_embedding_engine"),
+     ):
+         holder = globals().get(holder_name)
+         if holder is not None:
+diff --git a/src/web/config_api.py b/src/web/config_api.py
+index 4466eee..20ccaec 100644
+--- a/src/web/config_api.py
++++ b/src/web/config_api.py
+@@ -314,7 +314,7 @@ def register(mcp) -> None:
+                 rebuild_embedding = True
+ 
+             # One request may change several fields. Rebuild once, then publish
+-            # the same instance to web routes, BucketManager, ImportEngine and
++            # the same instance to web routes, BucketManager and
+             # the MCP tools runtime so reads and writes cannot split models.
+             if rebuild_embedding:
+                 try:
+diff --git a/src/web/import_api.py b/src/web/import_api.py
+index e47cca2..676380b 100644
+--- a/src/web/import_api.py
++++ b/src/web/import_api.py
+@@ -1,13 +1,11 @@
+ """
+ ========================================
+-web/import_api.py — 宿主机 vault 设置 / 历史对话导入 / 桶编辑 / 导出 / 记忆包迁移
++web/import_api.py — 宿主机 vault 设置 / 桶编辑 / 导出
+ ========================================
+ 
+ - /api/host-vault：读写 docker-compose 挂载的宿主机记忆目录（写 .env）
+-- /api/import/*：上传历史对话、状态/暂停/模式/结果/复核
+ - /api/bucket/{id}/edit：编辑桶正文（带内容体积校验）
+ - /api/export：导出全部记忆 zip
+-- /api/migrate/*：记忆包 zip 上传 / 状态 / 应用
+ 
+ 对外暴露：register(mcp)。
+ ========================================
+@@ -46,80 +44,17 @@ except ImportError:  # pragma: no cover
+         check_pinned_quota as _check_pinned_quota,
+     )
+ 
+-try:
+-    from import_memory import preview_import  # type: ignore
+-except ImportError:  # pragma: no cover
+-    from ..import_memory import preview_import  # type: ignore
+ 
+ 
+-_DEFAULT_MAX_IMPORT_UPLOAD_BYTES = 64 * 1024 * 1024
+ 
+ 
+-def _max_import_upload_bytes() -> int:
+-    limits = (getattr(sh, "config", {}) or {}).get("limits") or {}
+-    try:
+-        return max(1, int(limits.get("max_import_upload_bytes") or _DEFAULT_MAX_IMPORT_UPLOAD_BYTES))
+-    except (TypeError, ValueError):
+-        return _DEFAULT_MAX_IMPORT_UPLOAD_BYTES
+ 
+ 
+-async def _read_body_limited(request: Request, limit: int) -> bytes:
+-    raw_length = str((getattr(request, "headers", {}) or {}).get("content-length", "") or "").strip()
+-    if raw_length:
+-        try:
+-            length = int(raw_length)
+-        except ValueError:
+-            length = 0
+-        if length > limit:
+-            raise ValueError(f"Upload too large ({length} bytes > {limit} byte limit)")
+-
+-    stream = getattr(request, "stream", None)
+-    if callable(stream):
+-        chunks: list[bytes] = []
+-        total = 0
+-        async for chunk in stream():
+-            total += len(chunk)
+-            if total > limit:
+-                raise ValueError(f"Upload too large ({total} bytes > {limit} byte limit)")
+-            chunks.append(chunk)
+-        return b"".join(chunks)
+-
+-    body = await request.body()
+-    if len(body) > limit:
+-        raise ValueError(f"Upload too large ({len(body)} bytes > {limit} byte limit)")
+-    return body
+-
+-
+-async def _read_file_field_limited(file_field, limit: int) -> bytes:
+-    raw = await file_field.read(limit + 1)
+-    if len(raw) > limit:
+-        raise ValueError(f"Upload too large ({len(raw)} bytes > {limit} byte limit)")
+-    return raw
+-
+-
+-async def _read_import_upload_text(request: Request) -> tuple[str, str]:
+-    limit = _max_import_upload_bytes()
+-    content_type = request.headers.get("content-type", "")
+-    filename = ""
+-    if "multipart/form-data" in content_type:
+-        form = await request.form()
+-        file_field = form.get("file")
+-        if not file_field or isinstance(file_field, str):
+-            raise ValueError("No file field")
+-        raw_bytes = await _read_file_field_limited(file_field, limit)
+-        filename = getattr(file_field, "filename", "upload")
+-        return raw_bytes.decode("utf-8", errors="replace"), filename
+-
+-    body = await _read_body_limited(request, limit)
+-    filename = request.query_params.get("filename", "upload")
+-    return body.decode("utf-8", errors="replace"), filename
+-
+-
+-def _import_llm_ready() -> bool:
+-    engine_dehydrator = getattr(getattr(sh, "import_engine", None), "dehydrator", None)
+-    if engine_dehydrator is not None:
+-        return bool(getattr(engine_dehydrator, "api_available", False))
+-    return bool(getattr(getattr(sh, "dehydrator", None), "api_available", False))
++
++
++
++
++
+ 
+ 
+ def register(mcp) -> None:
+@@ -213,200 +148,6 @@ def register(mcp) -> None:
+     # 导入 API — 对话历史导入
+     # =============================================================
+ 
+-    @mcp.custom_route("/api/import/preflight", methods=["POST"])
+-    async def api_import_preflight(request: Request) -> Response:
+-        """Preview an import file without writing buckets or starting a job."""
+-        from starlette.responses import JSONResponse
+-        err = sh._require_auth(request)
+-        if err:
+-            return err
+-
+-        try:
+-            raw_content, filename = await _read_import_upload_text(request)
+-        except Exception as e:
+-            return JSONResponse({"ok": False, "error": f"Failed to read upload: {e}"}, status_code=400)
+-
+-        if not raw_content.strip():
+-            return JSONResponse({"ok": False, "error": "Empty file"}, status_code=400)
+-
+-        human_label = str((sh.config or {}).get("human") or "用户")
+-        preview = preview_import(raw_content, filename=filename, human_label=human_label)
+-        import_running = bool(getattr(sh.import_engine, "is_running", False))
+-        llm_ready = _import_llm_ready()
+-        return JSONResponse({
+-            **preview,
+-            "filename": filename,
+-            "size_bytes": len(raw_content.encode("utf-8")),
+-            "import_running": import_running,
+-            "llm_ready": llm_ready,
+-            "can_start": bool(preview.get("ok")) and not import_running and llm_ready,
+-        })
+-
+-
+-    @mcp.custom_route("/api/import/upload", methods=["POST"])
+-    async def api_import_upload(request: Request) -> Response:
+-        """Upload a conversation file and start import."""
+-        from starlette.responses import JSONResponse
+-        err = sh._require_auth(request)
+-        if err:
+-            return err
+-
+-        if sh.import_engine.is_running:
+-            return JSONResponse({"error": "Import already running"}, status_code=409)
+-
+-        try:
+-            raw_content, filename = await _read_import_upload_text(request)
+-
+-            if not raw_content.strip():
+-                return JSONResponse({"error": "Empty file"}, status_code=400)
+-
+-            preserve_raw = request.query_params.get("preserve_raw", "").lower() in ("1", "true")
+-            resume = request.query_params.get("resume", "").lower() in ("1", "true")
+-
+-        except Exception as e:
+-            return JSONResponse({"error": f"Failed to read upload: {e}"}, status_code=400)
+-
+-        # Start import in background
+-        async def _run_import():
+-            try:
+-                await sh.import_engine.start(raw_content, filename, preserve_raw, resume)
+-            except Exception as e:
+-                logger.error(f"Import failed: {e}")
+-
+-        asyncio.create_task(_run_import())
+-
+-        return JSONResponse({
+-            "status": "started",
+-            "filename": filename,
+-            "size_bytes": len(raw_content.encode()),
+-        })
+-
+-
+-    @mcp.custom_route("/api/import/status", methods=["GET"])
+-    async def api_import_status(request: Request) -> Response:
+-        """Get current import progress."""
+-        from starlette.responses import JSONResponse
+-        err = sh._require_auth(request)
+-        if err:
+-            return err
+-        return JSONResponse(sh.import_engine.get_status())
+-
+-
+-    @mcp.custom_route("/api/import/pause", methods=["POST"])
+-    async def api_import_pause(request: Request) -> Response:
+-        """Pause the running import."""
+-        from starlette.responses import JSONResponse
+-        err = sh._require_auth(request)
+-        if err:
+-            return err
+-        if not sh.import_engine.is_running:
+-            return JSONResponse({"error": "No import running"}, status_code=400)
+-        sh.import_engine.pause()
+-        return JSONResponse({"status": "pause_requested"})
+-
+-
+-    @mcp.custom_route("/api/import/patterns", methods=["GET"])
+-    async def api_import_patterns(request: Request) -> Response:
+-        """Detect high-frequency patterns after import."""
+-        from starlette.responses import JSONResponse
+-        err = sh._require_auth(request)
+-        if err:
+-            return err
+-        try:
+-            patterns = await sh.import_engine.detect_patterns()
+-            return JSONResponse({"patterns": patterns})
+-        except Exception as e:
+-            return JSONResponse({"error": str(e)}, status_code=500)
+-
+-
+-    @mcp.custom_route("/api/import/results", methods=["GET"])
+-    async def api_import_results(request: Request) -> Response:
+-        """List recently imported/created buckets for review."""
+-        from starlette.responses import JSONResponse
+-        err = sh._require_auth(request)
+-        if err:
+-            return err
+-        try:
+-            limit = int(request.query_params.get("limit", "50"))
+-            all_buckets = await sh.bucket_mgr.list_all(include_archive=False)
+-            # Sort by created time, newest first
+-            all_buckets.sort(key=lambda b: b["metadata"].get("created", ""), reverse=True)
+-            results = []
+-            for b in all_buckets[:limit]:
+-                results.append({
+-                    "id": b["id"],
+-                    "name": b["metadata"].get("name", ""),
+-                    "content": b["content"][:300],
+-                    "type": b["metadata"].get("type", ""),
+-                    "domain": b["metadata"].get("domain", []),
+-                    "tags": b["metadata"].get("tags", []),
+-                    "importance": b["metadata"].get("importance", 5),
+-                    "created": b["metadata"].get("created", ""),
+-                })
+-            return JSONResponse({"buckets": results, "total": len(all_buckets)})
+-        except Exception as e:
+-            return JSONResponse({"error": str(e)}, status_code=500)
+-
+-
+-    @mcp.custom_route("/api/import/review", methods=["POST"])
+-    async def api_import_review(request: Request) -> Response:
+-        """Apply review decisions: mark buckets as important/noise/pinned."""
+-        from starlette.responses import JSONResponse
+-        err = sh._require_auth(request)
+-        if err:
+-            return err
+-        try:
+-            body = await request.json()
+-        except Exception:
+-            return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+-
+-        decisions = body.get("decisions", [])
+-        if not decisions:
+-            return JSONResponse({"error": "No decisions provided"}, status_code=400)
+-
+-        applied = 0
+-        errors = 0
+-        for d in decisions:
+-            bid = d.get("bucket_id", "")
+-            action = d.get("action", "")
+-            if not bid or not action:
+-                continue
+-            try:
+-                if action == "important":
+-                    await sh.bucket_mgr.update(bid, importance=9)
+-                elif action == "pin":
+-                    bucket = await sh.bucket_mgr.get(bid)
+-                    if not bucket:
+-                        errors += 1
+-                        continue
+-                    if not bucket.get("metadata", {}).get("pinned"):
+-                        quota_err = await _check_pinned_quota()
+-                        if quota_err:
+-                            logger.warning(f"Review pin rejected for {bid}: {quota_err}")
+-                            errors += 1
+-                            continue
+-                    ok = await sh.bucket_mgr.update(bid, pinned=True)
+-                    if ok is False:
+-                        errors += 1
+-                        continue
+-                elif action == "noise":
+-                    await sh.bucket_mgr.update(bid, resolved=True, importance=1)
+-                elif action == "delete":
+-                    await sh.bucket_mgr.delete(bid)
+-                applied += 1
+-            except Exception as e:
+-                logger.warning(f"Review action failed for {bid}: {e}")
+-                errors += 1
+-
+-        return JSONResponse({"applied": applied, "errors": errors})
+-
+-
+-    # =============================================================
+-    # /api/bucket/{id}/edit  — iter 1.6 §6 trace 前端
+-    # 让 Dashboard 直接修改桶元数据：name / tags / importance / resolved /
+-    # pinned / digested / domain。content 也支持，会同步重建 embedding。
+-    # 内容大小受 §5 limits.max_bucket_bytes 约束；钉选量受 max_pinned 约束。
+-    # =============================================================
+     @mcp.custom_route("/api/bucket/{bucket_id}/edit", methods=["PATCH", "POST"])
+     async def api_bucket_edit(request: Request) -> Response:
+         from starlette.responses import JSONResponse
+@@ -578,98 +319,3 @@ def register(mcp) -> None:
+     # 流程：POST /upload → GET /status（含冲突列表） → POST /apply（带决策）→ 轮询 GET /status
+     # =============================================================
+ 
+-    @mcp.custom_route("/api/migrate/upload", methods=["POST"])
+-    async def api_migrate_upload(request: Request) -> Response:
+-        """上传 ombre_export_*.zip，解析内容并识别冲突，不实际写入。
+-
+-        Body: multipart/form-data，字段名 'file'；或直接 POST zip 字节（Content-Type: application/zip）。
+-        成功返回解析状态（含冲突列表、embedding 模型匹配情况）。
+-        """
+-        from starlette.responses import JSONResponse
+-        err = sh._require_auth(request)
+-        if err:
+-            return err
+-
+-        if sh.migrate_engine.is_busy:
+-            return JSONResponse({"error": "已有迁移任务正在进行，请等待完成后再上传"}, status_code=409)
+-
+-        content_type = request.headers.get("content-type", "")
+-        try:
+-            if "multipart/form-data" in content_type:
+-                form = await request.form()
+-                file_field = form.get("file")
+-                if not file_field or isinstance(file_field, str):
+-                    return JSONResponse({"error": "缺少 file 字段"}, status_code=400)
+-                zip_bytes = await _read_file_field_limited(file_field, MAX_ARCHIVE_BYTES)
+-            else:
+-                zip_bytes = await _read_body_limited(request, MAX_ARCHIVE_BYTES)
+-
+-            if not zip_bytes:
+-                return JSONResponse({"error": "文件为空"}, status_code=400)
+-        except Exception as e:
+-            return JSONResponse({"error": f"读取上传内容失败: {e}"}, status_code=400)
+-
+-        result = await sh.migrate_engine.parse_zip(zip_bytes)
+-        if not result.get("ok"):
+-            return JSONResponse(result, status_code=422)
+-        return JSONResponse(result)
+-
+-
+-    @mcp.custom_route("/api/migrate/status", methods=["GET"])
+-    async def api_migrate_status(request: Request) -> Response:
+-        """查询当前迁移任务状态（解析结果、冲突列表、执行进度、重新向量化进度）。"""
+-        from starlette.responses import JSONResponse
+-        err = sh._require_auth(request)
+-        if err:
+-            return err
+-        return JSONResponse(sh.migrate_engine.get_status())
+-
+-
+-    @mcp.custom_route("/api/migrate/apply", methods=["POST"])
+-    async def api_migrate_apply(request: Request) -> Response:
+-        """执行导入，携带冲突决策。
+-
+-        Body (JSON):
+-            decisions: {bucket_id: "skip" | "overwrite" | "keep_both"}
+-
+-        无冲突的 bucket 自动导入，无需出现在 decisions 中。
+-        冲突但未在 decisions 中的 bucket 默认 skip（安全优先）。
+-        成功启动后台任务返回 202；任务完成前轮询 GET /api/migrate/status。
+-        """
+-        from starlette.responses import JSONResponse
+-        err = sh._require_auth(request)
+-        if err:
+-            return err
+-
+-        if sh.migrate_engine.phase != "parsed":
+-            return JSONResponse(
+-                {"error": f"当前状态为 '{sh.migrate_engine.phase}'，apply 需要先完成 upload 解析（phase=parsed）"},
+-                status_code=409,
+-            )
+-
+-        try:
+-            body = await request.json()
+-        except Exception:
+-            body = {}
+-
+-        decisions: dict[str, str] = {}
+-        raw_decisions = body.get("decisions", {})
+-        if isinstance(raw_decisions, dict):
+-            valid_opts = {"skip", "overwrite", "keep_both"}
+-            for bid, decision in raw_decisions.items():
+-                if isinstance(bid, str) and isinstance(decision, str) and decision in valid_opts:
+-                    decisions[bid] = decision
+-
+-        # 后台执行（apply 可能耗时较长，含重新向量化）
+-        async def _run_apply():
+-            try:
+-                await sh.migrate_engine.apply(decisions)
+-            except Exception as e:
+-                logger.error(f"[migrate] background apply error: {e}", exc_info=True)
+-
+-        asyncio.create_task(_run_apply())
+-
+-        return JSONResponse(
+-            {"ok": True, "message": "导入任务已启动，请轮询 GET /api/migrate/status 查看进度"},
+-            status_code=202,
+-        )
+-- 
+2.43.0
+
