@@ -1,12 +1,17 @@
 {
-  "name": "Ombre Brain",
-  "short_name": "OB",
+  "name": "The Garden of Forking Paths",
+  "short_name": "Garden",
   "description": "A breathing, fading, surfacing memory system for AI models.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#FAF8F3",
-  "theme_color": "#B85C3C",
+  "background_color": "#0E1524",
+  "theme_color": "#0E1524",
   "icons": [
-    { "src": "/static/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    {
+      "src": "/static/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }

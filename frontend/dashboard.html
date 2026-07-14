@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Garden of Forking Paths</title>
-<meta name="theme-color" content="#B85C3C">
+<meta name="theme-color" content="#0E1524">
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="apple-touch-icon" href="/static/icon.svg">
 <link rel="manifest" href="/static/manifest.json">
@@ -1048,12 +1048,12 @@
   #network-terminal::before { content:'> '; color: var(--accent); }
   /* 工程网格星图模式 */
   #network-canvas.star-active {
-    background: #EBE6D9 !important;
+    background: #0A1120 !important;
     background-image: none !important;
   }
   #network-terminal.star-active {
-    background: #EBE6D9;
-    color: rgba(90,82,62,0.65);
+    background: #0A1120;
+    color: rgba(155,166,190,0.65);
     text-shadow: none;
   }
   #network-terminal.star-active::before { color: rgba(175,195,230,0.8); }
@@ -1338,7 +1338,7 @@
     padding:3px 11px; border-radius:10px; font-size:11px; font-weight:500; letter-spacing:0.3px;
   }
   .ver-badge-ok  { background:rgba(126,173,104,0.16); color:var(--positive); border:1px solid rgba(126,173,104,0.38); }
-  .ver-badge-new { background:rgba(184,92,60,0.11);   color:var(--negative); border:1px solid rgba(184,92,60,0.38); }
+  .ver-badge-new { background:rgba(197,106,90,0.12);   color:var(--negative); border:1px solid rgba(197,106,90,0.38); }
   #ver-update-panel {
     margin-top:16px; padding:14px 16px;
     background:var(--surface-solid); border:1px solid var(--border); border-radius:6px;
@@ -1783,7 +1783,7 @@
   <div class="breath-flow" id="breath-flow">
     <div class="flow-step" id="fs-input">① 输入<br><small>query / valence / arousal</small></div>
     <span class="flow-arrow">→</span>
-    <div class="flow-step" id="fs-candidates">② 候选池<br><small id="fs-cand-n">— 桶</small></div>
+    <div class="flow-step" id="fs-candidates">② 候选池<br><small id="fs-cand-n">— 条</small></div>
     <span class="flow-arrow">→</span>
     <div class="flow-step" id="fs-scoring">③ 四维评分<br><small>topic×4 + emotion×2 + time×2.5 + imp×1</small></div>
     <span class="flow-arrow">→</span>
@@ -1810,10 +1810,10 @@
 
 <div class="content" id="network-view" style="display:none">
   <div class="network-legend">
-    <div class="legend-item"><span class="legend-dot" style="background:#B85C3C"></span> [[双链]]</div>
-    <div class="legend-item"><span class="legend-dot" style="background:#4A7C59"></span> #tag</div>
-    <div class="legend-item"><span class="legend-dot" style="background:#9A7B4F"></span> 既是双链也是 tag</div>
-    <div class="legend-item" style="margin-left:18px;"><span style="display:inline-block;width:18px;height:2px;background:#8A8070;margin-right:6px;vertical-align:middle;"></span> 共现（同一桶里出现）</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#AFC3E6"></span> [[双链]]</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#7BA694"></span> #tag</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#C0A468"></span> 既是双链也是 tag</div>
+    <div class="legend-item" style="margin-left:18px;"><span style="display:inline-block;width:18px;height:2px;background:#5E7896;margin-right:6px;vertical-align:middle;"></span> 共现（同一条备忘录里出现）</div>
     <label style="margin-left:auto;font-size:11px;color:var(--text-dim);display:inline-flex;align-items:center;gap:6px;">
       模式
       <select id="network-mode" onchange="loadNetwork()" style="font-size:11px;padding:2px 6px;background:var(--surface);border:1px solid var(--border);color:var(--text);">
@@ -2044,7 +2044,7 @@
 
     <!-- ⓪ 版本 & 更新 -->
     <div class="config-section" id="sec-version">
-      <h3>⓪ 铭牌</h3>
+      <h3>⓪ 门牌</h3>
       <div style="font-size:13px;line-height:2;color:var(--text);">
         <div style="font-family:'Cormorant Garamond',serif;font-size:17px;color:var(--accent);">The Garden of Forking Paths</div>
         <div style="font-size:12px;color:var(--text-dim);font-style:italic;">Time forks perpetually toward innumerable futures.</div>
@@ -2052,7 +2052,6 @@
           · <a href="https://github.com/iwanttosleeeep/garden-of-forking-paths" target="_blank" style="color:var(--accent);">仓库</a>
           · 更新走 git + rebuild</div>
         <div id="decay-status-line" style="font-size:11px;color:var(--text-dim);margin-top:4px;">衰减引擎:…</div>
-        <div style="font-size:11px;color:var(--text-light);margin-top:8px;">forked from Ombre Brain by P0luz · 名字继承,结论现挣</div>
       </div>
     </div>
 
@@ -2062,7 +2061,7 @@
         所有项都直接显示当前生效的值，可以在此处改。每一组下方的「保存」按钮会立刻写入 .env / config.yaml / 各设置接口。
       </div>
       <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;font-size:12px;">
-        <a href="#sec-version" style="padding:4px 10px;border:1px solid rgba(175,195,230,0.4);border-radius:14px;text-decoration:none;color:var(--accent);">⓪ 铭牌</a>
+        <a href="#sec-version" style="padding:4px 10px;border:1px solid rgba(175,195,230,0.4);border-radius:14px;text-decoration:none;color:var(--accent);">⓪ 门牌</a>
         <a href="#sec-me" style="padding:4px 10px;border:1px solid var(--border,#ddd);border-radius:14px;text-decoration:none;color:var(--text);">① 我</a>
         <a href="#sec-service" style="padding:4px 10px;border:1px solid var(--border,#ddd);border-radius:14px;text-decoration:none;color:var(--text);">② 服务</a>
         <a href="#sec-engine" style="padding:4px 10px;border:1px solid var(--border,#ddd);border-radius:14px;text-decoration:none;color:var(--text);">③ 引擎</a>
@@ -2070,7 +2069,7 @@
         <a href="#sec-env" style="padding:4px 10px;border:1px solid var(--border,#ddd);border-radius:14px;text-decoration:none;color:var(--text);">⑤ 环境变量</a>
         <a href="#sec-mcp" style="padding:4px 10px;border:1px solid var(--border,#ddd);border-radius:14px;text-decoration:none;color:var(--text);">⑥ MCP 配置</a>
         <a href="#sec-github" style="padding:4px 10px;border:1px solid var(--border,#ddd);border-radius:14px;text-decoration:none;color:var(--text);">⑦ GitHub 同步</a>
-        <a href="#sec-danger" style="padding:4px 10px;border:1px solid rgba(184,92,60,0.5);border-radius:14px;text-decoration:none;color:var(--accent);">⑧ 危险区</a>
+        <a href="#sec-danger" style="padding:4px 10px;border:1px solid rgba(197,106,90,0.5);border-radius:14px;text-decoration:none;color:var(--accent);">⑧ 危险区</a>
       </div>
     </div>
 
@@ -2712,9 +2711,9 @@
         <button type="button" onclick="saveGithubConfig()" title="保存配置 / Save config" style="padding:0 14px;height:36px;font-size:13px;display:inline-flex;align-items:center;gap:5px;"><i data-lucide="check"></i> 保存</button>
         <button type="button" onclick="validateGithub()" title="验证连接 / Verify connection" style="padding:0 14px;height:36px;font-size:13px;display:inline-flex;align-items:center;gap:5px;"><i data-lucide="shield-check"></i> 验证</button>
         <button type="button" class="btn-primary" onclick="runGithubSync()" id="gh-sync-btn" title="立即同步 / Sync now" style="padding:0 14px;height:36px;font-size:13px;display:inline-flex;align-items:center;gap:5px;"><i data-lucide="upload-cloud"></i> 同步</button>
-        <button type="button" onclick="runGithubImport()" id="gh-import-btn" title="从 GitHub 拉回记忆（会覆盖本地同名记忆）/ Import from GitHub (overwrites local memories with the same name)" style="padding:0 14px;height:36px;font-size:13px;display:inline-flex;align-items:center;gap:5px;border:1px solid var(--accent,#b85c3c);color:var(--accent,#b85c3c);"><i data-lucide="download-cloud"></i> 从 GitHub 导入</button>
+        <button type="button" onclick="runGithubImport()" id="gh-import-btn" title="从 GitHub 拉回记忆（会覆盖本地同名记忆）/ Import from GitHub (overwrites local memories with the same name)" style="padding:0 14px;height:36px;font-size:13px;display:inline-flex;align-items:center;gap:5px;border:1px solid var(--accent,#AFC3E6);color:var(--accent,#AFC3E6);"><i data-lucide="download-cloud"></i> 从 GitHub 导入</button>
       </div>
-      <div style="margin-top:8px;font-size:11px;color:var(--accent,#b85c3c);line-height:1.6;">
+      <div style="margin-top:8px;font-size:11px;color:var(--accent,#AFC3E6);line-height:1.6;">
         ⚠️ 导入 = 把 GitHub 上的记忆拉回本地，<b>会覆盖同名记忆</b>（本地独有的保留）。导入前会自动存一份本地 zip 备份；导入后自动重建向量索引。一般用于换机/数据丢失后的恢复或回滚。
       </div>
 
@@ -3801,7 +3800,7 @@ function updateStats() {
   const resolved = allBuckets.filter(b => b.resolved).length;
   const digested = allBuckets.filter(b => b.digested).length;
   document.getElementById('stats').textContent =
-    total + ' 桶 · ' + pinned + ' 钉选 · ' + feels + ' feel · ' + resolved + ' 已解决 · ' + digested + ' 已消化';
+    total + ' 条 · ' + pinned + ' 钉选 · ' + feels + ' feel · ' + resolved + ' 已解决 · ' + digested + ' 已消化';
 }
 
 function buildFilters() {
@@ -3968,7 +3967,7 @@ async function showDetail(id) {
         '<button onclick="bucketResolve(\'' + id + '\')" class="icon-btn">' + (meta.resolved ? '<i data-lucide="rotate-ccw"></i> 取消已解决' : '<i data-lucide="check"></i> 标记已解决') + '</button>' +
         '<button onclick="bucketForget(\'' + id + '\')" class="icon-btn">' + (meta.dont_surface ? '<i data-lucide="eye"></i> 重新允许浮现' : '<i data-lucide="moon-off"></i> 主动遗忘') + '</button>' +
         '<button onclick="bucketArchive(\'' + id + '\')" class="icon-btn"><i data-lucide="archive"></i> 归档</button>' +
-        '<button onclick="bucketDelete(\'' + id + '\')" class="icon-btn" style="color:#b85c3c;"><i data-lucide="trash-2"></i> 删除到档案</button>' +
+        '<button onclick="bucketDelete(\'' + id + '\')" class="icon-btn" style="color:var(--negative);"><i data-lucide="trash-2"></i> 删除到档案</button>' +
       '</div>' +
       '<div class="detail-content">' + esc(b.content) + '</div>' +
       renderEditForm(id, Object.assign({}, meta, {_content_for_edit: b.content}));
@@ -4132,7 +4131,7 @@ async function loadNetwork() {
   ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
   var W = canvas.offsetWidth, H = canvas.offsetHeight;
 
-  ctx.fillStyle = '#C7C9BC';
+  ctx.fillStyle = '#0A1120';
   ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = '#5B5D4F';
   ctx.font = "14px 'Share Tech Mono', monospace";
@@ -4411,7 +4410,7 @@ function animateConceptNetwork(canvas, ctx, W, H, data) {
     var visEdges = allEdges.filter(function (e) { return visible.has(e.source) && visible.has(e.target); });
 
     // ── 静态背景：米色底 + 工程网格 ──
-    ctx.fillStyle = '#EBE6D9';
+    ctx.fillStyle = '#0A1120';
     ctx.fillRect(0, 0, W, H);
 
     // 细格
@@ -4424,7 +4423,7 @@ function animateConceptNetwork(canvas, ctx, W, H, data) {
       if (Math.round(gy / GRID) % MAJOR === 0) continue;
       ctx.moveTo(0, gy); ctx.lineTo(W, gy);
     }
-    ctx.strokeStyle = 'rgba(140,132,112,0.13)';
+    ctx.strokeStyle = 'rgba(120,150,200,0.10)';
     ctx.lineWidth   = 0.5;
     ctx.stroke();
 
@@ -4436,12 +4435,12 @@ function animateConceptNetwork(canvas, ctx, W, H, data) {
     for (var gy = 0; gy <= H; gy += GRID * MAJOR) {
       ctx.moveTo(0, gy); ctx.lineTo(W, gy);
     }
-    ctx.strokeStyle = 'rgba(120,112,92,0.22)';
+    ctx.strokeStyle = 'rgba(140,170,220,0.18)';
     ctx.lineWidth   = 0.8;
     ctx.stroke();
 
     if (!nodes.length) {
-      ctx.fillStyle = 'rgba(90,82,62,0.45)';
+      ctx.fillStyle = 'rgba(140,170,220,0.40)';
       ctx.font      = "14px 'Share Tech Mono', monospace";
       ctx.textAlign = 'center';
       ctx.fillText('还没有 [[双链]] 或 #tag', W / 2, H / 2);
@@ -4464,9 +4463,9 @@ function animateConceptNetwork(canvas, ctx, W, H, data) {
       var isFE = (e.source === focusId || e.target === focusId);
       var baseA = isFE ? 0.45 : Math.min(0.22, 0.05 + 0.045 * w);
       var grad  = ctx.createLinearGradient(pa.x, pa.y, pb.x, pb.y);
-      grad.addColorStop(0,   'rgba(100,88,60,' + baseA.toFixed(3) + ')');
-      grad.addColorStop(0.5, 'rgba(100,88,60,' + (baseA * 0.15).toFixed(3) + ')');
-      grad.addColorStop(1,   'rgba(100,88,60,' + baseA.toFixed(3) + ')');
+      grad.addColorStop(0,   'rgba(140,170,220,' + baseA.toFixed(3) + ')');
+      grad.addColorStop(0.5, 'rgba(140,170,220,' + (baseA * 0.15).toFixed(3) + ')');
+      grad.addColorStop(1,   'rgba(140,170,220,' + baseA.toFixed(3) + ')');
       ctx.beginPath();
       ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y);
       ctx.strokeStyle = grad;
@@ -4613,8 +4612,8 @@ function drawConceptNetwork(ctx, W, H, data) {
 function drawBucketNetwork(ctx, W, H, data) {
   var nodes = data.nodes || [], edges = data.edges || [];
   if (!nodes.length) {
-    ctx.fillStyle = '#C7C9BC'; ctx.fillRect(0,0,W,H);
-    ctx.fillStyle = '#8A8070';
+    ctx.fillStyle = '#0A1120'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle = '#5E7896';
     ctx.fillText('没有备忘录', W/2, H/2);
     return;
   }
@@ -4645,29 +4644,29 @@ function drawBucketNetwork(ctx, W, H, data) {
     });
     nodes.forEach(function(n){var p=positions[n.id]; p.x+=(cx-p.x)*0.01; p.y+=(cy-p.y)*0.01;});
   }
-  ctx.fillStyle='#C7C9BC'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#0A1120'; ctx.fillRect(0,0,W,H);
   edges.forEach(function(e){
     var pa=positions[e.source], pb=positions[e.target]; if(!pa||!pb) return;
     var w=e.weight||0.5;
     ctx.beginPath(); ctx.moveTo(pa.x,pa.y); ctx.lineTo(pb.x,pb.y);
-    ctx.strokeStyle='rgba(47,79,79,'+(w*0.35)+')'; ctx.lineWidth=Math.max(0.5,w*2);
+    ctx.strokeStyle='rgba(120,150,200,'+(w*0.35)+')'; ctx.lineWidth=Math.max(0.5,w*2);
     ctx.stroke();
   });
-  var colors = { dynamic:'#2F4F4F', permanent:'#9A7B4F', feel:'#8B6A6A', archived:'#B0A590' };
+  var colors = { dynamic:'#8FB3E8', permanent:'#C0A468', feel:'#C99BB0', archived:'#5E7896' };
   nodes.forEach(function(n){
     var p=positions[n.id];
     var r=Math.max(4, Math.min(14, (n.score||0)*0.8));
-    var color = colors[n.type] || '#2F4F4F';
+    var color = colors[n.type] || '#8FB3E8';
     // anchor 节点：朱砂外圈 (#10)
     if (n.anchor) {
       ctx.beginPath(); ctx.arc(p.x,p.y,r+6,0,Math.PI*2);
-      ctx.strokeStyle='#B85C3C'; ctx.lineWidth=2; ctx.stroke();
+      ctx.strokeStyle='#E8ECF4'; ctx.lineWidth=2; ctx.stroke();
     }
     ctx.beginPath(); ctx.arc(p.x,p.y,r+4,0,Math.PI*2); ctx.fillStyle=color+'15'; ctx.fill();
     ctx.beginPath(); ctx.arc(p.x,p.y,r,0,Math.PI*2); ctx.fillStyle=n.resolved?color+'70':color; ctx.fill();
-    if (n.pinned) { ctx.strokeStyle='#9A7B4F'; ctx.lineWidth=2; ctx.stroke(); }
+    if (n.pinned) { ctx.strokeStyle='#C0A468'; ctx.lineWidth=2; ctx.stroke(); }
     var name=(n.anchor?'⚓ ':'')+(n.name||n.id); if (name.length>12) name=name.slice(0,12)+'…';
-    ctx.fillStyle=n.anchor?'#B85C3C':'#3A3530';
+    ctx.fillStyle=n.anchor?'#E8ECF4':'#9BA6BE';
     ctx.font=n.anchor?"bold 11px 'Share Tech Mono',monospace":"11px 'Share Tech Mono',monospace";
     ctx.textAlign='center';
     ctx.fillText(name, p.x, p.y+r+14);
@@ -4745,26 +4744,6 @@ function feelFace(v, a) {
 
 
 // 搜索框空闲时，placeholder 偶尔换一句
-var _phLines = [
-  '搜索记忆…',
-  '搜索一段没说出口的话…',
-  '找找那个让你停下来的瞬间…',
-  '输入一个名字，或一种心情…',
-  '它可能藏在某个 #标签 里…',
-  '搜一件你以为忘了的事…',
-  '某个深夜，某句话，某个人…'
-];
-function startPlaceholderRotation() {
-  var input = document.getElementById('search-input');
-  if (!input) return;
-  setInterval(function () {
-    if (document.activeElement === input || input.value) return;  // 有焦点或有内容时不打扰
-    var next = _phLines[Math.floor(Math.random() * _phLines.length)];
-    input.style.transition = 'opacity .4s';
-    input.style.opacity = '0.45';
-    setTimeout(function () { input.placeholder = next; input.style.opacity = '1'; }, 400);
-  }, 6500);
-}
 
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') closeDetail();
@@ -4887,7 +4866,7 @@ async function runBreathDebug() {
     var data = await res.json();
 
     document.getElementById('fs-input').classList.add('active');
-    document.getElementById('fs-cand-n').textContent = data.total_candidates + ' 桶';
+    document.getElementById('fs-cand-n').textContent = data.total_candidates + ' 条';
     document.getElementById('fs-candidates').classList.add('active');
     document.getElementById('fs-scoring').classList.add('active');
     document.getElementById('fs-thresh-n').textContent = '≥' + data.threshold + ' → ' + data.passed_count + ' 通过';
@@ -4901,8 +4880,8 @@ async function runBreathDebug() {
       'topic=<code>' + w.topic + '</code> emotion=<code>' + w.emotion + '</code> ' +
       'time=<code>' + w.time + '</code> importance=<code>' + w.importance + '</code>' +
       ' &nbsp;|&nbsp; 阈值=<code>' + data.threshold + '</code>' +
-      ' &nbsp;|&nbsp; 候选=<code>' + data.total_candidates + '</code> 桶' +
-      ' → 通过=<code>' + data.passed_count + '</code> 桶' +
+      ' &nbsp;|&nbsp; 候选=<code>' + data.total_candidates + '</code> 条' +
+      ' → 通过=<code>' + data.passed_count + '</code> 条' +
       (query ? '' : ' &nbsp;|&nbsp; <em>未输入 query，topic 分数全为 0</em>');
 
     if (!data.results.length) {
@@ -4911,10 +4890,10 @@ async function runBreathDebug() {
     }
 
     var barColors = {
-      topic: '#2F4F4F',
-      emotion: '#8B6A6A',
-      time: '#9A7B4F',
-      importance: '#4A7C59',
+      topic: '#8FB3E8',
+      emotion: '#C99BB0',
+      time: '#C0A468',
+      importance: '#7BA694',
     };
 
     results.innerHTML = data.results.map(function(r, i) {
@@ -6010,36 +5989,11 @@ window.addEventListener('DOMContentLoaded', function() {
     refreshAnchorCounter();
     setInterval(refreshAnchorCounter, 30000);
   }
-  startPlaceholderRotation();  // 搜索框随机 placeholder
-  checkEmptyMemoryBanner();    // 零记忆时红色提示「可从 GitHub 恢复」
   loadOwnerBadge();            // 多人共用时顶部显示记忆归属徽标（单人隐藏）
 });
 
 // 更新/换机后发现一条记忆都没有 → 顶部红色横幅，引导从 GitHub 恢复。
 // 只在确实零记忆且已配置 GitHub 时出现；导入按钮平时仍在设置里随时可用。
-async function checkEmptyMemoryBanner() {
-  try {
-    var sr = await authFetch('/api/status');
-    if (!sr) return;
-    var s = await sr.json();
-    var b = s.buckets || {};
-    var live = (b.permanent || 0) + (b.dynamic || 0);
-    if (live > 0) { var ex = document.getElementById('empty-mem-banner'); if (ex) ex.remove(); return; }
-    // 是否配置了 GitHub（有才提恢复）
-    var ghOk = false;
-    try { var gr = await authFetch('/api/github/status'); if (gr) { var gd = await gr.json(); ghOk = !!(gd && (gd.configured || gd.token_set)); } } catch (e) {}
-    if (document.getElementById('empty-mem-banner')) return;
-    var bar = document.createElement('div');
-    bar.id = 'empty-mem-banner';
-    bar.style.cssText = 'position:sticky;top:0;z-index:9999;background:#b85c3c;color:#fff;padding:10px 16px;font-size:13px;line-height:1.6;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 2px 8px rgba(0,0,0,.25);';
-    bar.innerHTML = '<b>⚠️ 检测到当前没有任何记忆</b>'
-      + (ghOk
-          ? '<span>可从 GitHub 备份恢复（会写入本地，导入前自动备份）。</span><button onclick="runGithubImport()" style="background:#fff;color:#b85c3c;border:none;border-radius:4px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;">从 GitHub 恢复记忆</button>'
-          : '<span>若你在 GitHub 备份过记忆，去「⑦ GitHub 同步」填好配置后即可一键恢复。</span>')
-      + '<button onclick="this.parentNode.remove()" style="margin-left:auto;background:transparent;color:#fff;border:1px solid rgba(255,255,255,.6);border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;">忽略</button>';
-    document.body.insertBefore(bar, document.body.firstChild);
-  } catch (e) { /* ignore */ }
-}
 
 // ========================================
 // iter 1.6 §3 — heartbeat indicator + log viewer
@@ -6168,7 +6122,7 @@ async function loadLogs() {
 // 统一错误体系 — /api/errors/recent + /api/errors/clear
 // ========================================
 function _obLevelStyle(lvl) {
-  if (lvl === 'F') return { bg: 'rgba(184,92,60,0.12)', border: 'rgba(184,92,60,0.5)', label: _SV.stop+' Fatal',   color: 'var(--accent)' };
+  if (lvl === 'F') return { bg: 'rgba(184,92,60,0.12)', border: 'rgba(197,106,90,0.5)', label: _SV.stop+' Fatal',   color: 'var(--accent)' };
   if (lvl === 'E') return { bg: 'rgba(184,92,60,0.08)', border: 'rgba(184,92,60,0.35)', label: _SV.err+' Error',   color: 'var(--accent)' };
   if (lvl === 'W') return { bg: 'rgba(212,175,55,0.10)', border: 'rgba(212,175,55,0.40)', label: _SV.warn+' Warn',  color: '#7d6720' };
   return { bg: 'rgba(120,140,170,0.08)', border: 'rgba(120,140,170,0.30)', label: _SV.info+' Info', color: 'var(--text-dim)' };
@@ -6242,29 +6196,6 @@ async function clearOBErrors() {
   } catch (e) { alert('清空失败：' + e.message); }
 }
 
-async function checkEmptyMemoryBanner() {
-  try {
-    var sr = await authFetch('/api/status');
-    if (!sr) return;
-    var s = await sr.json();
-    var b = s.buckets || {};
-    var live = (b.permanent || 0) + (b.dynamic || 0);
-    if (live > 0) { var ex = document.getElementById('empty-mem-banner'); if (ex) ex.remove(); return; }
-    // 是否配置了 GitHub（有才提恢复）
-    var ghOk = false;
-    try { var gr = await authFetch('/api/github/status'); if (gr) { var gd = await gr.json(); ghOk = !!(gd && (gd.configured || gd.token_set)); } } catch (e) {}
-    if (document.getElementById('empty-mem-banner')) return;
-    var bar = document.createElement('div');
-    bar.id = 'empty-mem-banner';
-    bar.style.cssText = 'position:sticky;top:0;z-index:9999;background:#b85c3c;color:#fff;padding:10px 16px;font-size:13px;line-height:1.6;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 2px 8px rgba(0,0,0,.25);';
-    bar.innerHTML = '<b>⚠️ 检测到当前没有任何记忆</b>'
-      + (ghOk
-          ? '<span>可从 GitHub 备份恢复（会写入本地，导入前自动备份）。</span><button onclick="runGithubImport()" style="background:#fff;color:#b85c3c;border:none;border-radius:4px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;">从 GitHub 恢复记忆</button>'
-          : '<span>若你在 GitHub 备份过记忆，去「⑦ GitHub 同步」填好配置后即可一键恢复。</span>')
-      + '<button onclick="this.parentNode.remove()" style="margin-left:auto;background:transparent;color:#fff;border:1px solid rgba(255,255,255,.6);border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;">忽略</button>';
-    document.body.insertBefore(bar, document.body.firstChild);
-  } catch (e) { /* ignore */ }
-}
 
 // ========================================
 // iter 1.6 §2 — export zip + §4 duplicates panel
@@ -6641,7 +6572,7 @@ async function loadDuplicates() {
     const r = await fetch(BASE + '/api/duplicates');
     const d = await r.json();
     const pairs = d.pairs || [];
-    if (!pairs.length) { box.innerHTML = '<p style="color:var(--text-dim)">没有发现疑似重复桶。</p>'; return; }
+    if (!pairs.length) { box.innerHTML = '<p style="color:var(--text-dim)">没有发现疑似重复备忘录。</p>'; return; }
     box.innerHTML = pairs.map(p => `
       <div style="background:var(--surface);border-radius:10px;padding:10px;margin:6px 0;">
         <div style="font-size:12px;color:var(--text-dim);">相似度 ${p.score ? p.score.toFixed(3) : '—'}</div>
@@ -6651,29 +6582,6 @@ async function loadDuplicates() {
   } catch (e) { box.innerHTML = '<p style="color:var(--negative)">加载失败: ' + e.message + '</p>'; }
 }
 
-async function checkEmptyMemoryBanner() {
-  try {
-    var sr = await authFetch('/api/status');
-    if (!sr) return;
-    var s = await sr.json();
-    var b = s.buckets || {};
-    var live = (b.permanent || 0) + (b.dynamic || 0);
-    if (live > 0) { var ex = document.getElementById('empty-mem-banner'); if (ex) ex.remove(); return; }
-    // 是否配置了 GitHub（有才提恢复）
-    var ghOk = false;
-    try { var gr = await authFetch('/api/github/status'); if (gr) { var gd = await gr.json(); ghOk = !!(gd && (gd.configured || gd.token_set)); } } catch (e) {}
-    if (document.getElementById('empty-mem-banner')) return;
-    var bar = document.createElement('div');
-    bar.id = 'empty-mem-banner';
-    bar.style.cssText = 'position:sticky;top:0;z-index:9999;background:#b85c3c;color:#fff;padding:10px 16px;font-size:13px;line-height:1.6;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 2px 8px rgba(0,0,0,.25);';
-    bar.innerHTML = '<b>⚠️ 检测到当前没有任何记忆</b>'
-      + (ghOk
-          ? '<span>可从 GitHub 备份恢复（会写入本地，导入前自动备份）。</span><button onclick="runGithubImport()" style="background:#fff;color:#b85c3c;border:none;border-radius:4px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;">从 GitHub 恢复记忆</button>'
-          : '<span>若你在 GitHub 备份过记忆，去「⑦ GitHub 同步」填好配置后即可一键恢复。</span>')
-      + '<button onclick="this.parentNode.remove()" style="margin-left:auto;background:transparent;color:#fff;border:1px solid rgba(255,255,255,.6);border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;">忽略</button>';
-    document.body.insertBefore(bar, document.body.firstChild);
-  } catch (e) { /* ignore */ }
-}
 
 // ========================================
 // iter 1.6 §6 — trace 编辑表单（注入到 detail 面板）
@@ -6765,29 +6673,6 @@ async function bucketSaveEdit(bid) {
   }
 }
 
-async function checkEmptyMemoryBanner() {
-  try {
-    var sr = await authFetch('/api/status');
-    if (!sr) return;
-    var s = await sr.json();
-    var b = s.buckets || {};
-    var live = (b.permanent || 0) + (b.dynamic || 0);
-    if (live > 0) { var ex = document.getElementById('empty-mem-banner'); if (ex) ex.remove(); return; }
-    // 是否配置了 GitHub（有才提恢复）
-    var ghOk = false;
-    try { var gr = await authFetch('/api/github/status'); if (gr) { var gd = await gr.json(); ghOk = !!(gd && (gd.configured || gd.token_set)); } } catch (e) {}
-    if (document.getElementById('empty-mem-banner')) return;
-    var bar = document.createElement('div');
-    bar.id = 'empty-mem-banner';
-    bar.style.cssText = 'position:sticky;top:0;z-index:9999;background:#b85c3c;color:#fff;padding:10px 16px;font-size:13px;line-height:1.6;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 2px 8px rgba(0,0,0,.25);';
-    bar.innerHTML = '<b>⚠️ 检测到当前没有任何记忆</b>'
-      + (ghOk
-          ? '<span>可从 GitHub 备份恢复（会写入本地，导入前自动备份）。</span><button onclick="runGithubImport()" style="background:#fff;color:#b85c3c;border:none;border-radius:4px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;">从 GitHub 恢复记忆</button>'
-          : '<span>若你在 GitHub 备份过记忆，去「⑦ GitHub 同步」填好配置后即可一键恢复。</span>')
-      + '<button onclick="this.parentNode.remove()" style="margin-left:auto;background:transparent;color:#fff;border:1px solid rgba(255,255,255,.6);border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;">忽略</button>';
-    document.body.insertBefore(bar, document.body.firstChild);
-  } catch (e) { /* ignore */ }
-}
 
 // ========================================
 // iter 1.6 §8 — onboarding 首启引导 + embedding 警告
@@ -7196,7 +7081,7 @@ async function syncExistingHuman() {
 <div id="error-alert-popup"
   style="display:none;position:fixed;inset:0;z-index:10000;align-items:center;justify-content:center;background:rgba(44,42,38,0.65);backdrop-filter:blur(4px);"
   onclick="if(event.target===this)closeErrorAlertPopup()">
-  <div style="background:var(--surface-solid);border:1px solid rgba(184,92,60,0.5);border-radius:4px;width:min(560px,94vw);max-height:80vh;overflow-y:auto;padding:24px 24px 20px;box-shadow:0 8px 40px rgba(44,42,38,0.35);display:flex;flex-direction:column;gap:12px;">
+  <div style="background:var(--surface-solid);border:1px solid rgba(197,106,90,0.5);border-radius:4px;width:min(560px,94vw);max-height:80vh;overflow-y:auto;padding:24px 24px 20px;box-shadow:0 8px 40px rgba(44,42,38,0.35);display:flex;flex-direction:column;gap:12px;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
       <span style="font-size:15px;font-weight:700;color:var(--accent);display:inline-flex;align-items:center;gap:6px;"><svg class="icon icon-warn" aria-hidden="true"><use href="#i-warn"></use></svg> 检测到服务错误</span>
       <button onclick="closeErrorAlertPopup()" style="background:none;border:none;cursor:pointer;color:var(--text-dim);line-height:1;padding:0 4px;" title="关闭"><svg class="icon" style="width:16px;height:16px;" aria-hidden="true"><use href="#i-x"></use></svg></button>
