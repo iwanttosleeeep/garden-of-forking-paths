@@ -36,6 +36,7 @@ RUN pip install --no-cache-dir --retries 10 --timeout 120 \
 # Copy project files / 复制项目文件
 COPY src/ ./src/
 COPY frontend/ ./frontend/
+COPY tools/ ./tools/
 COPY VERSION ./VERSION
 COPY config.example.yaml ./config.default.yaml
 COPY entrypoint.sh ./entrypoint.sh
