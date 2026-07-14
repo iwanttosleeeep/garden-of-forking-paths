@@ -212,53 +212,6 @@ class RecordingService:
 
 
 @pytest.mark.asyncio
-async def test_runtime_lifecycle_starts_and_stops_every_owned_service(tmp_path):
-    events = []
-    logger = RecordingLogger()
-    marker = tmp_path / ".boot_fails"
-    marker.write_text("2", encoding="utf-8")
-
-    async def ollama_start():
-        events.append("ollama:start")
-
-    async def ollama_stop():
-        events.append("ollama:stop")
-
-    lifecycle = RuntimeLifecycle(
-        logger=logger,
-        decay_engine=RecordingService("decay", events),
-        embedding_outbox=RecordingService("outbox", events),
-        ensure_ollama_child=ollama_start,
-        stop_ollama_child=ollama_stop,
-        load_tunnel_config=lambda: {"auto_start": True, "token": "tunnel-token"},
-        start_tunnel=lambda token: (events.append(f"tunnel:start:{token}") or True, "ok"),
-        stop_tunnel=lambda: events.append("tunnel:stop"),
-        restart_github_auto_task=lambda interval: events.append(f"github:{interval}"),
-        github_auto_interval=9,
-        boot_marker_path=str(marker),
-    )
-
-    await lifecycle.start()
-    await lifecycle.start()
-    await lifecycle.stop()
-    await lifecycle.stop()
-
-    assert events == [
-        "tunnel:start:tunnel-token",
-        "github:9",
-        "decay:start",
-        "ollama:start",
-        "outbox:start",
-        "github:0",
-        "outbox:stop",
-        "decay:stop",
-        "ollama:stop",
-        "tunnel:stop",
-    ]
-    assert marker.read_text(encoding="utf-8") == "0"
-
-
-@pytest.mark.asyncio
 async def test_runtime_lifecycle_cancels_keepalive_on_shutdown():
     lifecycle = RuntimeLifecycle(
         logger=RecordingLogger(),

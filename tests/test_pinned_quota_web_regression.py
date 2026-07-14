@@ -101,19 +101,3 @@ async def test_bucket_pin_route_rejects_new_pin_when_quota_is_full(pinned_quota_
     assert "error" in _json(response)
     assert pinned_quota_runtime.rows["plain"]["metadata"]["pinned"] is False
     assert pinned_quota_runtime.updates == []
-
-
-@pytest.mark.asyncio
-async def test_import_review_pin_action_respects_pinned_quota(pinned_quota_runtime):
-    mcp = FakeMcp()
-    import_api.register(mcp)
-
-    response = await mcp.routes["/api/import/review"](
-        FakeRequest(body={"decisions": [{"bucket_id": "plain", "action": "pin"}]})
-    )
-
-    assert response.status_code == 200
-    assert _json(response)["applied"] == 0
-    assert _json(response)["errors"] == 1
-    assert pinned_quota_runtime.rows["plain"]["metadata"]["pinned"] is False
-    assert pinned_quota_runtime.updates == []

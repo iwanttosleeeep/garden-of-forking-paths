@@ -145,25 +145,10 @@ async def test_system_diagnostics_reports_missing_ai_configuration(monkeypatch, 
         ),
         encoding="utf-8",
     )
-    (tools_dir / "vnext_preflight.py").write_text(
-        "\n".join(
-            [
-                "def build_parser():",
-                "    parser.add_argument('--buckets-dir')",
-                "    parser.add_argument('--output')",
-                "    parser.add_argument('--coverage-only')",
-                "    runtime = LegacyRuntime.from_config({})",
-                "    return VNextPreflightReportBuilder(runtime).build()",
-            ]
-        ),
-        encoding="utf-8",
-    )
     (web_src / "system.py").write_text(
         "\n".join(
             [
                 "# diagnostics boundary",
-                "vnext_preflight = VNextPreflightReportBuilder(runtime).build()",
-                "action = 'Run tools/vnext_preflight.py'",
             ]
         ),
         encoding="utf-8",
@@ -312,37 +297,12 @@ Diagnostics regression tests.
     assert surface_context_details["items"][0]["instructional_force"] == "none"
     assert surface_context_details["items"][0]["may_control_reasoning"] is False
     assert surface_context_details["items"][0]["redactions"]
-    assert by_id["preflight_cli_diagnostics"]["status"] == "ok"
-    preflight_cli_details = by_id["preflight_cli_diagnostics"]["details"]
-    assert preflight_cli_details["ok"] is True
-    assert preflight_cli_details["missing_files"] == []
-    assert preflight_cli_details["missing_cli_snippets"] == []
-    assert preflight_cli_details["missing_diagnostics_snippets"] == []
     assert by_id["llm"]["status"] == "error"
     assert "API Key" in by_id["llm"]["message"]
     assert by_id["embedding"]["status"] == "error"
     assert "待机" in by_id["embedding"]["message"]
     assert by_id["github"]["status"] == "warning"
     assert by_id["auth"]["details"]["mcp_oauth_required"] is False
-    assert by_id["vnext_preflight"]["status"] == "ok"
-    assert by_id["vnext_preflight"]["details"]["schema"] == "vnext-preflight.v1"
-    assert by_id["preflight_report_self"]["status"] == "ok"
-    preflight_self_details = by_id["preflight_report_self"]["details"]
-    assert preflight_self_details["schema"] == "vnext-preflight.v1"
-    assert preflight_self_details["top_level_schema"] == "vnext-preflight.v1"
-    assert preflight_self_details["missing_self_check"] is False
-    assert preflight_self_details["missing_required_checks"] == []
-    assert preflight_self_details["malformed_checks"] == []
-    assert preflight_self_details["present_required_count"] == preflight_self_details["required_check_count"]
-    assert by_id["vnext_coverage"]["status"] == "ok"
-    vnext_coverage_details = by_id["vnext_coverage"]["details"]
-    assert vnext_coverage_details["schema"] == "vnext-coverage.v1"
-    assert vnext_coverage_details["top_level_schema"] == "vnext-preflight.v1"
-    assert vnext_coverage_details["missing_coverage_check"] is False
-    assert vnext_coverage_details["phase_count"] >= 30
-    assert vnext_coverage_details["preflight_gap_count"] == 0
-    assert vnext_coverage_details["next_preflight_targets"] == []
-    assert vnext_coverage_details["preflight_coverage_percent"] == 100.0
 
 
 @pytest.mark.asyncio

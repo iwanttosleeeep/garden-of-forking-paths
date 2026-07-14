@@ -6,7 +6,7 @@ from ombrebrain.maintenance.migration_contract import (
     MigrationPreservationContract,
     MigrationTraceRecord,
 )
-from ombrebrain.maintenance.report import V3MaintenanceReportBuilder, VNextPreflightReportBuilder
+from ombrebrain.maintenance.report import V3MaintenanceReportBuilder
 from ombrebrain.maintenance.vnext_coverage import VNextCoverageItem, VNextCoverageMatrix
 
 __all__ = [
@@ -17,5 +17,4 @@ __all__ = [
     "V3MaintenanceReportBuilder",
     "VNextCoverageItem",
     "VNextCoverageMatrix",
-    "VNextPreflightReportBuilder",
 ]
