@@ -5,7 +5,6 @@ import pytest
 from tools import _runtime as rt
 from web import _shared as sh
 from web import buckets as buckets_web
-from web import import_api
 
 
 class FakeMcp:

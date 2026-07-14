@@ -27,9 +27,9 @@ except ImportError:  # pragma: no cover
     from ..utils import parse_bool  # type: ignore
 
 try:
-    from backup_archive import MAX_ARCHIVE_BYTES, BackupArchiveError, build_export_archive  # type: ignore
+    from backup_archive import BackupArchiveError, build_export_archive  # type: ignore
 except ImportError:  # pragma: no cover
-    from ..backup_archive import MAX_ARCHIVE_BYTES, BackupArchiveError, build_export_archive  # type: ignore
+    from ..backup_archive import BackupArchiveError, build_export_archive  # type: ignore
 
 logger = sh.logger
 

@@ -22,7 +22,6 @@ from starlette.responses import Response
 
 from . import _shared as sh
 
-from ombrebrain.app.legacy_runtime import LegacyRuntime
 from ombrebrain.architecture import (
     ADRDocument,
     ADRRequirementsContract,
