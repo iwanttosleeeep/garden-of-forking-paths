@@ -15,7 +15,6 @@ web/ — Dashboard / HTTP 路由层（从 server.py 巨石文件拆出，镜像 
 
 from . import _shared
 from . import auth
-from . import tunnel
 from . import oauth
 from . import dashboard
 from . import system
@@ -35,7 +34,6 @@ from . import v3_debug
 
 _WEB_MODULES = (
     ("web.auth", auth.register),
-    ("web.tunnel", tunnel.register),
     ("web.oauth", oauth.register),
     ("web.dashboard", dashboard.register),
     ("web.system", system.register),

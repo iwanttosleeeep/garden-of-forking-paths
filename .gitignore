@@ -11,12 +11,7 @@ config.yaml.dir/
 .venv/
 .venv*/
 venv/
-# .claude/ 是 Claude Code 客户端本地配置，整体不上传；但把 breath hook 脚本
-# 作为官方产物放行给用户（Docker/纯 Python 用户都能从仓库拿到并按 README 装）。
-.claude/*
-!.claude/hooks/
-.claude/hooks/*
-!.claude/hooks/session_breath.py
+.claude/
 .vscode/
 config.yaml
 buckets/

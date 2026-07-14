@@ -202,9 +202,6 @@ class RuntimeLifecycle:
     embedding_outbox: Any = None
     ensure_ollama_child: AsyncCallback | None = None
     stop_ollama_child: AsyncCallback | None = None
-    load_tunnel_config: Callable[[], Mapping[str, Any]] | None = None
-    start_tunnel: Callable[[str], tuple[bool, str]] | None = None
-    stop_tunnel: Callable[[], Any] | None = None
     restart_github_auto_task: Callable[[int], Any] | None = None
     github_auto_interval: int = 0
     keepalive_url: str = ""
@@ -223,15 +220,6 @@ class RuntimeLifecycle:
             self.logger.warning("%s failed: %s", label, exc)
 
     def _start_optional_services(self) -> None:
-        if self.load_tunnel_config is not None and self.start_tunnel is not None:
-            try:
-                tunnel_config = self.load_tunnel_config()
-                if tunnel_config.get("auto_start") and tunnel_config.get("token"):
-                    _ok, message = self.start_tunnel(str(tunnel_config["token"]))
-                    self.logger.info("Tunnel auto-start: %s", message)
-            except Exception as exc:
-                self.logger.warning("tunnel auto-start failed: %s", exc)
-
         if self.github_auto_interval > 0 and self.restart_github_auto_task is not None:
             try:
                 self.restart_github_auto_task(self.github_auto_interval)
@@ -301,11 +289,6 @@ class RuntimeLifecycle:
             getattr(self.decay_engine, "stop", None),
         )
         await self._run_async_step("ollama child stop", self.stop_ollama_child)
-        if self.stop_tunnel is not None:
-            try:
-                self.stop_tunnel()
-            except Exception as exc:
-                self.logger.warning("tunnel stop failed: %s", exc)
 
 
 def install_runtime_lifespan(app: Any, lifecycle: RuntimeLifecycle) -> Any:

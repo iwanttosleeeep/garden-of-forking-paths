@@ -230,36 +230,6 @@ async def test_runtime_lifecycle_cancels_keepalive_on_shutdown():
 
 
 @pytest.mark.asyncio
-async def test_runtime_lifecycle_logs_optional_service_failures_without_leaking():
-    logger = RecordingLogger()
-
-    class FailingService:
-        async def start(self):
-            raise RuntimeError("start failed")
-
-        async def stop(self):
-            raise RuntimeError("stop failed")
-
-    lifecycle = RuntimeLifecycle(
-        logger=logger,
-        decay_engine=FailingService(),
-        embedding_outbox=FailingService(),
-        load_tunnel_config=lambda: (_ for _ in ()).throw(RuntimeError("tunnel failed")),
-        start_tunnel=lambda _token: (True, "unused"),
-        stop_tunnel=lambda: (_ for _ in ()).throw(RuntimeError("stop tunnel failed")),
-    )
-
-    await lifecycle.start()
-    await lifecycle.stop()
-
-    warnings = "\n".join(message for level, message in logger.messages if level == "warning")
-    assert "tunnel auto-start failed" in warnings
-    assert "decay engine start failed" in warnings
-    assert "embedding outbox stop failed" in warnings
-    assert "tunnel stop failed" in warnings
-
-
-@pytest.mark.asyncio
 async def test_runtime_lifespan_composes_with_parent_lifespan():
     events = []
 

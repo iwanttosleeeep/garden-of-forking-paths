@@ -838,9 +838,6 @@ if __name__ == "__main__":
             embedding_outbox=embedding_outbox,
             ensure_ollama_child=_ollama_local.ensure_child_on_boot,
             stop_ollama_child=_ollama_local.stop_child,
-            load_tunnel_config=_load_tunnel_config,
-            start_tunnel=_start_tunnel,
-            stop_tunnel=_stop_tunnel,
             restart_github_auto_task=_restart_github_auto_task,
             github_auto_interval=_gh_auto_interval,
             # Explicit IPv4 avoids localhost resolving to ::1 in Proot/Termux.

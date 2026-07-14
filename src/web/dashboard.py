@@ -69,7 +69,6 @@ def register(mcp) -> None:
             "icon.svg": "image/svg+xml",
             "favicon.svg": "image/svg+xml",
             "manifest.json": "application/manifest+json",
-            "RRPL.ttf": "font/truetype",
         }
         if name not in allowed:
             return JSONResponse({"error": "not found"}, status_code=404)

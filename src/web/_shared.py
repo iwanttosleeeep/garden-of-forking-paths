@@ -3,7 +3,7 @@
 web/_shared.py — Dashboard/HTTP 层的共享依赖与鉴权工具
 ========================================
 
-类比 tools/_runtime.py：web/ 下的各路由模块（auth/tunnel/oauth/…）都从这里取
+类比 tools/_runtime.py：web/ 下的各路由模块（auth/oauth/…）都从这里取
 运行期依赖（config）和横切工具（cookie 会话鉴权、密码哈希、安全问题急救）。
 
 为什么单独抽出来：
