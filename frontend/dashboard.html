@@ -1819,6 +1819,7 @@
       <select id="network-mode" onchange="loadNetwork()" style="font-size:11px;padding:2px 6px;background:var(--surface);border:1px solid var(--border);color:var(--text);">
         <option value="concept">概念 / Concept</option>
         <option value="embedding">桶相似度 / Embedding</option>
+        <option value="fernweh">Fernweh · 星空</option>
       </select>
     </label>
   </div>
@@ -4133,7 +4134,7 @@ async function loadNetwork() {
 
   ctx.fillStyle = '#0A1120';
   ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = '#5B5D4F';
+  ctx.fillStyle = '#5E7896';
   ctx.font = "14px 'Share Tech Mono', monospace";
   ctx.textAlign = 'center';
   ctx.fillText('LOADING MEMORY NET…', W / 2, H / 2);
@@ -4142,18 +4143,21 @@ async function loadNetwork() {
   try {
     var modeSel = document.getElementById('network-mode');
     var mode = modeSel ? modeSel.value : 'concept';
-    var res = await fetch(BASE + '/api/network?mode=' + encodeURIComponent(mode));
+    var fetchMode = (mode === 'fernweh') ? 'embedding' : mode;
+    var res = await fetch(BASE + '/api/network?mode=' + encodeURIComponent(fetchMode));
     networkData = await res.json();
 
-    if (mode === 'embedding') {
+    if (mode === 'fernweh') {
+      startFernweh(canvas, ctx, W, H, networkData);
+    } else if (mode === 'embedding') {
       drawBucketNetwork(ctx, W, H, networkData);
     } else {
       initConceptNetwork(canvas, ctx, W, H, networkData);
     }
     var _n = (networkData.nodes || []).length, _e = (networkData.edges || networkData.links || []).length;
-    setNetTerminal('ONLINE · ' + _n + ' nodes / ' + _e + ' links · mode=' + mode);
+    setNetTerminal(mode === 'fernweh' ? ('FERNWEH · ' + _n + ' 颗星 · ' + _e + ' 条星座线') : ('ONLINE · ' + _n + ' nodes / ' + _e + ' links · mode=' + mode));
   } catch (e) {
-    ctx.fillStyle = '#5B5D4F';
+    ctx.fillStyle = '#5E7896';
     ctx.textAlign = 'center';
     ctx.fillText('LOAD FAILED: ' + e.message, W / 2, H / 2 + 24);
     setNetTerminal('ERROR · ' + e.message);
@@ -4606,6 +4610,143 @@ function injectNetworkControls() {
 function drawConceptNetwork(ctx, W, H, data) {
   var canvas = document.getElementById('network-canvas');
   initConceptNetwork(canvas, ctx, W, H, data);
+}
+
+// =====================================================
+// FERNWEH · 星空 — 记忆的天文学
+// 星等=importance · 色温=valence · 亮度=衰减强度(score)
+// 已放下的星沉入背景;pinned 是恒星(衍射芒,不闪烁);anchor 带环
+// =====================================================
+function _fwHash(s) {
+  var h = 2166136261 >>> 0;
+  for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0) / 4294967295;
+}
+function _fwColor(valence) {
+  // 冷蓝(-1) ← 月白(0/null) → 暖金(+1)
+  var v = (valence === null || valence === undefined) ? 0 : Math.max(-1, Math.min(1, valence));
+  var cold = [143, 179, 232], mid = [232, 236, 244], warm = [242, 217, 166];
+  var a = v < 0 ? cold : warm, k = Math.abs(v);
+  return [Math.round(mid[0] + (a[0] - mid[0]) * k),
+          Math.round(mid[1] + (a[1] - mid[1]) * k),
+          Math.round(mid[2] + (a[2] - mid[2]) * k)];
+}
+function startFernweh(canvas, ctx, W, H, data) {
+  var nodes = (data.nodes || []).slice();
+  var edges = (data.edges || []).filter(function (e) { return (e.weight || 0) >= 0.62; });
+  if (!nodes.length) {
+    ctx.fillStyle = '#0A1120'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#5E7896'; ctx.textAlign = 'center';
+    ctx.fillText('这片夜空还没有星星 — hold 一条备忘录,点亮第一颗', W / 2, H / 2);
+    return;
+  }
+  // —— 布局:确定性散布 + 弹簧松弛(同一片天空,每次抬头都认得) ——
+  var pos = {}, pad = 46;
+  nodes.forEach(function (n) {
+    pos[n.id] = { x: pad + _fwHash(n.id) * (W - pad * 2), y: pad + _fwHash(n.id + '~') * (H - pad * 2) };
+  });
+  var relax = Math.min(160, 40 + nodes.length);
+  for (var it = 0; it < relax; it++) {
+    edges.forEach(function (e) {
+      var a = pos[e.source], b = pos[e.target]; if (!a || !b) return;
+      var dx = b.x - a.x, dy = b.y - a.y, d = Math.max(1, Math.sqrt(dx * dx + dy * dy));
+      var ideal = 70 + (1 - (e.weight || 0.62)) * 160;
+      var f = (d - ideal) * 0.010;
+      dx = dx / d * f; dy = dy / d * f;
+      a.x += dx; a.y += dy; b.x -= dx; b.y -= dy;
+    });
+    if (nodes.length <= 320) {
+      for (var i = 0; i < nodes.length; i++) for (var j = i + 1; j < nodes.length; j++) {
+        var a = pos[nodes[i].id], b = pos[nodes[j].id];
+        var dx = b.x - a.x, dy = b.y - a.y, d2 = dx * dx + dy * dy;
+        if (d2 < 900 && d2 > 0.01) {
+          var d = Math.sqrt(d2), push = (30 - d) * 0.06 / d;
+          a.x -= dx * push; a.y -= dy * push; b.x += dx * push; b.y += dy * push;
+        }
+      }
+    }
+    nodes.forEach(function (n) {
+      var p = pos[n.id];
+      p.x = Math.max(pad, Math.min(W - pad, p.x)); p.y = Math.max(pad, Math.min(H - pad, p.y));
+    });
+  }
+  // —— 星等/亮度预计算 ——
+  var maxScore = 0.001;
+  nodes.forEach(function (n) { maxScore = Math.max(maxScore, n.score || 0); });
+  var byImp = nodes.slice().sort(function (a, b) { return (b.importance || 0) - (a.importance || 0); });
+  var labeled = new Set(byImp.slice(0, 3).map(function (n) { return n.id; }));
+  nodes.forEach(function (n) {
+    if (n.pinned || n.anchor) labeled.add(n.id);
+    n._r = 1.2 + ((n.importance || 5) / 10) * 3.6;
+    var b = 0.28 + 0.72 * ((n.score || 0) / maxScore);
+    if (n.resolved) b *= 0.45;
+    n._b = Math.min(1, b);
+    n._c = _fwColor(n.valence);
+    n._ph = _fwHash(n.id + '*') * Math.PI * 2;
+  });
+  // —— 背景尘星(确定性,不参与数据) ——
+  var dust = [];
+  for (var d = 0; d < 110; d++) {
+    dust.push({ x: _fwHash('d' + d) * W, y: _fwHash('e' + d) * H,
+                r: 0.4 + _fwHash('f' + d) * 0.8, a: 0.06 + _fwHash('g' + d) * 0.10 });
+  }
+  // —— 呼吸循环 ——
+  var t0 = performance.now();
+  function frame(now) {
+    var t = (now - t0) / 1000;
+    var g = ctx.createRadialGradient(W / 2, H * 0.42, 20, W / 2, H / 2, Math.max(W, H) * 0.72);
+    g.addColorStop(0, '#0C1424'); g.addColorStop(1, '#070D18');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = 'rgba(200,215,240,1)';
+    dust.forEach(function (s) {
+      ctx.globalAlpha = s.a; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    // 星座线
+    edges.forEach(function (e) {
+      var a = pos[e.source], b = pos[e.target]; if (!a || !b) return;
+      var w = (e.weight - 0.62) / 0.38;
+      ctx.strokeStyle = 'rgba(175,195,230,' + (0.05 + 0.11 * w).toFixed(3) + ')';
+      ctx.lineWidth = 0.6 + 0.6 * w;
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    });
+    // 星
+    nodes.forEach(function (n) {
+      var p = pos[n.id], c = n._c;
+      var tw = n.pinned ? 1 : (1 + 0.09 * Math.sin(t * 1.6 + n._ph));
+      var alpha = Math.min(1, n._b * tw);
+      var rgb = c[0] + ',' + c[1] + ',' + c[2];
+      var glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, n._r * 4.2);
+      glow.addColorStop(0, 'rgba(' + rgb + ',' + (alpha * 0.55).toFixed(3) + ')');
+      glow.addColorStop(1, 'rgba(' + rgb + ',0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(p.x, p.y, n._r * 4.2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(' + rgb + ',' + alpha.toFixed(3) + ')';
+      ctx.beginPath(); ctx.arc(p.x, p.y, n._r, 0, Math.PI * 2); ctx.fill();
+      if (n.pinned) {   // 恒星:四芒衍射
+        ctx.strokeStyle = 'rgba(' + rgb + ',' + (alpha * 0.75).toFixed(3) + ')';
+        ctx.lineWidth = 0.8;
+        var L = n._r * 4.6;
+        ctx.beginPath();
+        ctx.moveTo(p.x - L, p.y); ctx.lineTo(p.x + L, p.y);
+        ctx.moveTo(p.x, p.y - L); ctx.lineTo(p.x, p.y + L);
+        ctx.stroke();
+      }
+      if (n.anchor) {   // 坐标系:细环
+        ctx.strokeStyle = 'rgba(232,236,244,' + (alpha * 0.5).toFixed(3) + ')';
+        ctx.lineWidth = 0.7;
+        ctx.beginPath(); ctx.arc(p.x, p.y, n._r + 3.5, 0, Math.PI * 2); ctx.stroke();
+      }
+      if (labeled.has(n.id)) {
+        ctx.fillStyle = 'rgba(155,166,190,0.78)';
+        ctx.font = "10px 'Share Tech Mono', monospace";
+        ctx.textAlign = 'center';
+        ctx.fillText(n.name, p.x, p.y + n._r + 14);
+      }
+    });
+    _netRAF = requestAnimationFrame(frame);
+  }
+  _netRAF = requestAnimationFrame(frame);
 }
 
 // 旧的桶级网络（embedding 模式仍然能切到）

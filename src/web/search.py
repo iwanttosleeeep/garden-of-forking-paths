@@ -140,6 +140,8 @@ def register(mcp) -> None:
                         "resolved": meta.get("resolved", False),
                         "pinned": meta.get("pinned", False),
                         "anchor": bool(meta.get("anchor")),  # #10
+                        "importance": meta.get("importance", 5),   # Fernweh: 星等
+                        "valence": meta.get("valence"),            # Fernweh: 色温(feel 才有,None=中性)
                     })
                 edges = []
                 embeddings = {}
