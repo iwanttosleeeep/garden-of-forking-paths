@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ombre Brain</title>
+<title>The Garden of Forking Paths</title>
 <meta name="theme-color" content="#B85C3C">
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="apple-touch-icon" href="/static/icon.svg">
@@ -12,31 +12,30 @@
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
 <style>
   :root {
-    /* === 复古掌机 retro-handheld palette — warm cream plastic + pale LCD + gold === */
-    --bg: #E7E2D8;                    /* 外环境米灰（带颗粒感） */
-    --bg-gradient: #E7E2D8;
-    --surface: #F4F0E8;              /* 凸起塑料外壳 */
-    --surface-solid: #EDE8DE;        /* 次级外壳块 */
-    --border: #DCD6CA;                /* 极柔的分隔（几乎无线条感） */
-    --border-strong: #C7C0B2;
-    --text: #2C2A26;                  /* 墨黑 */
-    --text-dim: #6E695E;
-    --text-light: #9E988C;
-    --accent: #C2982F;                /* 暖金（高亮/激活态） */
-    --accent-light: #D7B14A;
-    --accent-glow: rgba(194, 152, 47, 0.22);
-    --positive: #87A987;
-    --negative: #BE5A41;              /* 删除/危险红 */
-    --warning: #B89762;
-    /* 拟物化双向光影：高光（左上）+ 阴影（右下）。原作者把高光设成透明=关闭了立体感，这里点亮。 */
-    --shadow-light: rgba(255, 253, 247, 0.9);
-    --shadow-dark: rgba(150, 138, 116, 0.40);
-    --shadow-dark-subtle: rgba(150, 138, 116, 0.22);
-    /* LCD 点阵屏 */
-    --lcd: #C7C9BC;                   /* 屏底（灰绿单色） */
-    --lcd-text: #25271E;              /* 屏上深字 */
-    --lcd-dim: #5B5D4F;
-    --lcd-glow: rgba(37, 39, 30, 0.18);
+    /* === The Garden of Forking Paths — 午夜蓝夜间掌机 === */
+    --bg: #0E1524;
+    --bg-gradient: #0E1524;
+    --surface: #18213A;
+    --surface-solid: #151D33;
+    --border: #2A3554;
+    --border-strong: #3A4668;
+    --text: #E8ECF4;
+    --text-dim: #9BA6BE;
+    --text-light: #6B7590;
+    --accent: #AFC3E6;
+    --accent-light: #C7D6EE;
+    --accent-glow: rgba(175, 195, 230, 0.22);
+    --accent-contrast: #0E1524;
+    --positive: #7BA694;
+    --negative: #C56A5A;
+    --warning: #C0A468;
+    --shadow-light: rgba(140, 165, 220, 0.12);
+    --shadow-dark: rgba(0, 0, 0, 0.45);
+    --shadow-dark-subtle: rgba(0, 0, 0, 0.25);
+    --lcd: #0A1120;
+    --lcd-text: #A8C7E8;
+    --lcd-dim: #5E7896;
+    --lcd-glow: rgba(168, 199, 232, 0.20);
     --shell-radius: 24px;
     --radius-inner: 16px;
     --radius-control: 12px;
@@ -810,7 +809,7 @@
   .header button:hover { color: var(--accent) !important; transform: translateY(-1px); }
   .header button:active { transform: translateY(1px); box-shadow: inset 3px 3px 6px var(--shadow-dark-subtle), inset -2px -2px 5px var(--shadow-light) !important; }
   .search-bar input { box-shadow: inset 3px 3px 7px var(--shadow-dark-subtle), inset -3px -3px 6px var(--shadow-light) !important; }
-  #heartbeat-indicator, #anchor-counter { font-family:'Share Tech Mono',monospace; }
+  #anchor-counter { font-family:'Share Tech Mono',monospace; }
 
   /* ============ 标签页 → 内凹托盘里的一排实体键帽（keycap selector） ============ */
   .tabs {
@@ -839,7 +838,7 @@
     color: var(--accent);
     transform: translateY(-1.5px);
     box-shadow: 4px 4px 11px var(--shadow-dark-subtle), -4px -4px 9px var(--shadow-light),
-                0 0 0 2px var(--accent-glow), inset 0 0 14px rgba(194,152,47,0.10);
+                0 0 0 2px var(--accent-glow), inset 0 0 14px rgba(175,195,230,0.10);
   }
   .tab.active .tab-en { color: var(--accent); }
   .tab:active { transform: translateY(1px); box-shadow: inset 3px 3px 7px var(--shadow-dark-subtle), inset -2px -2px 6px var(--shadow-light); }
@@ -979,7 +978,7 @@
     flex-shrink: 0;
   }
 
-  /* ============ 记忆桶行 → 凸起塑料长条，纵向二层 ============ */
+  /* ============ 备忘录行 → 凸起塑料长条，纵向二层 ============ */
   .bucket-row {
     border: none !important;
     border-radius: 16px;
@@ -1057,7 +1056,7 @@
     color: rgba(90,82,62,0.65);
     text-shadow: none;
   }
-  #network-terminal.star-active::before { color: rgba(180,138,40,0.8); }
+  #network-terminal.star-active::before { color: rgba(175,195,230,0.8); }
 
   /* ============ Breath 评分流程：屏内点阵卡片 ============ */
   .flow-step {
@@ -1210,12 +1209,10 @@
      小巧思 · MICRO-INTERACTIONS（呼吸 / 消散 / 展开 / 钉光 / 引力 / 孵蛋）
      ============================================================ */
 
-  /* —— ① 衰减引擎运行 → heartbeat 点轻微呼吸（呼应 breath） —— */
   @keyframes ob-breathe {
     0%, 100% { transform: scale(0.84); opacity: 0.55; box-shadow: 0 0 0 0 rgba(126,173,104,0.0); }
     40%      { transform: scale(1.12); opacity: 1;    box-shadow: 0 0 5px 2px rgba(126,173,104,0.40); }
   }
-  #heartbeat-dot.breathing { animation: ob-breathe 4.2s ease-in-out infinite; }
 
   /* —— ② pinned 桶 hover：图标被「钉住」般亮起光晕 —— */
   .bucket-row .pin-ic svg { transition: color .25s ease, filter .25s ease, transform .25s ease; }
@@ -1225,7 +1222,7 @@
     transform: rotate(-10deg) scale(1.18);
   }
 
-  /* —— ③ 删除/放下：记忆桶轻轻「消散」而非直接消失 —— */
+  /* —— ③ 删除/放下：备忘录轻轻「消散」而非直接消失 —— */
   @keyframes ob-dissolve {
     0%   { opacity: 1; transform: translateX(0) scale(1); filter: blur(0); }
     100% { opacity: 0; transform: translateX(14px) scale(0.97); filter: blur(3px); }
@@ -1259,7 +1256,7 @@
   .detail-panel.anchor-mode::before {
     content:''; position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: 0.5;
     background:
-      repeating-radial-gradient(circle at 50% 38%, transparent 0 26px, rgba(194,152,47,0.10) 26px 27px, transparent 27px 54px);
+      repeating-radial-gradient(circle at 50% 38%, transparent 0 26px, rgba(175,195,230,0.10) 26px 27px, transparent 27px 54px);
     -webkit-mask-image: radial-gradient(circle at 50% 38%, #000 0%, transparent 72%);
             mask-image: radial-gradient(circle at 50% 38%, #000 0%, transparent 72%);
   }
@@ -1270,33 +1267,8 @@
   #anchor-counter.full #anchor-counter-text { color: var(--negative); font-weight: 600; }
 
   /* —— ⑨ 像素小黄鸡蛋：固定在右下角，随记忆数量孵化长大 —— */
-  #ob-chick {
-    position: fixed; right: 18px; bottom: 16px; z-index: 60;
-    width: 46px; height: 46px; cursor: pointer;
-    filter: drop-shadow(2px 3px 4px var(--shadow-dark));
-    transition: transform .25s cubic-bezier(.3,1.4,.5,1);
-    image-rendering: pixelated;
-  }
-  #ob-chick:hover { transform: translateY(-3px) scale(1.08); }
-  #ob-chick svg { display:block; width:100%; height:100%; shape-rendering: crispEdges; }
-  @keyframes ob-chick-wiggle { 0%,100%{transform:rotate(0)} 25%{transform:rotate(-9deg)} 75%{transform:rotate(9deg)} }
-  #ob-chick.wiggle svg { animation: ob-chick-wiggle .5s ease-in-out; transform-origin: 50% 80%; }
-  #ob-chick .chick-tip {
-    position:absolute; right:0; bottom:52px; white-space:nowrap;
-    background: var(--surface); color: var(--text);
-    font-family:'Share Tech Mono',monospace; font-size:10px; padding:5px 9px; border-radius:9px;
-    box-shadow: 3px 3px 10px var(--shadow-dark), -2px -2px 6px var(--shadow-light);
-    opacity:0; transform: translateY(4px); transition: opacity .2s, transform .2s; pointer-events:none;
-  }
-  #ob-chick:hover .chick-tip { opacity:1; transform: translateY(0); }
-  @media (max-width: 768px) { #ob-chick { width: 38px; height: 38px; right: 12px; bottom: 12px; } }
 
   /* —— ⑨b 小鸡的一天：随时段给画布微调色温（纯装饰，best-effort）—— */
-  #ob-chick canvas { transition: filter .8s ease; }
-  #ob-chick.tod-dawn  canvas { filter: hue-rotate(-8deg) brightness(1.05) saturate(1.05); }
-  #ob-chick.tod-day   canvas { filter: brightness(1.08) saturate(1.10); }
-  #ob-chick.tod-dusk  canvas { filter: hue-rotate(-14deg) brightness(0.99) saturate(1.18); }
-  #ob-chick.tod-night canvas { filter: brightness(0.80) saturate(0.78) hue-rotate(10deg); }
 
   /* ==================== Easter Eggs ==================== */
   #egg-overlay {
@@ -1311,7 +1283,7 @@
     text-shadow:0 0 10px rgba(157,200,128,0.5); white-space:pre;
   }
   #egg-terminal .eg-dim  { color:rgba(157,200,128,0.38); }
-  #egg-terminal .eg-bright { color:#fff; }
+  #egg-terminal .eg-bright { color:var(--accent-contrast); }
   #egg-terminal .eg-cursor {
     display:inline-block; width:8px; height:13px; background:#9DC880;
     vertical-align:-2px; animation:eg-blink .7s step-end infinite;
@@ -1319,7 +1291,6 @@
   @keyframes eg-blink { 0%,100%{opacity:1} 50%{opacity:0} }
   #egg-poem-card { animation:ob-unfold .4s cubic-bezier(.2,.7,.3,1) both; }
   @keyframes egg-rage { 0%{transform:rotate(-12deg) scale(1.1)} 50%{transform:rotate(12deg) scale(1.15)} 100%{transform:rotate(-12deg) scale(1.1)} }
-  #ob-chick.raging { animation:egg-rage 0.1s ease-in-out infinite !important; filter:drop-shadow(0 0 10px rgba(200,80,40,0.9)) saturate(180%) !important; }
   /* ====================================================== */
 
   /* SVG icon system */
@@ -1359,7 +1330,7 @@
   .embed-warn-btn:hover { background: rgba(184,151,98,0.18); }
 
   /* ====== ⓪ 版本 & 更新 面板 ====== */
-  #sec-version { background: rgba(194,152,47,0.03); border: 1px solid rgba(194,152,47,0.22); }
+  #sec-version { background: rgba(175,195,230,0.03); border: 1px solid rgba(175,195,230,0.22); }
   #sec-version h3 { color: var(--accent); }
   .ver-status-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:10px 0 0; }
   .ver-badge {
@@ -1461,7 +1432,7 @@
     color: var(--text-dim);
   }
 
-  /* ============ 记忆桶行 — 纵向二层布局 ============ */
+  /* ============ 备忘录行 — 纵向二层布局 ============ */
   .bucket-row-top {
     display: flex;
     align-items: center;
@@ -1745,37 +1716,28 @@
 <div class="header">
   <h1>
     <img class="ob-logo" src="/static/icon.svg" alt="OB" />
-    Ombre Brain<span class="version-badge" id="version-badge"></span>
+    The Garden of Forking Paths<span class="version-badge" id="version-badge"></span>
   </h1>
   <div class="header-meta">
-    <!-- 记忆归属徽标：多人共用一套 OB 时（owner_count>=2）显示「这份记忆是谁的」，单人隐藏。
-         由 loadOwnerBadge() 按 /api/config 的 owner_name / owner_count 填充。 -->
-    <span id="owner-badge" title="这份记忆的归属者（多人共用时显示）" style="display:none;font-size:11px;font-weight:600;color:var(--accent,#b85c3c);border:1px solid var(--accent,#b85c3c);border-radius:10px;padding:2px 9px;align-items:center;gap:4px;">
-      <i data-lucide="user" style="width:12px;height:12px;"></i>
-      <span id="owner-badge-text"></span>
-    </span>
     <span class="stats" id="stats">loading...</span>
-    <span id="heartbeat-indicator" title="MCP 心跳" style="font-size:11px;color:var(--text-dim);display:inline-flex;align-items:center;gap:4px;">
-      <span id="heartbeat-dot" style="width:8px;height:8px;border-radius:50%;background:#bbb;display:inline-block;"></span>
       <span id="heartbeat-text">…</span>
     </span>
-    <span id="anchor-counter" title="anchor = 坐标系桶，硬上限 24" style="font-size:11px;color:var(--text-dim);cursor:pointer;display:inline-flex;align-items:center;gap:4px;" onclick="document.querySelector('[data-tab=anchors]')?.click()">
+    <span id="anchor-counter" title="anchor = 坐标系备忘录，硬上限 24" style="font-size:11px;color:var(--text-dim);cursor:pointer;display:inline-flex;align-items:center;gap:4px;" onclick="document.querySelector('[data-tab=anchors]')?.click()">
       <i data-lucide="anchor" style="width:12px;height:12px;"></i>
       <span id="anchor-counter-text">0/24</span>
     </span>
   </div>
   <div class="search-bar">
-    <input type="text" id="search-input" placeholder="搜索记忆… / 粘贴完整 bucket id 精确定位" onkeydown="if(event.key==='Enter')doSearch()" />
+    <input type="text" id="search-input" placeholder="搜索备忘录…" onkeydown="if(event.key==='Enter')doSearch()" />
     <button onclick="doSearch()" title="搜索"><i data-lucide="search"></i></button>
   </div>
   <div class="header-actions">
-    <button onclick="openFeedback()" title="给作者反馈" style="height:32px;padding:0 12px;gap:5px;display:inline-flex;align-items:center;white-space:nowrap;font-size:12px;"><i data-lucide="message-circle"></i> 反馈</button>
     <button onclick="doLogout()" title="退出登录 / Log out" style="height:32px;padding:0 12px;gap:5px;display:inline-flex;align-items:center;white-space:nowrap;font-size:12px;"><i data-lucide="log-out"></i> 退出</button>
   </div>
 </div>
 
 <div class="tabs">
-  <div class="tab active" data-tab="list"><span>记忆桶</span><span class="tab-en">Buckets</span></div>
+  <div class="tab active" data-tab="list"><span>备忘录</span><span class="tab-en">Memos</span></div>
   <div class="tab" data-tab="breath"><span>Breath 模拟</span><span class="tab-en">Breath Trace</span></div>
   <div class="tab" data-tab="network"><span>记忆网络</span><span class="tab-en">Network</span></div>
   <div class="tab" data-tab="tools"><span>工具箱</span><span class="tab-en">Toolbox</span></div>
@@ -1791,7 +1753,6 @@
   <div class="tab" data-tab="v3-debug"><span>2.4.0 Debug</span><span class="tab-en">Replay</span></div>
   -->
   <div class="tab-spacer"></div>
-  <div class="tab" data-tab="about"><span>关于</span><span class="tab-en">About</span></div>
 </div>
 
 <!-- embed-warn-banner: 向量化未配置时始终可见，配置后自动消失 -->
@@ -2009,14 +1970,6 @@
 </div>
 
 <!-- ====== iter 1.7 §H: About / Author note ====== -->
-<div class="content" id="about-view" style="display:none">
-  <div style="max-width:680px;margin:0 auto;padding:20px 0;">
-    <div id="about-content" style="font-family:'Noto Serif SC',Georgia,serif;line-height:1.95;color:var(--text);">
-      <div style="text-align:center;color:var(--text-dim);padding:36px 0;font-size:13px;">加载中…</div>
-    </div>
-  </div>
-</div>
-
 <!-- ====== Letters tab (iter 1.6 follow-up): 把原 letters.html 合并进来 ====== -->
 <div class="content" id="letters-view" style="display:none">
   <div style="max-width:920px;margin:0 auto;">
@@ -2068,7 +2021,7 @@
   </div>
 </div>
 
-<!-- iter 2.0: anchor view / 坐标系桶面板 -->
+<!-- iter 2.0: anchor view / 坐标系备忘录面板 -->
 <div class="content" id="anchors-view" style="display:none">
   <div style="max-width:920px;margin:0 auto;">
     <div class="config-section">
@@ -2091,76 +2044,29 @@
 
     <!-- ⓪ 版本 & 更新 -->
     <div class="config-section" id="sec-version">
-      <h3>⓪ 版本 & 更新</h3>
-      <div class="ver-status-row">
-        <span style="font-size:13px;">当前版本：<b id="ver-local-disp">…</b></span>
-        <button class="btn-secondary" onclick="checkGitHubVersion()" id="btn-check-ver" style="height:30px;padding:0 14px;font-size:12px;display:inline-flex;align-items:center;gap:5px;">
-          <i data-lucide="refresh-cw"></i> 检查 GitHub 更新
-        </button>
-        <span id="ver-checking" style="display:none;font-size:12px;color:var(--text-dim);">检查中…</span>
-        <span class="ver-badge ver-badge-ok"  id="ver-badge-ok"  style="display:none;">✓ 已是最新</span>
-        <span class="ver-badge ver-badge-new" id="ver-badge-new" style="display:none;">⬆ 有新版本</span>
-        <span id="ver-error" style="display:none;font-size:12px;color:var(--negative);"></span>
-      </div>
-
-      <!-- 有新版本时显示的完整更新引导面板 -->
-      <div id="ver-update-panel" style="display:none">
-        <div style="font-weight:600;font-size:13px;margin-bottom:6px;">
-          最新版本：<span id="ver-remote-disp" style="color:var(--accent)">—</span>
-          <span id="ver-remote-date" style="font-size:11px;color:var(--text-dim);font-weight:400;margin-left:8px;"></span>
-        </div>
-
-        <div style="font-size:12px;font-weight:600;color:var(--text-dim);margin:10px 0 4px;">更新说明</div>
-        <div class="ver-notes-box" id="ver-notes-box">—</div>
-
-        <div style="font-size:12px;font-weight:600;color:var(--text-dim);margin:10px 0 4px;">当前部署信息（建议截图保存）</div>
-        <div class="ver-deploy-info" id="ver-deploy-info">载入中…</div>
-
-        <div style="font-size:12px;font-weight:600;color:var(--warning);margin:16px 0 8px;">⚠ 更新前请先完成以下两步</div>
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
-          <button class="btn-primary" onclick="downloadExport()" id="btn-export-before-update" style="height:34px;padding:0 14px;font-size:12px;display:inline-flex;align-items:center;gap:5px;">
-            <i data-lucide="download"></i> ① 导出记忆备份
-          </button>
-          <span style="font-size:11px;color:var(--text-dim);">下载 .zip 备份</span>
-        </div>
-        <div style="font-size:11px;color:var(--text-dim);margin-bottom:16px;line-height:1.7;">
-          ② 截图上方部署信息（端口、数据目录、访问地址），以备不时之需。
-        </div>
-
-        <!-- 热更新按钮 -->
-        <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px;">
-          <button class="btn-primary" onclick="doHotUpdate()" id="btn-hot-update"
-            style="height:38px;padding:0 20px;font-size:13px;display:inline-flex;align-items:center;gap:7px;background:var(--accent);color:#fff;">
-            <i data-lucide="zap"></i> 立即热更新
-          </button>
-          <span style="font-size:11px;color:var(--text-dim);margin-left:10px;">
-            服务端自动下载新版并重启，记忆数据不受影响
-          </span>
-          <!-- 热更新持久性提示（用户反馈 #1）：Docker 下如实说明「已持久化 / 重建后会失效」 -->
-          <div id="ver-persist-note" style="display:none;margin-top:10px;font-size:12px;line-height:1.5;border-radius:8px;padding:9px 12px;"></div>
-        </div>
-
-        <!-- 更新进度日志 -->
-        <div id="ver-update-log" style="display:none;margin-top:12px;">
-          <div class="ver-deploy-info" id="ver-log-box" style="min-height:60px;white-space:pre-wrap;"></div>
-          <div id="ver-update-done" style="display:none;margin-top:8px;font-size:13px;font-weight:600;color:var(--positive);">
-            ✓ 更新完成！页面将自动刷新…
-          </div>
-        </div>
+      <h3>⓪ 铭牌</h3>
+      <div style="font-size:13px;line-height:2;color:var(--text);">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:17px;color:var(--accent);">The Garden of Forking Paths</div>
+        <div style="font-size:12px;color:var(--text-dim);font-style:italic;">Time forks perpetually toward innumerable futures.</div>
+        <div style="margin-top:8px;">版本 <span id="ver-current" style="font-family:'Share Tech Mono',monospace;">…</span>
+          · <a href="https://github.com/iwanttosleeeep/garden-of-forking-paths" target="_blank" style="color:var(--accent);">仓库</a>
+          · 更新走 git + rebuild</div>
+        <div id="decay-status-line" style="font-size:11px;color:var(--text-dim);margin-top:4px;">衰减引擎:…</div>
+        <div style="font-size:11px;color:var(--text-light);margin-top:8px;">forked from Ombre Brain by P0luz · 名字继承,结论现挣</div>
       </div>
     </div>
 
-    <!-- 顶部引导 + 锚点 -->
+        <!-- 顶部引导 + 锚点 -->
     <div class="config-section" style="background:rgba(0,0,0,0.025);">
       <div style="font-size:13px;color:var(--text-dim);line-height:1.7;">
         所有项都直接显示当前生效的值，可以在此处改。每一组下方的「保存」按钮会立刻写入 .env / config.yaml / 各设置接口。
       </div>
       <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;font-size:12px;">
-        <a href="#sec-version" style="padding:4px 10px;border:1px solid rgba(194,152,47,0.4);border-radius:14px;text-decoration:none;color:var(--accent);">⓪ 版本 & 更新</a>
+        <a href="#sec-version" style="padding:4px 10px;border:1px solid rgba(175,195,230,0.4);border-radius:14px;text-decoration:none;color:var(--accent);">⓪ 铭牌</a>
         <a href="#sec-me" style="padding:4px 10px;border:1px solid var(--border,#ddd);border-radius:14px;text-decoration:none;color:var(--text);">① 我</a>
         <a href="#sec-service" style="padding:4px 10px;border:1px solid var(--border,#ddd);border-radius:14px;text-decoration:none;color:var(--text);">② 服务</a>
         <a href="#sec-engine" style="padding:4px 10px;border:1px solid var(--border,#ddd);border-radius:14px;text-decoration:none;color:var(--text);">③ 引擎</a>
-        <a href="#sec-bucket" style="padding:4px 10px;border:1px solid var(--border,#ddd);border-radius:14px;text-decoration:none;color:var(--text);">④ 桶行为</a>
+        <a href="#sec-bucket" style="padding:4px 10px;border:1px solid var(--border,#ddd);border-radius:14px;text-decoration:none;color:var(--text);">④ 备忘录行为</a>
         <a href="#sec-env" style="padding:4px 10px;border:1px solid var(--border,#ddd);border-radius:14px;text-decoration:none;color:var(--text);">⑤ 环境变量</a>
         <a href="#sec-mcp" style="padding:4px 10px;border:1px solid var(--border,#ddd);border-radius:14px;text-decoration:none;color:var(--text);">⑥ MCP 配置</a>
         <a href="#sec-github" style="padding:4px 10px;border:1px solid var(--border,#ddd);border-radius:14px;text-decoration:none;color:var(--text);">⑦ GitHub 同步</a>
@@ -2317,14 +2223,14 @@
       </div>
 
       <div>
-        <div style="font-weight:600;font-size:13px;margin-bottom:6px;">宿主机记忆桶目录 (Docker)</div>
+        <div style="font-weight:600;font-size:13px;margin-bottom:6px;">宿主机备忘录目录 (Docker)</div>
         <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;line-height:1.6;">
           docker-compose 将 <code>${OMBRE_HOST_VAULT_DIR:-./buckets}</code> 挂到容器的 <code>/app/buckets</code>。留空 = compose 文件旁的 <code>./buckets</code>。
           <span style="color:var(--warning);"><svg class="icon icon-warn" aria-hidden="true"><use href="#i-warn"></use></svg> 容器运行后不能修改宿主机挂载；请编辑 compose 文件旁的 <code>.env</code>，再执行 <code>docker compose up -d --force-recreate</code>。</span>
         </div>
         <div class="config-row">
           <label>路径</label>
-          <input type="text" id="settings-host-vault" placeholder="例如 /Users/you/Obsidian/Ombre Brain" style="flex:1;" />
+          <input type="text" id="settings-host-vault" placeholder="例如 /Users/you/Obsidian/Garden" style="flex:1;" />
         </div>
         <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
           <button id="settings-host-vault-save" class="btn-primary" onclick="saveHostVault()" title="保存 / Save" style="padding:0 14px;height:36px;display:inline-flex;align-items:center;gap:5px;"><i data-lucide="check"></i> 保存</button>
@@ -2403,7 +2309,7 @@
           · 跨区域用（如美国机连国内 API）务必给服务器挂梯子 / 代理，否则易超时或报 400。
         </div>
         <div id="emb-key-notice" style="display:none;font-size:12px;color:var(--warning);margin-bottom:10px;padding:7px 10px;background:rgba(184,153,98,0.08);border-radius:4px;line-height:1.6;">
-          <svg class="icon icon-warn" aria-hidden="true"><use href="#i-warn"></use></svg> Ombre Brain 必须配置向量化 Embedding API Key 才能正常使用。未配置时语义检索完全不可用，记忆系统无法运作。请在下方填入 Key 并点击「保存 Key」，保存后立即生效。
+          <svg class="icon icon-warn" aria-hidden="true"><use href="#i-warn"></use></svg> 花园必须配置向量化 Embedding API Key 才能正常使用。未配置时语义检索完全不可用，记忆系统无法运作。请在下方填入 Key 并点击「保存 Key」，保存后立即生效。
         </div>
         <div id="emb-info-panel" style="margin-bottom:10px;padding:12px 14px;background:var(--surface-solid);border-radius:var(--radius-control);box-shadow:inset 3px 3px 7px var(--shadow-dark-subtle),inset -3px -3px 6px var(--shadow-light);font-size:12px;line-height:1.7;color:var(--text);">
           <div>当前后端：<b id="emb-info-backend">—</b> · 模型：<span id="emb-info-model">—</span> · 维度：<span id="emb-info-dim">—</span></div>
@@ -2524,7 +2430,7 @@
 
     <!-- ④ 桶行为 -->
     <div class="config-section" id="sec-bucket">
-      <h3>④ 桶行为</h3>
+      <h3>④ 备忘录行为</h3>
 
       <div style="margin-bottom:18px;">
         <div style="font-weight:600;font-size:13px;margin-bottom:6px;">呼吸采样 <span style="font-size:11px;color:var(--text-dim);font-weight:400;">/ Breath Sampling</span></div>
@@ -2845,7 +2751,7 @@
       <div style="margin-bottom:18px;padding-top:14px;border-top:1px solid var(--border);">
         <div style="font-weight:600;font-size:13px;margin-bottom:6px;">从 zip 包导入（完整记忆迁移）</div>
         <div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;line-height:1.6;">
-          上传从另一个 Ombre Brain 实例导出的 <code>.zip</code> 文件。系统会增量合并，遇到 ID 冲突时由你决定如何处理。<br>
+          上传从另一个实例导出的 <code>.zip</code> 文件。系统会增量合并，遇到 ID 冲突时由你决定如何处理。<br>
           若导入包的 embedding 模型与当前不一致，向量数据将被丢弃并在导入后自动重新向量化。
         </div>
         <div id="migrate-upload-zone"
@@ -2895,7 +2801,7 @@
 <!-- Onboarding modal (iter 1.6 §8): 仅当 env+config 都没有任何 key 时弹出 -->
 <div id="onboarding-overlay" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.55);align-items:center;justify-content:center;">
   <div style="background:var(--surface-solid);max-width:520px;width:92%;padding:32px 28px;border-radius:18px;box-shadow:0 8px 40px rgba(0,0,0,0.25);">
-    <h2 style="font-family:'Cormorant Garamond',serif;color:var(--accent);margin:0 0 12px;">欢迎来到 Ombre Brain</h2>
+    <h2 style="font-family:'Cormorant Garamond',serif;color:var(--accent);margin:0 0 12px;">欢迎来到 The Garden of Forking Paths</h2>
     <p style="font-size:13px;color:var(--text-dim);line-height:1.7;margin:0 0 14px;">
       看起来这是第一次启动。两件事可以现在做，也可以稍后做：
     </p>
@@ -2913,7 +2819,7 @@
       <a href="https://github.com/" target="_blank" style="color:var(--accent);">README</a>。
     </p>
     <div style="margin-top:18px;display:flex;gap:8px;justify-content:flex-end;">
-      <button onclick="dismissOnboarding()" style="background:var(--accent);color:#fff;border:none;padding:8px 18px;border-radius:8px;cursor:pointer;">我先试用一下</button>
+      <button onclick="dismissOnboarding()" style="background:var(--accent);color:var(--accent-contrast);border:none;padding:8px 18px;border-radius:8px;cursor:pointer;">我先试用一下</button>
     </div>
   </div>
 </div>
@@ -2921,7 +2827,7 @@
 <!-- Auth Overlay -->
 <div id="auth-overlay" style="position:fixed;inset:0;z-index:9999;background:var(--bg-gradient);background-attachment:fixed;display:flex;align-items:center;justify-content:center;">
   <div style="background:var(--surface);backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:24px;padding:48px 40px;max-width:400px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,0.12);">
-    <h2 style="font-family:'Cormorant Garamond',serif;font-size:28px;color:var(--accent);margin-bottom:8px;">◐ Ombre Brain</h2>
+    <h2 style="font-family:'Cormorant Garamond',serif;font-size:28px;color:var(--accent);margin-bottom:8px;">❧ The Garden of Forking Paths</h2>
     <p style="color:var(--text-dim);font-size:13px;margin-bottom:28px;" id="auth-subtitle">验证身份 / Verifying identity</p>
 
     <!-- Setup form -->
@@ -2936,13 +2842,13 @@
           <input type="text" id="auth-setup-a" placeholder="答案（不区分大小写）/ Answer (case-insensitive)" style="display:block;width:100%;padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface-solid);color:var(--text);font-size:13px;box-sizing:border-box;" />
         </div>
       </details>
-      <button onclick="doSetup()" style="width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;cursor:pointer;">设置密码并进入 / Set password &amp; enter</button>
+      <button onclick="doSetup()" style="width:100%;padding:12px;background:var(--accent);color:var(--accent-contrast);border:none;border-radius:10px;font-size:14px;cursor:pointer;">设置密码并进入 / Set password &amp; enter</button>
     </div>
 
     <!-- Login form -->
     <div id="auth-login-form" style="display:none;">
       <input type="password" id="auth-login-pwd" placeholder="输入访问密码 / Enter access password" style="display:block;width:100%;padding:10px 16px;border:1px solid var(--border);border-radius:10px;background:var(--surface-solid);color:var(--text);font-size:14px;margin-bottom:12px;" onkeydown="if(event.key==='Enter')doLogin()" />
-      <button onclick="doLogin()" style="width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;cursor:pointer;">登录 / Log in</button>
+      <button onclick="doLogin()" style="width:100%;padding:12px;background:var(--accent);color:var(--accent-contrast);border:none;border-radius:10px;font-size:14px;cursor:pointer;">登录 / Log in</button>
       <div style="margin-top:12px;text-align:center;">
         <a href="#" onclick="showRecovery();return false;" style="font-size:12px;color:var(--text-dim);text-decoration:none;border-bottom:1px dashed var(--border);">忘记密码 / Forgot password →</a>
       </div>
@@ -2954,7 +2860,7 @@
       <p id="auth-recovery-question" style="font-size:14px;color:var(--text);font-weight:500;margin-bottom:16px;"></p>
       <input type="text" id="auth-recovery-answer" placeholder="你的答案 / Your answer" style="display:block;width:100%;padding:10px 16px;border:1px solid var(--border);border-radius:10px;background:var(--surface-solid);color:var(--text);font-size:14px;margin-bottom:10px;" />
       <input type="password" id="auth-recovery-newpwd" placeholder="新密码（至少6位）/ New password (6+ chars)" style="display:block;width:100%;padding:10px 16px;border:1px solid var(--border);border-radius:10px;background:var(--surface-solid);color:var(--text);font-size:14px;margin-bottom:16px;" onkeydown="if(event.key==='Enter')doRecover()" />
-      <button onclick="doRecover()" style="width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;cursor:pointer;margin-bottom:8px;">重置密码并进入 / Reset password &amp; enter</button>
+      <button onclick="doRecover()" style="width:100%;padding:12px;background:var(--accent);color:var(--accent-contrast);border:none;border-radius:10px;font-size:14px;cursor:pointer;margin-bottom:8px;">重置密码并进入 / Reset password &amp; enter</button>
       <div style="text-align:center;"><a href="#" onclick="showLogin();return false;" style="font-size:12px;color:var(--text-dim);text-decoration:none;">← 返回登录 / Back to login</a></div>
     </div>
 
@@ -3686,7 +3592,6 @@ async function toolToggleTunnel() {
 
 async function toolTestBreath() {
   var out = document.getElementById('tools-action-result');
-  if (window.ObPet) ObPet.react('breath');   // 电子宠物：breath 反应
   out.textContent = 'breath 中…';
   try {
     var resp = await authFetch('/api/breath?n=5');
@@ -3829,7 +3734,6 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.getElementById('settings-view').style.display = target === 'settings' ? '' : 'none';
     document.getElementById('letters-view').style.display = target === 'letters' ? '' : 'none';
     document.getElementById('anchors-view').style.display = target === 'anchors' ? '' : 'none';
-    document.getElementById('about-view').style.display = target === 'about' ? '' : 'none';
     if (target !== 'network' && _netRAF) { cancelAnimationFrame(_netRAF); _netRAF = null; }
     if (target === 'network') loadNetwork();
     if (target === 'tools') loadToolsPanel();
@@ -3855,7 +3759,6 @@ document.querySelectorAll('.tab').forEach(tab => {
     }
     if (target === 'letters') loadLetters();
     if (target === 'anchors') loadAnchorsView();
-    if (target === 'about') loadAbout();
   });
 });
 
@@ -3899,7 +3802,6 @@ function updateStats() {
   const digested = allBuckets.filter(b => b.digested).length;
   document.getElementById('stats').textContent =
     total + ' 桶 · ' + pinned + ' 钉选 · ' + feels + ' feel · ' + resolved + ' 已解决 · ' + digested + ' 已消化';
-  updateChick(total);   // 小黄鸡蛋随记忆总数孵化长大
 }
 
 function buildFilters() {
@@ -3952,7 +3854,7 @@ function renderBuckets(buckets) {
   var visible = buckets.filter(function(b) { return !b.dont_surface; });
   renderForgottenGroup(forgotten);
   if (!visible.length) {
-    list.innerHTML = '<div class="loading">没有记忆桶</div>';
+    list.innerHTML = '<div class="loading">没有备忘录</div>';
     return;
   }
   list.innerHTML = visible.map(function(b) {
@@ -4177,7 +4079,7 @@ async function bucketArchive(id) {
 }
 
 async function bucketDelete(id) {
-  if (!confirm('这会把此记忆桶移入删除档案，并从日常界面隐藏；文件仍保留在 archive/ 中。继续？\n\nThis moves the bucket to the delete archive and hides it from everyday views; the file stays in archive/. Continue?')) return;
+  if (!confirm('这会把此备忘录移入删除档案，并从日常界面隐藏；文件仍保留在 archive/ 中。继续？\n\nThis moves the bucket to the delete archive and hides it from everyday views; the file stays in archive/. Continue?')) return;
   try {
     var res = await fetch(BASE + '/api/bucket/' + id + '?confirm=true', { method: 'DELETE' });
     if (!res.ok) throw new Error(await res.text());
@@ -4590,8 +4492,8 @@ function animateConceptNetwork(canvas, ctx, W, H, data) {
       var glowR = r + (lit ? 11 : 6) + (lit ? 3 : 1) * pulse;
       var glowA = lit ? (0.22 + 0.08 * pulse) : (0.06 + 0.03 * pulse);
       var grd   = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, Math.max(1, glowR));
-      grd.addColorStop(0, 'rgba(180,138,40,' + glowA.toFixed(3) + ')');
-      grd.addColorStop(1, 'rgba(180,138,40,0)');
+      grd.addColorStop(0, 'rgba(175,195,230,' + glowA.toFixed(3) + ')');
+      grd.addColorStop(1, 'rgba(175,195,230,0)');
       ctx.beginPath();
       ctx.arc(p.x, p.y, Math.max(1, glowR), 0, Math.PI * 2);
       ctx.fillStyle = grd;
@@ -4602,7 +4504,7 @@ function animateConceptNetwork(canvas, ctx, W, H, data) {
         var ringR = r + (isFocus ? 8 : 5) + 1.5 * pulse;
         ctx.beginPath();
         ctx.arc(p.x, p.y, ringR, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(180,138,40,' + (0.45 + 0.15 * pulse).toFixed(3) + ')';
+        ctx.strokeStyle = 'rgba(175,195,230,' + (0.45 + 0.15 * pulse).toFixed(3) + ')';
         ctx.lineWidth   = isFocus ? 1.4 : 1.0;
         ctx.stroke();
       }
@@ -4612,7 +4514,7 @@ function animateConceptNetwork(canvas, ctx, W, H, data) {
       ctx.beginPath();
       ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
       ctx.fillStyle = lit
-        ? 'rgba(180,138,40,' + bodyA.toFixed(3) + ')'
+        ? 'rgba(175,195,230,' + bodyA.toFixed(3) + ')'
         : 'rgba(72,65,50,' + bodyA.toFixed(3) + ')';
       ctx.fill();
 
@@ -4713,7 +4615,7 @@ function drawBucketNetwork(ctx, W, H, data) {
   if (!nodes.length) {
     ctx.fillStyle = '#C7C9BC'; ctx.fillRect(0,0,W,H);
     ctx.fillStyle = '#8A8070';
-    ctx.fillText('没有记忆桶', W/2, H/2);
+    ctx.fillText('没有备忘录', W/2, H/2);
     return;
   }
   var positions = {};
@@ -4839,220 +4741,8 @@ function feelFace(v, a) {
     '</svg>';
 }
 
-// ============================================================
-// 像素电子宠物 · ObPet（HTML5 Canvas 点阵小鸡）
-//   字符→颜色：. 透明 / Y 鸡黄 / O 深黄冠 / W 蛋壳白 / S 壳影
-//   B 嘴橙 / K 豆豆眼 / L 蓝领结 / l 深蓝结 / P 波点蓝 / r 腮红
-//   三态：egg 蛋（晃动）→ chick 破壳雏鸡 → big 走来走去的肥嘟嘟大吉
-//   记忆越多越大；Hold / Breath 事件触发破壳 or 开心跳。像捏乐高一样的 2D 像素数组。
-// ============================================================
-window.ObPet = (function () {
-  var PAL = { '.':null, Y:'#FFD452', O:'#E0A92E', W:'#FFFFFF', S:'#E8DFC2', B:'#FF9F43', K:'#3A2E1E', L:'#5B8FD6', l:'#3E6FB0', P:'#7FB0E6', r:'#F6B6C2' };
-  var EGG = [
-    '................','......SSSS......','.....SWWWWS.....','....SWWWWWWS....',
-    '...SWWWPWWWWS...','...SWWWWWWWWS...','..SWWWWWWWWWWS..','..SWWPWWWWWWWS..',
-    '..SWWWWWWWPWWS..','..SWWWWWWWWWWS..','...SWWWPWWWWS...','...SWWWWWWWWS...',
-    '....SWWWWWWS....','.....SWWWWS.....','......SSSS......','................'];
-  var EGG_CRACK = [
-    '................','......SSSS......','.....SWWWWS.....','....SWWWWWWS....',
-    '...SWWKWWKWWS...','...SWWWWWWWWS...','..SWWWBBWWWWWS..','..SOWWOWWOWWOS..',
-    '..SWOWWOWWOWWS..','..SWWWWWWWWWWS..','...SWWWWWWWWS...','...SWWWWWWWWS...',
-    '....SWWWWWWS....','.....SWWWWS.....','......SSSS......','................'];
-  var CHICK = [
-    '................','......YYYY......','.....YYYYYY.....','....YYYYYYYY....',
-    '....YKYYYYKY....','....YYYYYYYY....','....YYYBBYYY....','...YYYYYYYYYY...',
-    '..YYYYYYYYYYYY..','..YYYYYYYYYYYY..','..YYYYYYYYYYYY..','...YYYYYYYYYY...',
-    '....YYYYYYYY....','.....YYYYYY.....','.....B....B.....','....BB....BB....'];
-  var CHICK_BLINK = [
-    '................','......YYYY......','.....YYYYYY.....','....YYYYYYYY....',
-    '....YYYYYYYY....','....YYYYYYYY....','....YYYBBYYY....','...YYYYYYYYYY...',
-    '..YYYYYYYYYYYY..','..YYYYYYYYYYYY..','..YYYYYYYYYYYY..','...YYYYYYYYYY...',
-    '....YYYYYYYY....','.....YYYYYY.....','.....B....B.....','....BB....BB....'];
-  var BIG1 = [
-    '.......OO.......','......YYYY......','.....YYYYYY.....','....YKYYYYKY....',
-    '...rYYYYYYYYr...','....YYYBBYYY....','...YYYYYYYYYY...','..YYYYYYYYYYYY..',
-    '..YYYYYYYYYYYY..','..YYYYYYYYYYYY..','..YYYYYYYYYYYY..','...YYYYYYYYYY...',
-    '....YYLllLYY....','.....YYYYYY.....','....B......B....','...BB......BB...'];
-  var BIG2 = [
-    '.......OO.......','......YYYY......','.....YYYYYY.....','....YKYYYYKY....',
-    '...rYYYYYYYYr...','....YYYBBYYY....','...YYYYYYYYYY...','..YYYYYYYYYYYY..',
-    '..YYYYYYYYYYYY..','..YYYYYYYYYYYY..','..YYYYYYYYYYYY..','...YYYYYYYYYY...',
-    '....YYLllLYY....','.....YYYYYY.....','.....B....B.....','....BB....BB....'];
-  var SPR = 16, W = 64, H = 24, SCALE = 2;
-  var host, cv, ctx, raf = null, t0 = 0;
-  var st = { stage:'egg', count:0, x:24, dir:1, frame:0, blinkT:0, hatchT:0, hopT:0, started:false };
 
-  function ensure() {
-    host = document.getElementById('ob-chick');
-    if (!host) { host = document.createElement('div'); host.id = 'ob-chick'; document.body.appendChild(host); }
-    if (!cv) {
-      host.style.width = 'auto'; host.style.height = 'auto';
-      host.innerHTML = '<canvas width="' + W + '" height="' + H + '" style="display:block;width:' + (W*SCALE) + 'px;height:' + (H*SCALE) + 'px;image-rendering:pixelated;"></canvas><div class="chick-tip"></div>';
-      cv = host.querySelector('canvas'); ctx = cv.getContext('2d');
-      host.addEventListener('click', function () { react('poke'); });
-    }
-  }
-  function setTip(s) { var t = host && host.querySelector('.chick-tip'); if (t) t.textContent = s; }
-  function stageFor(n) { return n < 1 ? 'egg' : (n < 25 ? 'chick' : 'big'); }
-  function draw(frame, ox, oy, flip) {
-    for (var y = 0; y < frame.length; y++) { var row = frame[y];
-      for (var x = 0; x < row.length; x++) { var col = PAL[row[x]]; if (!col) continue;
-        ctx.fillStyle = col; ctx.fillRect((flip ? ox + (SPR-1-x) : ox + x), oy + y, 1, 1);
-      } }
-  }
-  function render(now) {
-    raf = requestAnimationFrame(render);
-    var dt = now - (t0 || now); t0 = now;
-    ctx.clearRect(0, 0, W, H);
-    var oy = H - SPR;
-    if (st.hatchT > 0) {                              // 破壳过场
-      st.hatchT -= dt;
-      var shake = (Math.floor(now / 70) % 2) ? 1 : -1;
-      if (st.hatchT > 600) draw(EGG, 24 + shake, oy, false);
-      else if (st.hatchT > 250) draw(EGG_CRACK, 24 + shake, oy, false);
-      else draw(CHICK, 24, oy, false);
-      if (st.hatchT <= 0) { st.stage = stageFor(st.count); st.x = 24; }
-    } else if (st.stage === 'egg') {                  // 蛋：轻晃
-      draw(EGG, 24 + Math.round(Math.sin(now / 420)), oy, false);
-    } else if (st.stage === 'chick') {                // 雏鸡：眨眼 + 微微点头
-      st.blinkT += dt;
-      var bob = (Math.floor(now / 320) % 2) ? 0 : -1;
-      draw((st.blinkT % 3200) < 150 ? CHICK_BLINK : CHICK, 24, oy + bob, false);
-    } else {                                          // 大吉：走来走去
-      var hop = 0;
-      if (st.hopT > 0) { st.hopT -= dt; hop = Math.round(Math.sin((1 - st.hopT / 300) * Math.PI) * -3); }
-      st.frame += dt; var step = Math.floor(st.frame / 150) % 2;
-      st.x += st.dir * dt * 0.012;
-      if (st.x < 2) { st.x = 2; st.dir = 1; } else if (st.x > W - SPR - 2) { st.x = W - SPR - 2; st.dir = -1; }
-      draw(step ? BIG1 : BIG2, Math.round(st.x), oy + (step ? 0 : -1) + hop, st.dir < 0);
-    }
-  }
-  function start() { if (!raf) { t0 = 0; raf = requestAnimationFrame(render); } }
-  function setCount(n) {
-    ensure(); n = n || 0; var prev = st.stage; st.count = n; var s = stageFor(n);
-    if (st.started && prev === 'egg' && s !== 'egg') st.hatchT = 1000;   // 首次破壳过场
-    else if (!st.started) st.stage = s;
-    st.started = true;
-    setTip(s === 'egg' ? '一颗蛋 · 记点东西我就孵化' : (s === 'chick' ? '破壳啦 · ' + n + ' 段记忆' : '肥嘟嘟大吉 · ' + n + ' 段记忆'));
-    start();
-  }
-  function react(type) {
-    ensure();
-    if (st.stage === 'egg' && st.hatchT <= 0) { st.hatchT = 1000; setTip('咔嚓——破壳！'); }
-    else { st.hopT = 300; setTip(type === 'breath' ? 'breath～它跳了一下' : (type === 'hold' ? '记住啦 :)' : '戳我干嘛 :)')); }
-    start();
-  }
-  return { setCount: setCount, react: react };
-})();
 
-function updateChick(total) { if (window.ObPet) ObPet.setCount(total || 0); }
-
-// =====================================================
-// ⑨b 小鸡彩蛋：天气 / 时段 / 最近记忆「心理状态」联动
-// 纯装饰、可有可无：悬停时把这三样揉成一句话塞进 .chick-tip，
-// 并按时段给画布上色。任何一环失败都静默跳过，不影响小鸡本体。
-// =====================================================
-(function ObChickFlavor(){
-  var weather = null;  // {emoji, desc, temp} | null
-
-  function getBuckets(){ try { return allBuckets || []; } catch(e){ return (window.allBuckets || []); } }
-  function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
-
-  function timeOfDay(){
-    var h = new Date().getHours();
-    if (h>=5 && h<8)   return {cls:'tod-dawn',  hi:['天刚亮','清晨好','早上好呀'], emoji:'🌅'};
-    if (h>=8 && h<17)  return {cls:'tod-day',   hi:['白天','此刻','今天'],         emoji:'🌞'};
-    if (h>=17 && h<20) return {cls:'tod-dusk',  hi:['黄昏','傍晚','日落时分'],     emoji:'🌇'};
-    return                    {cls:'tod-night', hi:['夜里','这么晚还醒着','深夜'], emoji:'🌙'};
-  }
-
-  // 最近活跃的几条普通桶，平均 valence/arousal → 心情标签（Russell 象限）
-  function recentMood(){
-    var bs = getBuckets().filter(function(b){
-      return b && typeof b.valence==='number'
-        && b.type!=='letter' && b.type!=='plan' && b.type!=='archived';
-    });
-    if (!bs.length) return null;
-    bs.sort(function(a,b){ return (b.last_active||b.created||'').localeCompare(a.last_active||a.created||''); });
-    var top = bs.slice(0,8), v=0, a=0;
-    top.forEach(function(b){ v += (b.valence!=null?b.valence:0.5); a += (b.arousal!=null?b.arousal:0.3); });
-    v/=top.length; a/=top.length;
-    if (v>=0.62) return a>=0.55 ? {label:'雀跃',     emoji:'✨'} : {label:'暖洋洋',   emoji:'☺️'};
-    if (v<=0.40) return a>=0.55 ? {label:'有点烦躁', emoji:'😖'} : {label:'有点低落', emoji:'🥺'};
-    return            a>=0.55 ? {label:'微微紧绷', emoji:'😬'} : {label:'平平静静', emoji:'🍃'};
-  }
-
-  // 天气：open-meteo（无 key、CORS 友好）。坐标按时区粗映射，查不到就不显示天气。
-  var TZ = {
-    'Australia/Sydney':[-33.87,151.21],'Australia/Melbourne':[-37.81,144.96],
-    'Asia/Shanghai':[31.23,121.47],'Asia/Hong_Kong':[22.32,114.17],'Asia/Taipei':[25.03,121.57],
-    'Asia/Tokyo':[35.68,139.69],'Asia/Singapore':[1.35,103.82],'Asia/Seoul':[37.57,126.98],
-    'Asia/Bangkok':[13.76,100.50],'Asia/Kolkata':[28.61,77.21],'Asia/Dubai':[25.20,55.27],
-    'Europe/London':[51.51,-0.13],'Europe/Paris':[48.86,2.35],'Europe/Berlin':[52.52,13.40],
-    'America/New_York':[40.71,-74.01],'America/Los_Angeles':[34.05,-118.24],'America/Chicago':[41.88,-87.63]
-  };
-  function wmo(c){
-    if (c===0) return {emoji:'☀️',desc:'晴'};
-    if (c<=3)  return {emoji:'⛅',desc:'多云'};
-    if (c<=48) return {emoji:'🌫️',desc:'雾蒙蒙'};
-    if (c<=57) return {emoji:'🌦️',desc:'毛毛雨'};
-    if (c<=67) return {emoji:'🌧️',desc:'下雨'};
-    if (c<=77) return {emoji:'❄️',desc:'下雪'};
-    if (c<=82) return {emoji:'🌧️',desc:'阵雨'};
-    if (c<=86) return {emoji:'🌨️',desc:'阵雪'};
-    if (c<=99) return {emoji:'⛈️',desc:'打雷'};
-    return null;
-  }
-  function fetchWeather(){
-    try {
-      var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      var c = TZ[tz]; if (!c) return;
-      var ctrl = new AbortController(); setTimeout(function(){ try{ctrl.abort();}catch(e){} }, 3500);
-      fetch('https://api.open-meteo.com/v1/forecast?latitude='+c[0]+'&longitude='+c[1]+'&current=temperature_2m,weather_code', {signal:ctrl.signal})
-        .then(function(r){ return r.ok ? r.json() : null; })
-        .then(function(j){
-          if (!j || !j.current) return;
-          var w = wmo(j.current.weather_code); if (!w) return;
-          weather = { emoji:w.emoji, desc:w.desc, temp:Math.round(j.current.temperature_2m) };
-        }).catch(function(){});
-    } catch(e){}
-  }
-
-  function compose(){
-    // 偶尔来一句纯废话
-    if (Math.random()<0.18) return pick([
-      '我在站岗 🐤','刚啄了一下你的记忆','别看了，专心 :)','咕… 我也想被记住','存点好的给我孵 🥚','今天也要乖乖的'
-    ]);
-    var tod = timeOfDay(), mood = recentMood(), parts = [];
-    parts.push(pick(tod.hi)+' '+tod.emoji);
-    if (weather) parts.push(weather.emoji + (Math.random()<0.5 ? (' '+weather.desc) : (' '+weather.temp+'°')));
-    if (mood)    parts.push(mood.emoji + ' 记忆里' + mood.label);
-    return parts.join(' · ');
-  }
-
-  function applyTint(){
-    var host = document.getElementById('ob-chick'); if (!host) return;
-    host.classList.remove('tod-dawn','tod-day','tod-dusk','tod-night');
-    host.classList.add(timeOfDay().cls);
-  }
-
-  function hook(){
-    var host = document.getElementById('ob-chick');
-    if (!host) { return setTimeout(hook, 1000); }   // 小鸡可能还没 ensure()，等一下
-    applyTint();
-    host.addEventListener('mouseenter', function(){
-      var tip = host.querySelector('.chick-tip');
-      if (!tip || host.classList.contains('raging')) return;  // 暴走时不抢话
-      tip.textContent = compose();
-    });
-    setInterval(applyTint, 5*60*1000);   // 每 5 分钟跟一次时段
-  }
-
-  fetchWeather();
-  setInterval(fetchWeather, 30*60*1000);
-  if (document.readyState !== 'loading') hook();
-  else document.addEventListener('DOMContentLoaded', hook);
-})();
 
 // 搜索框空闲时，placeholder 偶尔换一句
 var _phLines = [
@@ -5141,30 +4831,6 @@ function _eggKonami(){
   });
 }
 
-// —— 2. 连戳小鸡 7 次 → 暴走 ——
-(function(){
-  var n=0, tm=null, raging=false;
-  document.addEventListener('click',function(e){
-    var host=document.getElementById('ob-chick');
-    if(!host||!host.contains(e.target)) return;
-    n++; clearTimeout(tm); tm=setTimeout(function(){n=0;},2000);
-    if(n>=7&&!raging){
-      raging=true; n=0;
-      var tip=host.querySelector('.chick-tip');
-      host.classList.add('raging');
-      var msgs=['别戳了！','！！！！','我要生气了','好吧……','唉','😤','……好吧 :)'];
-      var mi=0, iv=setInterval(function(){
-        if(tip) tip.textContent=msgs[mi]||'';
-        mi++;
-        if(mi>=msgs.length){
-          clearInterval(iv);
-          host.classList.remove('raging');
-          raging=false; n=0;
-        }
-      }, 380);
-    }
-  });
-})();
 
 // —— 3. 搜索 "ombre" / "我是谁" → 系统自白诗 ——
 setTimeout(function(){
@@ -5195,40 +4861,13 @@ function _eggPoem(){
     '<div style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:var(--text-dim);letter-spacing:3px;margin-bottom:20px;">SYSTEM · IDENTITY</div>'+
     '<div style="font-size:28px;color:var(--accent);margin-bottom:18px;line-height:1;">⚓</div>'+
     '<p style="margin:0;font-style:italic;">我不是储存记忆的容器，<br>我是记忆之间的<strong>空隙</strong>——<br><br>那些没说出口的、<br>以为忘了的、<br>还在等你回来的。</p>'+
-    '<div style="margin-top:28px;font-family:\'Share Tech Mono\',monospace;font-size:10px;color:var(--text-dim);">— Ombre Brain &nbsp;·&nbsp; 点击关闭</div>';
+    '<div style="margin-top:28px;font-family:\'Share Tech Mono\',monospace;font-size:10px;color:var(--text-dim);">— The Garden of Forking Paths &nbsp;·&nbsp; 点击关闭</div>';
   function close(){ card.remove(); bd.remove(); }
   card.onclick=close; bd.onclick=close;
   document.body.appendChild(bd); document.body.appendChild(card);
 }
 
 // —— 4. 深夜彩蛋 (00:00 - 00:04) ——
-(function(){
-  var hr=new Date().getHours(), mn=new Date().getMinutes();
-  if(hr!==0||mn>=5) return;
-  setTimeout(function(){
-    // 心跳灯变金
-    var dot=document.getElementById('heartbeat-dot');
-    if(dot){ dot.style.background='var(--accent)'; dot.style.boxShadow='0 0 6px 2px rgba(194,152,47,0.5)'; }
-    // 右下角浮字
-    var card=document.createElement('div');
-    card.style.cssText=[
-      'position:fixed','bottom:80px','right:18px','z-index:9998',
-      'background:var(--surface)','border-radius:14px',
-      'padding:12px 18px',
-      'font-family:\'Share Tech Mono\',monospace','font-size:11px',
-      'color:var(--text-dim)','white-space:pre',
-      'box-shadow:4px 4px 14px var(--shadow-dark),-2px -2px 8px var(--shadow-light)',
-      'line-height:1.75','opacity:0','transition:opacity .8s','pointer-events:none'
-    ].join(';');
-    card.textContent='深夜好。\n记忆在固化中。';
-    document.body.appendChild(card);
-    requestAnimationFrame(function(){ requestAnimationFrame(function(){ card.style.opacity='1'; }); });
-    setTimeout(function(){
-      card.style.opacity='0';
-      setTimeout(function(){ card.remove(); }, 900);
-    }, 6000);
-  }, 2000);
-})();
 
 async function runBreathDebug() {
   var query = document.getElementById('breath-query').value.trim();
@@ -5237,7 +4876,6 @@ async function runBreathDebug() {
   var results = document.getElementById('breath-results');
   var info = document.getElementById('breath-info');
 
-  if (window.ObPet) ObPet.react('breath');   // 电子宠物：breath 时跳一下/破壳
   results.innerHTML = '<div class="loading">计算中…</div>';
 
   var url = BASE + '/api/breath-debug?q=' + encodeURIComponent(query);
@@ -5936,35 +5574,12 @@ async function _runBackfillSilent() {
   });
 }
 
-// 记忆归属徽标。规则：owner_count>=2 才显示（单人不打扰），文字取 owner_name。
-// 接受一个可选的已解析 cfg，避免重复请求；无则自行拉一次 /api/config。
-async function loadOwnerBadge(cfg) {
-  try {
-    if (!cfg) {
-      var res = await authFetch('/api/config');
-      if (!res) return;
-      cfg = await res.json();
-    }
-    var badge = document.getElementById('owner-badge');
-    if (!badge) return;
-    var count = parseInt(cfg.owner_count, 10) || 1;
-    var name = (cfg.owner_name || '').trim();
-    if (count >= 2 && name) {
-      document.getElementById('owner-badge-text').textContent = name;
-      badge.style.display = 'inline-flex';
-      if (window.lucide) lucide.createIcons();
-    } else {
-      badge.style.display = 'none';
-    }
-  } catch (e) { /* ignore：徽标是锦上添花，失败不影响主流程 */ }
-}
 
 async function loadConfig() {
   try {
     var res = await authFetch('/api/config');
     if (!res) return;
     var cfg = await res.json();
-    loadOwnerBadge(cfg);
     document.getElementById('cfg-dehy-model').value = cfg.dehydration.model || '';
     document.getElementById('cfg-dehy-url').value = cfg.dehydration.base_url || '';
     var fmtEl = document.getElementById('cfg-dehy-format');
@@ -6269,246 +5884,13 @@ async function loadVersionBadge() {
     _obLocalVersion = d.version || null;
     const el = document.getElementById('version-badge');
     if (el && d.version) el.textContent = 'v' + d.version;
-    document.title = 'Ombre Brain · v' + (d.version || '');
-    // 同步填入版本面板
-    const vl = document.getElementById('ver-local-disp');
-    if (vl && d.version) vl.textContent = 'v' + d.version;
+    document.title = 'The Garden of Forking Paths';
+    const vc = document.getElementById('ver-current');
+    if (vc && d.version) vc.textContent = 'v' + d.version;
   } catch(_) {}
 }
 loadVersionBadge();
 
-// ====== ⓪ 版本 & 更新 ======
-(function() {
-  var _deployInfo = null;
-
-  function semverGt(a, b) {
-    var pa = String(a).replace(/^v/, '').split('.').map(Number);
-    var pb = String(b).replace(/^v/, '').split('.').map(Number);
-    for (var i = 0; i < 3; i++) {
-      var na = pa[i] || 0, nb = pb[i] || 0;
-      if (na > nb) return true;
-      if (na < nb) return false;
-    }
-    return false;
-  }
-
-  async function loadDeployInfo() {
-    if (_deployInfo) return _deployInfo;
-    try {
-      const r = await fetch(BASE + '/api/update-info');
-      _deployInfo = await r.json();
-    } catch(_) { _deployInfo = {}; }
-    return _deployInfo;
-  }
-
-  async function showUpdatePanel(gh, latestTag) {
-    var panel = document.getElementById('ver-update-panel');
-    if (!panel) return;
-
-    var remDisp = document.getElementById('ver-remote-disp');
-    if (remDisp) remDisp.textContent = 'v' + latestTag;
-
-    var remDate = document.getElementById('ver-remote-date');
-    if (remDate && gh.published_at) remDate.textContent = gh.published_at.slice(0, 10) + ' 发布';
-
-    var notesBox = document.getElementById('ver-notes-box');
-    if (notesBox) {
-      var body = gh.body ? gh.body.slice(0, 700) : '（作者尚未发布正式 Release 说明，可前往 GitHub 查看提交记录）';
-      if (gh.body && gh.body.length > 700) body += '\n…（完整说明见 GitHub Release）';
-      notesBox.textContent = body;
-    }
-
-    var info = await loadDeployInfo();
-    var deployEl = document.getElementById('ver-deploy-info');
-    if (deployEl) {
-      deployEl.textContent = [
-        '当前版本  : v' + (info.version || _obLocalVersion || '?'),
-        '部署方式  : ' + (info.is_docker ? 'Docker 容器' : '裸机 / git'),
-        '服务端口  : ' + (info.port || location.port || '8000'),
-        '数据目录  : ' + (info.data_dir || '（未知）'),
-        '访问地址  : ' + location.origin,
-      ].join('\n');
-    }
-
-    var cmdEl = document.getElementById('ver-cmd-box');
-    if (cmdEl) {
-      if (info.is_docker) {
-        var cname = info.container_name || 'ombre-brain';
-        cmdEl.textContent = 'docker pull p0luz/ombre-brain:latest\ndocker restart ' + cname;
-      } else {
-        cmdEl.textContent = 'cd /path/to/ombre-brain\ngit pull origin main\n# 然后重启服务（systemctl / pm2 / screen 等）';
-      }
-    }
-
-    renderPersistNote(info);
-    panel.style.display = '';
-  }
-
-  // 按 /api/update-info 的持久性字段如实提示热更新会不会扛过容器重建（用户反馈 #1）。
-  function renderPersistNote(info) {
-    var el = document.getElementById('ver-persist-note');
-    if (!el) return;
-    // 裸机天然持久，无需打扰
-    if (!info || !info.is_docker || info.hot_update_persistent === undefined) {
-      el.style.display = 'none';
-      return;
-    }
-    var note = info.hot_update_note || '';
-    if (info.hot_update_persistent) {
-      el.style.background = 'rgba(46,160,67,0.12)';
-      el.style.border = '1px solid rgba(46,160,67,0.35)';
-      el.style.color = 'var(--positive, #2ea043)';
-      el.textContent = '✓ 热更新可持久：' + note;
-    } else {
-      el.style.background = 'rgba(210,153,34,0.14)';
-      el.style.border = '1px solid rgba(210,153,34,0.45)';
-      el.style.color = 'var(--warning, #d29922)';
-      el.textContent = '⚠️ 热更新不持久：' + note;
-    }
-    el.style.display = '';
-  }
-
-  window.doHotUpdate = async function() {
-    var btn = document.getElementById('btn-hot-update');
-    var logWrap = document.getElementById('ver-update-log');
-    var logBox  = document.getElementById('ver-log-box');
-    var doneEl  = document.getElementById('ver-update-done');
-
-    // v2.3.9 起：服务端热更新后会「自我重启」(os.execv 原地替换进程)，
-    // 不再依赖外部守护进程，Docker / Render / Zeabur / 裸机 Mac·Linux·Windows 统一自动恢复。
-    var _confirmMsg = '确认开始热更新？\n\n请确保已导出记忆备份，更新期间服务会自动重启（约 10-30 秒）后自行恢复。';
-    if (!confirm(_confirmMsg)) return;
-
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i data-lucide="loader"></i> 更新中…'; lucide.createIcons(); }
-    if (logWrap) logWrap.style.display = '';
-    if (logBox)  logBox.textContent = '';
-    if (doneEl)  doneEl.style.display = 'none';
-
-    var log = function(line) { if (logBox) logBox.textContent += line + '\n'; };
-
-    try {
-      var r = await fetch(BASE + '/api/do-update', { method: 'POST', credentials: 'include' });
-      if (!r.ok) { log('请求失败：' + r.status); return; }
-
-      var reader = r.body.getReader();
-      var decoder = new TextDecoder();
-      var restarting = false;
-
-      while (true) {
-        var chunk = await reader.read();
-        if (chunk.done) break;
-        var text = decoder.decode(chunk.value);
-        // SSE lines: "data: ...\n\n"
-        text.split('\n').forEach(function(line) {
-          if (!line.startsWith('data:')) return;
-          var msg = line.slice(5).trim();
-          if (!msg) return;
-          if (msg === 'RESTART') {
-            restarting = true;
-            log('服务重启中，请稍候…');
-          } else if (msg.startsWith('ERROR:')) {
-            log('❌ ' + msg.slice(6));
-          } else {
-            log(msg);
-          }
-        });
-        if (restarting) break;
-      }
-
-      if (restarting) {
-        // 轮询 /api/version 直到服务恢复
-        var newVer = null;
-        for (var i = 0; i < 30; i++) {
-          await new Promise(function(res) { setTimeout(res, 2000); });
-          try {
-            var vr = await fetch(BASE + '/api/version');
-            if (vr.ok) { var vd = await vr.json(); newVer = vd.version; break; }
-          } catch(_) {}
-          log('等待服务恢复…');
-        }
-        if (newVer) {
-          log('服务已恢复，新版本：v' + newVer);
-          if (doneEl) doneEl.style.display = '';
-          setTimeout(function() { location.reload(); }, 2500);
-        } else {
-          log('服务未在预期时间内恢复，请手动刷新页面。');
-        }
-      }
-    } catch(e) {
-      log('连接中断：' + e.message);
-    } finally {
-      if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="zap"></i> 立即热更新'; lucide.createIcons(); }
-    }
-  };
-
-  window.checkGitHubVersion = async function() {
-    var btnCheck  = document.getElementById('btn-check-ver');
-    var checking  = document.getElementById('ver-checking');
-    var badgeOk   = document.getElementById('ver-badge-ok');
-    var badgeNew  = document.getElementById('ver-badge-new');
-    var errEl     = document.getElementById('ver-error');
-    var panel     = document.getElementById('ver-update-panel');
-
-    [badgeOk, badgeNew, errEl, panel].forEach(function(e) { if (e) e.style.display = 'none'; });
-    if (btnCheck) btnCheck.disabled = true;
-    if (checking) checking.style.display = '';
-
-    try {
-      if (!_obLocalVersion) {
-        const rv = await fetch(BASE + '/api/version');
-        const dv = await rv.json();
-        _obLocalVersion = dv.version || '0.0.0';
-        const vl = document.getElementById('ver-local-disp');
-        if (vl) vl.textContent = 'v' + _obLocalVersion;
-      }
-
-      // raw.githubusercontent.com 的 main 分支会走 Fastly CDN，push 后可能继续命中旧 VERSION。
-      // 先走 GitHub Contents API 取真实 HEAD 内容；API 不可用时再回退 raw。
-      let latestText = '';
-      try {
-        const rApi = await fetch(
-          'https://api.github.com/repos/P0luz/Ombre-Brain/contents/VERSION?ref=main',
-          { cache: 'no-store', headers: { 'Accept': 'application/vnd.github.raw' } }
-        );
-        if (rApi.ok) latestText = await rApi.text();
-      } catch (_) {}
-
-      if (!latestText.trim()) {
-        const rRaw = await fetch(
-          'https://raw.githubusercontent.com/P0luz/Ombre-Brain/main/VERSION?t=' + Date.now(),
-          { cache: 'no-store' }
-        );
-        if (!rRaw.ok) throw new Error('无法读取 GitHub VERSION 文件（' + rRaw.status + '）');
-        latestText = await rRaw.text();
-      }
-
-      const latestTag = latestText.trim().replace(/^v/, '');
-      if (!latestTag) throw new Error('GitHub VERSION 文件为空');
-
-      // 尝试读 Release 说明（无 Release 时静默忽略）
-      var ghRelease = {};
-      try {
-        const rRel = await fetch('https://api.github.com/repos/P0luz/Ombre-Brain/releases/latest',
-          { headers: { 'Accept': 'application/vnd.github.v3+json' } });
-        if (rRel.ok) ghRelease = await rRel.json();
-      } catch(_) {}
-
-      if (checking) checking.style.display = 'none';
-      if (btnCheck) btnCheck.disabled = false;
-
-      if (semverGt(latestTag, _obLocalVersion)) {
-        if (badgeNew) badgeNew.style.display = '';
-        await showUpdatePanel(ghRelease, latestTag);
-      } else {
-        if (badgeOk) badgeOk.style.display = '';
-      }
-    } catch (e) {
-      if (checking) checking.style.display = 'none';
-      if (btnCheck) btnCheck.disabled = false;
-      if (errEl) { errEl.textContent = '检查失败：' + e.message; errEl.style.display = ''; }
-    }
-  };
-})();
 
 function _planCard(p) {
   var name = esc(p.name || (p.content || '').slice(0, 40) || p.id);
@@ -6621,50 +6003,6 @@ async function planEdit(id) {
   } catch(e) { alert('编辑失败: ' + e.message); }
 }
 
-async function loadAbout() {
-  const el = document.getElementById('about-content');
-  el.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:24px 0;font-size:13px;">加载中…</div>';
-  try {
-    const r = await fetch(BASE + '/api/author');
-    const d = await r.json();
-    // 复古掌机外壳里的「一封信」：米色注塑卡 + 像素标题 + 暖色衬线正文，与全局设计语言对齐
-    var html = '<div style="background:var(--surface);border-radius:var(--shell-radius);padding:34px 36px 30px;' +
-      'box-shadow:8px 8px 22px var(--shadow-dark-subtle), -7px -7px 16px var(--shadow-light), inset 0 1px 0 rgba(255,255,255,0.55);">';
-    html += '<div style="font-family:\'VT323\',monospace;font-size:46px;line-height:1;color:var(--accent);text-shadow:0 0 14px var(--accent-glow);letter-spacing:1px;">' + esc(d.title || '') + '</div>';
-    html += '<div style="font-family:\'Share Tech Mono\',monospace;font-size:11px;letter-spacing:2px;color:var(--text-light);text-transform:uppercase;margin-top:6px;">AUTHOR · 一些</div>';
-    html += '<div style="height:1px;background:var(--border);margin:18px 0 24px;"></div>';
-    (d.sections || []).forEach(function(s) {
-      html += '<h3 style="font-family:\'Share Tech Mono\',monospace;font-size:14px;color:var(--accent);margin:22px 0 10px;font-weight:400;letter-spacing:1px;text-transform:uppercase;">' + esc(s.heading) + '</h3>';
-      html += '<div style="white-space:pre-wrap;color:var(--text);line-height:2.0;font-family:\'Noto Serif SC\',Georgia,serif;">' + esc(s.body) + '</div>';
-    });
-    if (d.signature) html += '<div style="margin-top:30px;text-align:right;color:var(--text-dim);font-family:\'Share Tech Mono\',monospace;font-size:14px;letter-spacing:1px;">' + esc(d.signature) + '</div>';
-    var _divider = '<div style="height:1px;background:var(--border);margin:26px 0;"></div>';
-    (d.contributors || []).forEach(function(c) {
-      html += _divider;
-      if (c.body) html += '<div style="white-space:pre-wrap;color:var(--text);line-height:2.0;font-family:\'Noto Serif SC\',Georgia,serif;text-align:center;">' + esc(c.body) + '</div>';
-      if (c.signature) html += '<div style="margin-top:10px;text-align:right;color:var(--text-dim);font-family:\'Share Tech Mono\',monospace;font-size:14px;letter-spacing:1px;">' + esc(c.signature) + '</div>';
-    });
-    if (d.support) {
-      html += _divider;
-      html += '<div style="white-space:pre-wrap;color:var(--text);line-height:2.0;font-family:\'Noto Serif SC\',Georgia,serif;text-align:center;">' + esc(d.support) + '</div>';
-    }
-    if (d.ifdian) {
-      html += '<div style="margin-top:24px;padding:22px;background:var(--surface-solid);border-radius:14px;text-align:center;' +
-        'box-shadow:inset 3px 3px 8px var(--shadow-dark-subtle), inset -3px -3px 6px var(--shadow-light);">' +
-        '<a href="' + esc(d.ifdian) + '" target="_blank" rel="noopener" style="display:inline-block;color:#fffdf5;text-decoration:none;font-size:14px;padding:11px 26px;border-radius:13px;' +
-        'background:linear-gradient(150deg, var(--accent-light), var(--accent));text-shadow:0 1px 1px rgba(120,90,20,0.35);' +
-        'box-shadow:5px 5px 13px var(--shadow-dark), -4px -4px 10px var(--shadow-light), inset 0 1px 0 rgba(255,255,255,0.35);">' +
-        _SV.coffee + ' 在爱发电支持我们 / Support on Afdian</a></div>';
-    }
-    html += '</div>';
-    el.innerHTML = html;
-    if (window.lucide) lucide.createIcons();
-  } catch(e) {
-    el.innerHTML = '<div style="color:var(--negative)">加载失败: ' + esc(e.message) + '</div>';
-  }
-}
-
-// Re-render Lucide icons whenever DOM is ready (covers static markup)
 window.addEventListener('DOMContentLoaded', function() {
   if (window.lucide) lucide.createIcons();
   // iter 2.0: refresh anchor counter on first load + every 30s
@@ -6672,7 +6010,6 @@ window.addEventListener('DOMContentLoaded', function() {
     refreshAnchorCounter();
     setInterval(refreshAnchorCounter, 30000);
   }
-  updateChick(0);              // 小黄鸡蛋初始（loadBuckets 后会按真实总数更新）
   startPlaceholderRotation();  // 搜索框随机 placeholder
   checkEmptyMemoryBanner();    // 零记忆时红色提示「可从 GitHub 恢复」
   loadOwnerBadge();            // 多人共用时顶部显示记忆归属徽标（单人隐藏）
@@ -6789,24 +6126,15 @@ async function replayV3Decision(identifier) {
 // v3-debug-panel-end
 
 async function pollHeartbeat() {
-  const dot = document.getElementById('heartbeat-dot');
-  const txt = document.getElementById('heartbeat-text');
+  const el = document.getElementById('decay-status-line');
+  if (!el) return;
   try {
     const r = await fetch(BASE + '/api/heartbeat');
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const d = await r.json();
-    dot.style.background = '#3a9b5c';
-    const idle = Math.floor((Date.now()/1000) - (d.last_op_ts || 0));
-    var decaying = d.decay_engine === 'running';
-    txt.textContent = '在线 · ' + (decaying ? '衰减运行中' : '衰减停');
-    txt.title = 'uptime ' + d.uptime_s + 's · 上次活跃 ' + idle + 's 前';
-    dot.classList.add('breathing');   // 在线即呼吸，衰减状态只影响文字
-  } catch (e) {
-    dot.style.background = '#c45a3a';
-    dot.classList.remove('breathing');
-    txt.textContent = '离线';
-    txt.title = e.message;
-  }
+    el.textContent = '衰减引擎:' + (d.decay_engine === 'running' ? '运行中' : '已停止') + ' · uptime ' + d.uptime_s + 's';
+    el.style.color = d.decay_engine === 'running' ? 'var(--text-dim)' : 'var(--negative)';
+  } catch (e) { el.textContent = '衰减引擎:无法连接'; el.style.color = 'var(--negative)'; }
 }
 setInterval(pollHeartbeat, 15000);
 
@@ -7512,7 +6840,7 @@ async function refreshAnchorCounter() {
     if (wrap) {
       const full = d.limit && d.count >= d.limit;
       wrap.classList.toggle('full', !!full);
-      wrap.title = full ? 'anchor 已满（' + d.count + '/' + d.limit + '）— 要 anchor 新的，得先 release 一条旧的' : 'anchor = 坐标系桶，硬上限 ' + d.limit;
+      wrap.title = full ? 'anchor 已满（' + d.count + '/' + d.limit + '）— 要 anchor 新的，得先 release 一条旧的' : 'anchor = 坐标系备忘录，硬上限 ' + d.limit;
     }
     return d;
   } catch(e) { /* ignore */ }
@@ -7793,64 +7121,8 @@ if (location.hash === '#letters') {
 }
 
 // ── 给作者反馈 ──────────────────────────────────────────────
-async function openFeedback() {
-  const modal = document.getElementById('feedback-modal');
-  modal.style.display = 'flex';
-  document.getElementById('feedback-log-area').textContent = '加载中… / Loading…';
-  try {
-    const r = await fetch(BASE + '/api/logs?limit=30');
-    const d = await r.json();
-    document.getElementById('feedback-log-area').textContent =
-      d.lines ? d.lines.join('\n') : (d.error || '（无日志）');
-  } catch (e) {
-    document.getElementById('feedback-log-area').textContent = '加载失败: ' + e.message;
-  }
-}
-function closeFeedback() {
-  document.getElementById('feedback-modal').style.display = 'none';
-}
-function copyFeedback() {
-  const type = document.getElementById('feedback-type').value;
-  const desc = document.getElementById('feedback-desc').value.trim();
-  const logs = document.getElementById('feedback-log-area').textContent;
-  const text = `问题类型: ${type}\n描述: ${desc || '（未填写）'}\n\n--- 最近日志（30条）---\n${logs}`;
-  navigator.clipboard.writeText(text).then(() => {
-    const btn = document.getElementById('feedback-copy-btn');
-    btn.innerHTML = _SV.ok + ' 已复制';
-    setTimeout(() => { btn.textContent = '一键复制'; }, 2000);
-  });
-}
 </script>
 
-<!-- 给作者反馈 Modal -->
-<div id="feedback-modal" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;background:rgba(0,0,0,0.55);" onclick="if(event.target===this)closeFeedback()">
-  <div style="background:var(--surface-solid);border:1px solid var(--border);border-radius:4px;padding:28px 30px;width:min(600px,92vw);max-height:85vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.4);display:flex;flex-direction:column;gap:14px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;">
-      <span style="font-size:15px;font-weight:600;color:var(--text);">给作者反馈</span>
-      <button onclick="closeFeedback()" style="background:none;border:none;cursor:pointer;color:var(--text-dim);line-height:1;"><svg class="icon" style="width:16px;height:16px;" aria-hidden="true"><use href="#i-x"></use></svg></button>
-    </div>
-    <div style="display:grid;grid-template-columns:80px 1fr;gap:10px 12px;align-items:center;font-size:13px;">
-      <label style="color:var(--text-dim);">问题类型</label>
-      <select id="feedback-type" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:2px;font-size:13px;">
-        <option>导入失败</option>
-        <option>工具不响应</option>
-        <option>记忆读写异常</option>
-        <option>界面显示错误</option>
-        <option>其他</option>
-      </select>
-      <label style="color:var(--text-dim);">描述</label>
-      <textarea id="feedback-desc" rows="3" placeholder="简单描述遇到了什么…" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:2px;font-size:13px;font-family:inherit;resize:vertical;"></textarea>
-    </div>
-    <details>
-      <summary style="cursor:pointer;font-size:12px;color:var(--text-dim);user-select:none;">最近 30 条日志（点击展开）</summary>
-      <pre id="feedback-log-area" style="font-size:11px;line-height:1.5;color:var(--text-dim);white-space:pre-wrap;word-break:break-all;max-height:220px;overflow-y:auto;margin-top:8px;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:2px;"></pre>
-    </details>
-    <div style="display:flex;justify-content:flex-end;gap:10px;">
-      <button onclick="closeFeedback()" style="background:none;border:1px solid var(--border);color:var(--text-dim);border-radius:2px;padding:6px 16px;font-size:12px;cursor:pointer;">取消</button>
-      <button id="feedback-copy-btn" onclick="copyFeedback()" style="background:var(--accent);border:none;color:#fff;border-radius:2px;padding:6px 18px;font-size:12px;cursor:pointer;font-weight:600;">一键复制</button>
-    </div>
-  </div>
-</div>
 <script>
 // ============================================================
 // Human name setting
@@ -7934,7 +7206,7 @@ async function syncExistingHuman() {
     </p>
     <div id="error-alert-body"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px;">
-      <button onclick="goToLogsTab()" style="background:var(--accent);border:none;color:#fff;border-radius:3px;padding:8px 20px;font-size:13px;font-weight:500;cursor:pointer;">查看日志 Tab</button>
+      <button onclick="goToLogsTab()" style="background:var(--accent);border:none;color:var(--accent-contrast);border-radius:3px;padding:8px 20px;font-size:13px;font-weight:500;cursor:pointer;">查看日志 Tab</button>
       <button onclick="closeErrorAlertPopup()" style="background:none;border:1px solid var(--border);color:var(--text-dim);border-radius:3px;padding:8px 16px;font-size:13px;cursor:pointer;">已知晓，关闭</button>
     </div>
   </div>

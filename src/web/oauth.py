@@ -261,7 +261,7 @@ def _oauth_authorize_html(client_id: str, redirect_uri: str, state: str,
     err_html = f'<p style="color:#ff6b6b;font-size:13px;margin-top:12px;">{e(error)}</p>' if error else ""
     return f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Ombre Brain · 授权 MCP</title>
+<title>The Garden of Forking Paths · 授权 MCP</title>
 <style>
 *{{box-sizing:border-box}}
 body{{font-family:-apple-system,system-ui,sans-serif;background:#0f0f0f;color:#e0e0e0;
@@ -278,7 +278,7 @@ button:hover{{background:#d4b87a}}
 .note{{color:#666;font-size:11px;margin-top:16px;line-height:1.6}}
 </style></head>
 <body><div class="card">
-<h2>◐ Ombre Brain</h2>
+<h2>❧ The Garden of Forking Paths</h2>
 <p class="sub">授权 {ai_name} 连接 MCP</p>
 <form method="POST">
 <input type="hidden" name="client_id" value="{e(client_id)}">
