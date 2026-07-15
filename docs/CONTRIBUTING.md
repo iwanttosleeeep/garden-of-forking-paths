@@ -13,3 +13,4 @@
 6. **破坏性操作(删记忆、删批次、force push)由 Ainsley 拍板,Senn 不擅自动手。**
 7. **每刀一个 commit,每 commit 附冒烟测试结果**(compileall / node --check / pulse 三连)。
 8. **每刀交付前,ruff + pytest 本地全过再出门**(2026-07-14,53 处 lint 学费)。
+9. **凡删除模块:全仓 grep 其符号至零残留,并把死亡名单同步进僵尸哨兵**(2026-07-14,tunnel 僵尸 import 学费——三道验收全瞎,靠线上崩溃报案)。

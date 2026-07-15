@@ -790,12 +790,6 @@ async def dream(window_hours: Optional[int] = 48) -> str:
 from web.oauth import _is_valid_mcp_token  # noqa: F401  (injected into server_app middleware)
 
 
-# ============================================================
-# Cloudflare Tunnel 管理 —— 已拆分到 web/tunnel.py（路由在其 register 内注册）。
-# 这里把启动/关停 lifespan 要用的 helper import 回来。
-# ============================================================
-from web.tunnel import _load_tunnel_config, _start_tunnel, _stop_tunnel  # noqa: F401
-
 
 # --- Entry point / 启动入口 ---
 if __name__ == "__main__":
