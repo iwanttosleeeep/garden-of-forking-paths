@@ -127,7 +127,7 @@ def register(mcp) -> None:
             result = []
             for b in all_buckets:
                 meta = b.get("metadata", {})
-                if meta.get("deleted_at"):
+                if meta.get("deleted_at") or meta.get("source_tool") == "sterling":
                     continue
                 result.append({
                     "id": b["id"],

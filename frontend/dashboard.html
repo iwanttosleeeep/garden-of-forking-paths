@@ -1785,6 +1785,7 @@
   <div class="tab" data-tab="plan"><span>计划</span><span class="tab-en">Plans</span></div>
   <div class="tab" data-tab="letters"><span>信</span><span class="tab-en">Letters</span></div>
   <div class="tab" data-tab="journal"><span>日记</span><span class="tab-en">Journal</span></div>
+  <div class="tab" data-tab="chats"><span>聊天记录</span><span class="tab-en">Chat History</span></div>
   <div class="tab" data-tab="health"><span>健康</span><span class="tab-en">Health</span></div>
   <div class="tab" data-tab="anchors"><span>锚点</span><span class="tab-en">Anchors</span></div>
   <div class="tab" data-tab="logs"><span>日志</span><span class="tab-en">Logs</span></div>
@@ -2066,6 +2067,8 @@
     </div>
   </div>
 </div>
+
+<div class="content" id="chats-view" style="display:none"><div style="max-width:920px;margin:0 auto;"><div class="config-section"><h3>Chat History</h3><p style="font-size:12px;color:var(--text-dim);">私有 Markdown 图书馆，不会写入备忘录、搜索或 AI 上下文。</p><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><input type="file" id="chat-history-file" accept="text/markdown,.md"><button onclick="uploadChatHistory()" style="font-size:12px;padding:0 12px;height:32px;">上传 Markdown</button><button onclick="loadChatHistory()" style="font-size:12px;padding:0 12px;height:32px;">刷新</button></div><div id="chat-history-list" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-top:16px;"></div></div></div></div>
 
 <div class="content" id="health-view" style="display:none">
   <div style="max-width:920px;margin:0 auto;">
@@ -3648,6 +3651,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.getElementById('settings-view').style.display = target === 'settings' ? '' : 'none';
     document.getElementById('letters-view').style.display = target === 'letters' ? '' : 'none';
     document.getElementById('journal-view').style.display = target === 'journal' ? '' : 'none';
+    document.getElementById('chats-view').style.display = target === 'chats' ? '' : 'none';
     document.getElementById('health-view').style.display = target === 'health' ? '' : 'none';
     document.getElementById('anchors-view').style.display = target === 'anchors' ? '' : 'none';
     if (target !== 'network' && _netRAF) { cancelAnimationFrame(_netRAF); _netRAF = null; }
@@ -3678,6 +3682,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     }
     if (target === 'letters') loadLetters();
     if (target === 'journal') loadJournalView();
+    if (target === 'chats') loadChatHistory();
     if (target === 'health') loadHealthView();
     if (target === 'anchors') loadAnchorsView();
   });
@@ -3877,8 +3882,8 @@ async function showDetail(id) {
         '<div class="field"><label>已消化 / Digested</label>' + (meta.digested ? _SV.ok : '—') + '</div>' +
         '<div class="field"><label>钉选 / Pinned</label>' + (meta.pinned ? _SV.ok : '—') + '</div>' +
         '<div class="field"><label>Anchor</label>' + (meta.anchor ? _SV.anchor+' 坐标系 / anchor' : '—') + '</div>' +
-        '<div class="field"><label>创建 / Created</label>' + (meta.created || '—') + '</div>' +
-        '<div class="field"><label>最后活跃 / Last active</label>' + (meta.last_active || '—') + '</div>' +
+        '<div class="field"><label>创建 / Created</label>' + formatGardenTimestamp(meta.created) + '</div>' +
+        '<div class="field"><label>最后活跃 / Last active</label>' + formatGardenTimestamp(meta.last_active) + '</div>' +
         weightHtml +
         triggerHtml +
       '</div>' +
@@ -6152,6 +6157,13 @@ async function pollHeartbeat() {
     el.style.color = d.decay_engine === 'running' ? 'var(--text-dim)' : 'var(--negative)';
   } catch (e) { el.textContent = '衰减引擎:无法连接'; el.style.color = 'var(--negative)'; }
 }
+
+function formatGardenTimestamp(iso) {
+  if (!iso) return '—';
+  var d = new Date(iso);
+  if (isNaN(d)) return esc(String(iso));
+  return d.toLocaleString(undefined, {year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false});
+}
 setInterval(pollHeartbeat, 15000);
 
 async function loadLogs() {
@@ -6504,6 +6516,27 @@ async function loadJournalView() {
   } catch (e) {
     overview.textContent = '加载失败：' + e.message;
   }
+}
+
+async function loadChatHistory() {
+  const list = document.getElementById('chat-history-list'); if (!list) return;
+  list.innerHTML = '<div style="color:var(--text-dim);">加载中…</div>';
+  try {
+    const data = await authFetch('/api/chat-history').then(readJsonSafe);
+    const docs = data.documents || [];
+    list.innerHTML = docs.length ? docs.map(doc => '<article style="background:var(--surface);border:1px solid var(--border);padding:15px;border-radius:2px;"><div style="font-size:11px;color:var(--text-dim);margin-bottom:7px;">' + esc(doc.file) + ' · ' + Math.ceil((doc.size || 0) / 1024) + ' KB</div><input id="chat-title-' + esc(doc.file) + '" value="' + esc(doc.title) + '" style="width:100%;box-sizing:border-box;margin-bottom:7px;font-weight:600;"><textarea id="chat-description-' + esc(doc.file) + '" placeholder="Description" style="width:100%;box-sizing:border-box;min-height:70px;">' + esc(doc.description) + '</textarea><button onclick="saveChatHistory(\'' + esc(doc.file) + '\')" style="font-size:11px;padding:0 10px;height:28px;margin-top:8px;">保存</button></article>').join('') : '<div style="color:var(--text-dim);padding:24px;">还没有上传聊天记录。</div>';
+  } catch (e) { list.innerHTML = '<div style="color:var(--negative);">加载失败：' + esc(e.message) + '</div>'; }
+}
+
+async function uploadChatHistory() {
+  const input = document.getElementById('chat-history-file'), file = input && input.files && input.files[0];
+  if (!file) { alert('请选择 .md 文件'); return; }
+  const form = new FormData(); form.append('file', file);
+  try { const data = await fetch(BASE + '/api/chat-history', {method:'POST', body:form, credentials:'same-origin'}).then(readJsonSafe); if (!data.ok) throw new Error(data.error || '上传失败'); input.value = ''; loadChatHistory(); } catch (e) { alert('上传失败：' + e.message); }
+}
+
+async function saveChatHistory(name) {
+  try { const data = await authFetch('/api/chat-history/' + encodeURIComponent(name), {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({title:document.getElementById('chat-title-' + name).value, description:document.getElementById('chat-description-' + name).value})}).then(readJsonSafe); if (!data.ok) throw new Error(data.error || '保存失败'); loadChatHistory(); } catch (e) { alert('保存失败：' + e.message); }
 }
 
 // Health is a deliberately separate private surface: no memo indexing or AI context.

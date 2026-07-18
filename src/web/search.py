@@ -46,6 +46,8 @@ def register(mcp) -> None:
                 if not _SURFACE_POLICY.evaluate_bucket(b, mode="search").allowed:
                     continue
                 meta = b.get("metadata", {})
+                if meta.get("source_tool") == "sterling":
+                    continue
                 result.append({
                     "id": b["id"],
                     "name": meta.get("name", b["id"]),
@@ -123,7 +125,8 @@ def register(mcp) -> None:
         if mode == "wikilinks":
             mode = "concept"
         try:
-            all_buckets = await sh.bucket_mgr.list_all(include_archive=False)
+            all_buckets = [bucket for bucket in await sh.bucket_mgr.list_all(include_archive=False)
+                           if (bucket.get("metadata") or {}).get("source_tool") != "sterling"]
 
             if mode == "embedding":
                 # 旧的桶→桶相似度图（保留）
@@ -248,7 +251,8 @@ def register(mcp) -> None:
             return err
         try:
             n = min(int(request.query_params.get("n", "10")), 50)
-            all_buckets = await sh.bucket_mgr.list_all(include_archive=False)
+            all_buckets = [bucket for bucket in await sh.bucket_mgr.list_all(include_archive=False)
+                           if (bucket.get("metadata") or {}).get("source_tool") != "sterling"]
             results = []
             for bucket in all_buckets:
                 if not _SURFACE_POLICY.evaluate_bucket(bucket, mode="spontaneous").allowed:
@@ -284,7 +288,8 @@ def register(mcp) -> None:
         q_arousal: float | None = float(_qa_raw) if _qa_raw else None
 
         try:
-            all_buckets = await sh.bucket_mgr.list_all(include_archive=False)
+            all_buckets = [bucket for bucket in await sh.bucket_mgr.list_all(include_archive=False)
+                           if (bucket.get("metadata") or {}).get("source_tool") != "sterling"]
             results = []
             w = {
                 "topic": sh.bucket_mgr.w_topic,
