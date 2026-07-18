@@ -1784,6 +1784,7 @@
   <div class="tab" data-tab="tools"><span>工具箱</span><span class="tab-en">Toolbox</span></div>
   <div class="tab" data-tab="plan"><span>计划</span><span class="tab-en">Plans</span></div>
   <div class="tab" data-tab="letters"><span>信</span><span class="tab-en">Letters</span></div>
+  <div class="tab" data-tab="journal"><span>日记</span><span class="tab-en">Journal</span></div>
   <div class="tab" data-tab="anchors"><span>锚点</span><span class="tab-en">Anchors</span></div>
   <div class="tab" data-tab="logs"><span>日志</span><span class="tab-en">Logs</span></div>
   <div class="tab" data-tab="settings"><span>设置</span><span class="tab-en">Settings</span></div>
@@ -2049,6 +2050,18 @@
       <div id="letters-list" style="display:flex;flex-direction:column;gap:14px;margin-top:6px;">
         <div style="text-align:center;color:var(--text-dim);padding:36px 0;font-size:13px;">点击「刷新」加载信件…</div>
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="content" id="journal-view" style="display:none">
+  <div style="max-width:920px;margin:0 auto;">
+    <div class="config-section">
+      <h3>日记 / Journal</h3>
+      <p style="font-size:12px;color:var(--text-dim);line-height:1.7;margin:4px 0 14px;">来自 Sterling 的私密记录。它们不会自动混入普通备忘录检索。</p>
+      <div id="journal-overview" style="font-size:13px;color:var(--text-dim);margin-bottom:14px;">加载中…</div>
+      <button onclick="loadJournalView()" title="刷新" style="padding:0 12px;height:32px;font-size:12px;"><i data-lucide="refresh-cw"></i> 刷新</button>
+      <div id="journal-entries" style="display:flex;flex-direction:column;gap:12px;margin-top:16px;"></div>
     </div>
   </div>
 </div>
@@ -3608,6 +3621,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.getElementById('v3-debug-view').style.display = target === 'v3-debug' ? '' : 'none';
     document.getElementById('settings-view').style.display = target === 'settings' ? '' : 'none';
     document.getElementById('letters-view').style.display = target === 'letters' ? '' : 'none';
+    document.getElementById('journal-view').style.display = target === 'journal' ? '' : 'none';
     document.getElementById('anchors-view').style.display = target === 'anchors' ? '' : 'none';
     if (target !== 'network' && _netRAF) { cancelAnimationFrame(_netRAF); _netRAF = null; }
     if (target === 'network') loadNetwork();
@@ -3635,6 +3649,7 @@ document.querySelectorAll('.tab').forEach(tab => {
       renderMcpUrls();
     }
     if (target === 'letters') loadLetters();
+    if (target === 'journal') loadJournalView();
     if (target === 'anchors') loadAnchorsView();
   });
 });
@@ -6425,6 +6440,39 @@ async function loadJournalSummary() {
     renderJournalSummary(await readJsonSafe(r));
   } catch (e) {
     renderJournalSummary({ok:false, error:e.message});
+  }
+}
+
+async function loadJournalView() {
+  const overview = document.getElementById('journal-overview');
+  const list = document.getElementById('journal-entries');
+  if (!overview || !list) return;
+  overview.textContent = '加载中…';
+  list.innerHTML = '';
+  try {
+    const [summary, data] = await Promise.all([
+      authFetch('/api/journal/summary').then(readJsonSafe),
+      authFetch('/api/journal/entries').then(readJsonSafe),
+    ]);
+    const dots = (summary.curve || []).map(point => Number(point.mood) >= 4 ? '●' : Number(point.mood) >= 3 ? '•' : '○').join('');
+    overview.textContent = '共 ' + (summary.count || 0) + ' 条 · 心情均值 '
+      + (summary.average_mood == null ? '—' : Number(summary.average_mood).toFixed(2) + '/5')
+      + (dots ? ' · 近 30 天 ' + dots : '');
+    const entries = data.entries || [];
+    if (!entries.length) {
+      list.innerHTML = '<div style="color:var(--text-dim);padding:24px;text-align:center;">还没有同步到 Garden 的日记。</div>';
+      return;
+    }
+    list.innerHTML = entries.map(entry => {
+      const body = String(entry.content || '').replace(/^Sterling 日记[^\n]*(?:\n\n)?/, '');
+      const tags = (entry.tags || []).map(tag => '<span style="padding:2px 6px;border:1px solid var(--border);font-size:10px;color:var(--text-dim);">' + esc(tag) + '</span>').join(' ');
+      return '<article style="background:var(--surface);border:1px solid var(--border);border-radius:2px;padding:16px 20px;box-shadow:4px 4px 10px var(--shadow-dark-subtle),-4px -4px 10px var(--shadow-light);">'
+        + '<div style="display:flex;gap:10px;justify-content:space-between;font-size:11px;color:var(--text-dim);margin-bottom:9px;"><span>' + esc(entry.date || '未标注日期') + '</span><span>心情 ' + (entry.mood == null ? '—' : esc(String(entry.mood)) + '/5') + '</span></div>'
+        + (tags ? '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;">' + tags + '</div>' : '')
+        + '<div style="white-space:pre-wrap;font-size:14px;line-height:1.75;color:var(--text);">' + esc(body) + '</div></article>';
+    }).join('');
+  } catch (e) {
+    overview.textContent = '加载失败：' + e.message;
   }
 }
 
