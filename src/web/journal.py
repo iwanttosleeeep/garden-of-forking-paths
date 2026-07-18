@@ -165,7 +165,7 @@ def _sync_status() -> dict[str, Any]:
         "path": cfg.get("path", "sterling-journal.json"),
         "allowed_origin": cfg.get("allowed_origin", ""),
         "key_set": bool(cfg.get("token_hash")),
-        "github_token_set": bool(os.environ.get("OMBRE_GITHUB_TOKEN") or (sh.config.get("github_sync") or {}).get("token")),
+        "github_token_set": bool(os.environ.get("OMBRE_STERLING_GITHUB_TOKEN") or cfg.get("github_token")),
     }
 
 
@@ -190,11 +190,12 @@ def _sync_token_ok(request: Request) -> bool:
 
 
 def _github_token() -> str:
-    return str(os.environ.get("OMBRE_GITHUB_TOKEN") or (sh.config.get("github_sync") or {}).get("token") or "").strip()
+    """Sterling sync never borrows the Garden backup credential."""
+    return str(os.environ.get("OMBRE_STERLING_GITHUB_TOKEN") or _sync_config().get("github_token") or "").strip()
 
 
 def _github_token_source() -> str:
-    return "env:OMBRE_GITHUB_TOKEN" if os.environ.get("OMBRE_GITHUB_TOKEN") else "config:github_sync.token"
+    return "env:OMBRE_STERLING_GITHUB_TOKEN" if os.environ.get("OMBRE_STERLING_GITHUB_TOKEN") else "config:sterling_sync.github_token"
 
 
 def _github_headers(token: str) -> dict[str, str]:
@@ -232,7 +233,7 @@ async def _put_github_json(payload: dict[str, Any]) -> None:
     cfg = _sync_config()
     token = _github_token()
     if not token:
-        raise ValueError("请先在 Garden 的 GitHub 同步中配置具有 Contents 读写权限的 Token")
+        raise ValueError("请先在 Sterling 日记同步配置中设置专用 GitHub Token")
     repo = str(cfg.get("repo") or "").strip()
     branch = str(cfg.get("branch") or "main").strip()
     path = str(cfg.get("path") or "sterling-journal.json").strip().strip("/")
@@ -343,6 +344,10 @@ def register(mcp) -> None:
             for field, default in (("repo", ""), ("branch", "main"), ("path", "sterling-journal.json"), ("allowed_origin", "")):
                 if field in body:
                     cfg[field] = str(body.get(field) or default).strip()
+            # Keep the existing secret when the password field is intentionally blank.
+            new_github_token = str(body.get("github_token") or "").strip()
+            if new_github_token:
+                cfg["github_token"] = new_github_token
             if not cfg.get("repo") or "/" not in str(cfg["repo"]):
                 raise ValueError("请先填写日记仓库（例如 iwanttosleeeep/garden-journal-sync）")
             if not cfg.get("allowed_origin"):
