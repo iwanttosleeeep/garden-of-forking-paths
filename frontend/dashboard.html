@@ -2222,10 +2222,11 @@
         <div style="font-weight:600;font-size:13px;margin-bottom:6px;">Garden Health Sync</div>
         <div style="font-size:12px;color:var(--text-dim);line-height:1.65;">iPhone 同伴 App 只上传每日汇总，不经过 GitHub。健康数据独立保存，不自动给 AI；月经周期仅显示在健康页。</div>
         <div class="config-row" style="margin-top:9px;"><label>Timezone</label><select id="health-sync-timezone" style="flex:1;max-width:260px;"><option value="UTC">UTC (UTC+00:00)</option><option value="Asia/Hong_Kong">Hong Kong (UTC+08:00)</option><option value="America/Los_Angeles">Los Angeles (UTC−08:00 / −07:00 DST)</option><option value="America/New_York">New York (UTC−05:00 / −04:00 DST)</option><option value="Europe/London">London (UTC+00:00 / +01:00 DST)</option><option value="Europe/Paris">Paris (UTC+01:00 / +02:00 DST)</option></select></div>
-        <div style="font-size:11px;color:var(--text-dim);line-height:1.6;margin-top:3px;">Health 日期完全以 iPhone 同步的日期为准，不会被 Garden 时区设置移动。旧备忘录的无时区标题会被安全地按 UTC 显示为所选时区，不会改写原记录。</div>
+        <div style="font-size:11px;color:var(--text-dim);line-height:1.6;margin-top:3px;">Health 日期完全以 iPhone 同步的日期为准，不会被 Garden 时区设置移动。旧 Memo 的标题是时间基准；如之前的修复让详情时间多移了 8 小时，可一次性从标题恢复。</div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:9px;">
           <button onclick="saveHealthSync(false)" style="font-size:12px;padding:0 12px;height:32px;">保存时区/生成同步密钥</button>
           <button onclick="saveHealthSync(true)" style="font-size:12px;padding:0 12px;height:32px;">轮换密钥</button>
+          <button onclick="restoreHistoricalMemoTimes()" style="font-size:12px;padding:0 12px;height:32px;">从标题恢复历史 Memo 时间</button>
         </div>
         <div id="health-sync-msg" style="font-size:12px;color:var(--text-dim);line-height:1.6;margin-top:8px;word-break:break-all;"></div>
       </div>
@@ -3633,24 +3634,10 @@ async function readJsonSafe(resp) {
 const BASE = location.origin;
 let allBuckets = [];
 let currentFilter = 'all';
-// Legacy names were created in UTC without a timezone marker. Convert only
-// while drawing them; writing a conversion back would shift them again.
 let gardenTimezone = 'Asia/Hong_Kong';
 
-function formatDateInGardenTimezone(date) {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: gardenTimezone, year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
-  }).formatToParts(date).reduce((result, part) => { result[part.type] = part.value; return result; }, {});
-  return parts.year + '-' + parts.month + '-' + parts.day + ' ' + parts.hour + '-' + parts.minute + '-' + parts.second;
-}
-
 function displayMemoName(name, timestampTimezone) {
-  const raw = String(name || '');
-  const match = /^(\d{4}-\d{2}-\d{2} \d{2}-\d{2}-\d{2})(.*)$/.exec(raw);
-  if (!match || timestampTimezone) return raw;
-  const utc = new Date(match[1].replace(' ', 'T').replace(/(\d{2})-(\d{2})-(\d{2})$/, '$1:$2:$3') + 'Z');
-  return isNaN(utc) ? raw : formatDateInGardenTimezone(utc) + match[2];
+  return String(name || '');
 }
 
 function displayBucketName(bucket) {
@@ -6626,6 +6613,19 @@ async function saveHealthSync(rotate) {
     loadBuckets();
     msg.textContent = data.sync_key ? '请立刻复制到 GardenHealthSync（只显示这一次）：' + data.sync_key : '时区已保存；同步密钥已保留。';
   } catch (e) { msg.textContent = '操作失败：' + e.message; }
+}
+
+async function restoreHistoricalMemoTimes() {
+  if (!confirm('会把所有尚未标记的旧 Memo 的 Created 与 Last active 恢复为其标题中的时间。标题 2026-07-15 10-28-34 会恢复为 10:28:34；已恢复的 Memo 不会再被移动。继续吗？')) return;
+  const msg = document.getElementById('health-sync-msg');
+  try {
+    const timezone = document.getElementById('health-sync-timezone');
+    const data = await authFetch('/api/health/sync/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({timezone: timezone ? timezone.value : 'Asia/Hong_Kong', restore_memo_timestamps_from_titles:true})}).then(readJsonSafe);
+    if (!data.ok) throw new Error(data.error || '恢复失败');
+    gardenTimezone = data.timezone || gardenTimezone;
+    msg.textContent = '已从标题恢复 ' + (data.restored_memos || 0) + ' 条历史 Memo 的创建与最后活跃时间。';
+    loadBuckets();
+  } catch (e) { msg.textContent = '恢复失败：' + e.message; }
 }
 
 async function deleteJournalEntry(id) {

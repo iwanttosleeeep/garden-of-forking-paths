@@ -7,9 +7,10 @@ Health data is only exposed through the explicit ``check_up`` connector tool.
 import hashlib
 import json
 import os
+import re
 import secrets
 import tempfile
-from datetime import date
+from datetime import date, datetime
 from typing import Any
 
 import yaml
@@ -24,6 +25,7 @@ _FLOW_VALUES = {"none", "light", "medium", "heavy"}
 # Keep Shanghai as a compatibility alias for configurations saved by the last
 # release; new UI presents the preferred Hong Kong label instead.
 _TIMEZONES = {"UTC", "Asia/Hong_Kong", "Asia/Shanghai", "America/Los_Angeles", "America/New_York", "Europe/London", "Europe/Paris"}
+_MEMO_NAME_TIMESTAMP = re.compile(r"^(\d{4}-\d{2}-\d{2} \d{2}-\d{2}-\d{2})(?:\s|$)")
 
 
 def _config() -> dict[str, Any]:
@@ -167,6 +169,42 @@ def _status() -> dict[str, Any]:
     }
 
 
+async def _restore_memo_timestamps_from_titles() -> int:
+    """Restore pre-marker memo timestamps from their already-correct title.
+
+    A previous repair path could move ``created`` and ``last_active`` more than
+    once.  The title prefix is the stable civil-time source for those old
+    records (for example ``2026-07-15 10-28-34``).  ``last_active`` is only
+    restored when it is still identical to the bad historical ``created``
+    value; a genuinely later activation is preserved.  Each repaired memo gets
+    a timezone marker, so this operation is idempotent and never moves it again.
+    """
+    restored = 0
+    for bucket in await sh.bucket_mgr.list_all(include_archive=True):
+        if sh.is_sterling_journal(bucket):
+            continue
+        meta = bucket.get("metadata") or {}
+        if meta.get("timestamp_timezone"):
+            continue
+        match = _MEMO_NAME_TIMESTAMP.match(str(meta.get("name") or ""))
+        if not match:
+            continue
+        try:
+            timestamp = datetime.strptime(match.group(1), "%Y-%m-%d %H-%M-%S").isoformat(timespec="seconds")
+        except ValueError:
+            continue
+        updates: dict[str, str] = {"created": timestamp, "timestamp_timezone": _timezone()}
+        # Old migration runs moved both fields together.  Do not overwrite a
+        # later real activation: only fix last_active while it still equals the
+        # malformed created timestamp.
+        if str(meta.get("last_active") or "") == str(meta.get("created") or ""):
+            updates["last_active"] = timestamp
+        changed = await sh.bucket_mgr.update(bucket["id"], **updates)
+        if changed:
+            restored += 1
+    return restored
+
+
 def register(mcp) -> None:
     from starlette.responses import JSONResponse
 
@@ -208,8 +246,9 @@ def register(mcp) -> None:
             if body.get("rotate_key") or not _config().get("token_hash"):
                 key = secrets.token_urlsafe(32)
                 _config()["token_hash"] = hashlib.sha256(key.encode()).hexdigest()
+            restored_memos = await _restore_memo_timestamps_from_titles() if body.get("restore_memo_timestamps_from_titles") else 0
             _save_config()
-            return JSONResponse({"ok": True, **_status(), "sync_key": key})
+            return JSONResponse({"ok": True, **_status(), "sync_key": key, "restored_memos": restored_memos})
         except Exception as exc:
             return JSONResponse({"ok": False, "error": str(exc)}, status_code=400)
 
