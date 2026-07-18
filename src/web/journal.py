@@ -208,6 +208,13 @@ async def _put_github_json(payload: dict[str, Any]) -> None:
     headers = {"Authorization": f"token {token}", "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
     url = f"{_GITHUB_API}/repos/{repo}/contents/{path}"
     async with httpx.AsyncClient(headers=headers, timeout=30.0) as client:
+        repo_check = await client.get(f"{_GITHUB_API}/repos/{repo}")
+        if repo_check.status_code == 404:
+            raise ValueError(
+                "Garden 的 GitHub Token 无权访问日记仓库。请在 Fine-grained Token 的 "
+                "Repository access 中加入 iwanttosleeeep/garden-journal-sync，并授予 Contents: Read and write"
+            )
+        repo_check.raise_for_status()
         current = await client.get(url, params={"ref": branch})
         sha = current.json().get("sha") if current.status_code == 200 else None
         if current.status_code not in (200, 404):
@@ -220,6 +227,8 @@ async def _put_github_json(payload: dict[str, Any]) -> None:
         if sha:
             body["sha"] = sha
         result = await client.put(url, json=body)
+        if result.status_code == 404:
+            raise ValueError(f"日记仓库缺少分支 {branch}；请在 GitHub 创建 README 并确认默认分支名称")
         if result.status_code == 409:
             raise ValueError("日记仓库还是空的；请在 GitHub 为它创建 README 后再同步一次")
         result.raise_for_status()

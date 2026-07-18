@@ -30,7 +30,7 @@ EXPECTED_TOOLS = {
     "letter_read",
     "I",
     "dream",
-    "journal",
+    "echo",
 }
 
 
