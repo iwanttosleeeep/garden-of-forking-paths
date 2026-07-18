@@ -6491,7 +6491,9 @@ async function validateSterlingSync() {
   try {
     const data = await readJsonSafe(await authFetch('/api/journal/sync/validate', {method:'POST'}));
     if (!data.ok) {
-      msg.textContent = '验证失败：' + (data.error || ('认证=' + data.authenticated + '，仓库访问=' + data.repo_access + '（HTTP ' + data.repo_status + '）'));
+      msg.textContent = '验证失败：' + (data.error || ('认证=' + data.authenticated
+        + '（账号 ' + (data.authenticated_as || '未知') + '，来源 ' + (data.token_source || '未知') + '），仓库访问='
+        + data.repo_access + '（HTTP ' + data.repo_status + '）'));
       return;
     }
     msg.textContent = '验证成功：运行中 Token 来自 ' + data.token_source + '，认证账号 ' + data.authenticated_as + '，可访问 ' + data.repo + '。';
