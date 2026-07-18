@@ -22,13 +22,24 @@ async def test_batch_commit_bootstraps_zero_commit_repository(monkeypatch):
         path_prefix="ombre",
     )
     calls: list[tuple[str, str, dict | None]] = []
+    ref_reads = 0
 
     async def fake_request(_client, method: str, url: str, *, json=None, _max_retries=4):
+        nonlocal ref_reads
         calls.append((method, url, json))
         if method == "GET" and url.endswith("/git/ref/heads/main"):
-            return _json_response(method, url, 409, {"message": "Git Repository is empty."})
+            ref_reads += 1
+            if ref_reads == 1:
+                return _json_response(method, url, 409, {"message": "Git Repository is empty."})
+            return _json_response(method, url, 200, {"object": {"sha": "bootstrap-commit"}})
+        if method == "PUT" and "/contents/ombre/_ombre_backup_manifest.json" in url:
+            assert json["branch"] == "main"
+            assert json["message"] == "Ombre Brain backup bootstrap"
+            return _json_response(method, url, 201, {"commit": {"sha": "bootstrap-commit"}})
+        if method == "GET" and url.endswith("/git/commits/bootstrap-commit"):
+            return _json_response(method, url, 200, {"tree": {"sha": "bootstrap-tree"}})
         if method == "POST" and url.endswith("/git/trees"):
-            assert "base_tree" not in json
+            assert json["base_tree"] == "bootstrap-tree"
             by_path = {entry["path"]: entry for entry in json["tree"]}
             assert by_path["ombre/dynamic/first.md"] == {
                 "path": "ombre/dynamic/first.md",
@@ -42,11 +53,11 @@ async def test_batch_commit_bootstraps_zero_commit_repository(monkeypatch):
             return _json_response(method, url, 201, {"sha": "tree-zero"})
         if method == "POST" and url.endswith("/git/commits"):
             assert json["tree"] == "tree-zero"
-            assert json["parents"] == []
+            assert json["parents"] == ["bootstrap-commit"]
             return _json_response(method, url, 201, {"sha": "commit-zero"})
-        if method == "POST" and url.endswith("/git/refs"):
-            assert json == {"ref": "refs/heads/main", "sha": "commit-zero"}
-            return _json_response(method, url, 201, {"ref": "refs/heads/main"})
+        if method == "PATCH" and url.endswith("/git/refs/heads/main"):
+            assert json == {"sha": "commit-zero", "force": False}
+            return _json_response(method, url, 200, {"ref": "refs/heads/main"})
         raise AssertionError(f"Unexpected GitHub API call: {method} {url}")
 
     monkeypatch.setattr(sync, "_request", fake_request)
@@ -54,4 +65,4 @@ async def test_batch_commit_bootstraps_zero_commit_repository(monkeypatch):
     uploaded = await sync._batch_commit({"dynamic/first.md": b"first memory"})
 
     assert uploaded == 1
-    assert [method for method, _url, _json in calls] == ["GET", "POST", "POST", "POST"]
+    assert [method for method, _url, _json in calls] == ["GET", "PUT", "GET", "GET", "POST", "POST", "PATCH"]
