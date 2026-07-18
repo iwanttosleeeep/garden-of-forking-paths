@@ -77,9 +77,25 @@ async def test_sterling_import_is_deduplicated_and_hidden(monkeypatch):
     assert first["imported"] == 2
     assert first["average_mood"] == 3.0
     assert second["imported"] == 0
-    assert second["skipped"] == 2
+    assert second["refreshed"] == 2
+    assert second["skipped"] == 0
     assert manager.buckets[0]["metadata"]["dont_surface"] is True
     assert manager.buckets[0]["metadata"]["journal_date"] == "2026-07-01"
+
+
+@pytest.mark.asyncio
+async def test_sterling_unix_milliseconds_keep_a_local_calendar_date(monkeypatch):
+    manager = FakeBucketManager()
+    monkeypatch.setattr(sh, "bucket_mgr", manager)
+    monkeypatch.setattr(sh, "config", {"timezone": "Asia/Hong_Kong"})
+
+    result = await journal_web._import_entries([{
+        "id": "millis", "timestamp": 1785427200000, "mood": 4, "lyrics": "a clear echo",
+    }])
+
+    assert result["imported"] == 1
+    assert manager.buckets[0]["metadata"]["journal_date"] == "2026-07-31"
+    assert "Echo: a clear echo" in manager.buckets[0]["content"]
 
 
 @pytest.mark.asyncio
