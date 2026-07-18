@@ -2068,7 +2068,7 @@
   </div>
 </div>
 
-<div class="content" id="chats-view" style="display:none"><div style="max-width:920px;margin:0 auto;"><div class="config-section"><h3>Chat History</h3><p style="font-size:12px;color:var(--text-dim);">私有 Markdown 图书馆，不会写入备忘录、搜索或 AI 上下文。</p><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><input type="file" id="chat-history-file" accept="text/markdown,.md"><button onclick="uploadChatHistory()" style="font-size:12px;padding:0 12px;height:32px;">上传 Markdown</button><button onclick="loadChatHistory()" style="font-size:12px;padding:0 12px;height:32px;">刷新</button></div><div id="chat-history-list" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-top:16px;"></div></div></div></div>
+<div class="content" id="chats-view" style="display:none"><div style="max-width:920px;margin:0 auto;"><div class="config-section"><h3>Chat History</h3><p style="font-size:12px;color:var(--text-dim);line-height:1.7;">私有 Markdown 图书馆。正文不会进入 Memos、搜索或 AI 上下文；只有 <code>recall</code> 可明确读取指定文件。</p><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:13px 14px;border:1px dashed var(--border);background:var(--surface-solid);"><input type="file" id="chat-history-file" accept="text/markdown,.md" style="font-size:12px;max-width:330px;"><button onclick="uploadChatHistory()" class="btn-primary" style="font-size:12px;padding:0 13px;height:32px;">上传 .md</button><button onclick="loadChatHistory()" style="font-size:12px;padding:0 12px;height:32px;">刷新图书馆</button></div><div id="chat-history-msg" style="min-height:18px;margin-top:9px;font-size:12px;color:var(--text-dim);"></div><div id="chat-history-list" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(285px,1fr));gap:14px;margin-top:16px;"></div></div></div></div>
 
 <div class="content" id="health-view" style="display:none">
   <div style="max-width:920px;margin:0 auto;">
@@ -6540,13 +6540,18 @@ async function loadJournalView() {
 }
 
 async function loadChatHistory() {
-  const list = document.getElementById('chat-history-list'); if (!list) return;
+  const list = document.getElementById('chat-history-list'), msg = document.getElementById('chat-history-msg'); if (!list) return;
   list.innerHTML = '<div style="color:var(--text-dim);">加载中…</div>';
   try {
     const data = await authFetch('/api/chat-history').then(readJsonSafe);
     const docs = data.documents || [];
-    list.innerHTML = docs.length ? docs.map(doc => '<article style="background:var(--surface);border:1px solid var(--border);padding:15px;border-radius:2px;"><div style="font-size:11px;color:var(--text-dim);margin-bottom:7px;">' + esc(doc.file) + ' · ' + Math.ceil((doc.size || 0) / 1024) + ' KB</div><input id="chat-title-' + esc(doc.file) + '" value="' + esc(doc.title) + '" style="width:100%;box-sizing:border-box;margin-bottom:7px;font-weight:600;"><textarea id="chat-description-' + esc(doc.file) + '" placeholder="Description" style="width:100%;box-sizing:border-box;min-height:70px;">' + esc(doc.description) + '</textarea><button onclick="saveChatHistory(\'' + esc(doc.file) + '\')" style="font-size:11px;padding:0 10px;height:28px;margin-top:8px;">保存</button></article>').join('') : '<div style="color:var(--text-dim);padding:24px;">还没有上传聊天记录。</div>';
-  } catch (e) { list.innerHTML = '<div style="color:var(--negative);">加载失败：' + esc(e.message) + '</div>'; }
+    if (msg) msg.textContent = docs.length ? docs.length + ' 个 Markdown 文档 · 选择卡片后可编辑标题与简介。' : '';
+    list.innerHTML = docs.length ? docs.map(doc => '<article style="background:var(--surface);border:1px solid var(--border);padding:17px;border-radius:4px;box-shadow:4px 4px 10px var(--shadow-dark-subtle),-4px -4px 10px var(--shadow-light);">'
+      + '<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:13px;"><div style="font-size:19px;line-height:1;">▤</div><div style="min-width:0;flex:1;"><div style="font-size:11px;color:var(--text-dim);word-break:break-all;">' + esc(doc.file) + '</div><div style="font-size:10px;color:var(--text-dim);margin-top:3px;">' + Math.max(1, Math.ceil((doc.size || 0) / 1024)) + ' KB · uploaded ' + esc(String(doc.uploaded_at || '').replace('T', ' ').slice(0, 16) || '—') + '</div></div></div>'
+      + '<label style="display:block;font-size:10px;letter-spacing:.08em;color:var(--text-dim);margin-bottom:4px;">TITLE</label><input id="chat-title-' + esc(doc.file) + '" value="' + esc(doc.title) + '" placeholder="Title" style="width:100%;box-sizing:border-box;margin-bottom:11px;font-weight:600;font-size:14px;">'
+      + '<label style="display:block;font-size:10px;letter-spacing:.08em;color:var(--text-dim);margin-bottom:4px;">DESCRIPTION</label><textarea id="chat-description-' + esc(doc.file) + '" placeholder="Add a short description…" style="width:100%;box-sizing:border-box;min-height:82px;resize:vertical;line-height:1.5;">' + esc(doc.description) + '</textarea>'
+      + '<div style="display:flex;justify-content:space-between;gap:8px;margin-top:12px;"><button onclick="saveChatHistory(\'' + esc(doc.file) + '\')" class="btn-primary" style="font-size:11px;padding:0 11px;height:29px;">保存修改</button><button onclick="deleteChatHistory(\'' + esc(doc.file) + '\')" style="font-size:11px;padding:0 10px;height:29px;color:var(--negative);border-color:var(--negative);">删除 .md</button></div></article>').join('') : '<div style="color:var(--text-dim);padding:24px;">还没有上传聊天记录。</div>';
+  } catch (e) { if (msg) msg.textContent = ''; list.innerHTML = '<div style="color:var(--negative);">加载失败：' + esc(e.message) + '</div>'; }
 }
 
 async function uploadChatHistory() {
@@ -6558,6 +6563,15 @@ async function uploadChatHistory() {
 
 async function saveChatHistory(name) {
   try { const data = await authFetch('/api/chat-history/' + encodeURIComponent(name), {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({title:document.getElementById('chat-title-' + name).value, description:document.getElementById('chat-description-' + name).value})}).then(readJsonSafe); if (!data.ok) throw new Error(data.error || '保存失败'); loadChatHistory(); } catch (e) { alert('保存失败：' + e.message); }
+}
+
+async function deleteChatHistory(name) {
+  if (!confirm('这会从 Garden 永久删除 “' + name + '” 及其标题、简介。确定吗？')) return;
+  try {
+    const data = await authFetch('/api/chat-history/' + encodeURIComponent(name), {method:'DELETE'}).then(readJsonSafe);
+    if (!data.ok) throw new Error(data.error || '删除失败');
+    loadChatHistory();
+  } catch (e) { alert('删除失败：' + e.message); }
 }
 
 // Health is a deliberately separate private surface: no memo indexing or AI context.
