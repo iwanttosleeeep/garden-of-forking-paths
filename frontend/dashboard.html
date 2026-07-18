@@ -3882,8 +3882,8 @@ async function showDetail(id) {
         '<div class="field"><label>已消化 / Digested</label>' + (meta.digested ? _SV.ok : '—') + '</div>' +
         '<div class="field"><label>钉选 / Pinned</label>' + (meta.pinned ? _SV.ok : '—') + '</div>' +
         '<div class="field"><label>Anchor</label>' + (meta.anchor ? _SV.anchor+' 坐标系 / anchor' : '—') + '</div>' +
-        '<div class="field"><label>创建 / Created</label>' + (meta.created || '—') + '</div>' +
-        '<div class="field"><label>最后活跃 / Last active</label>' + (meta.last_active || '—') + '</div>' +
+        '<div class="field"><label>创建 / Created</label>' + formatGardenTimestamp(meta.created) + '</div>' +
+        '<div class="field"><label>最后活跃 / Last active</label>' + formatGardenTimestamp(meta.last_active) + '</div>' +
         weightHtml +
         triggerHtml +
       '</div>' +
@@ -6156,6 +6156,13 @@ async function pollHeartbeat() {
     el.textContent = '衰减引擎:' + (d.decay_engine === 'running' ? '运行中' : '已停止') + ' · uptime ' + d.uptime_s + 's';
     el.style.color = d.decay_engine === 'running' ? 'var(--text-dim)' : 'var(--negative)';
   } catch (e) { el.textContent = '衰减引擎:无法连接'; el.style.color = 'var(--negative)'; }
+}
+
+function formatGardenTimestamp(iso) {
+  if (!iso) return '—';
+  var d = new Date(iso);
+  if (isNaN(d)) return esc(String(iso));
+  return d.toLocaleString(undefined, {year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false});
 }
 setInterval(pollHeartbeat, 15000);
 
