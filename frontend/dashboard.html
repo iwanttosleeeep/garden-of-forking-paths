@@ -6449,8 +6449,9 @@ async function loadSterlingSync() {
     const data = await readJsonSafe(await authFetch('/api/journal/sync/status'));
     const repo = document.getElementById('sterling-sync-repo');
     const origin = document.getElementById('sterling-sync-origin');
-    if (repo) repo.value = data.repo || '';
-    if (origin) origin.value = data.allowed_origin || '';
+    // Do not let a slow status request erase values the user has just typed.
+    if (repo && !repo.value) repo.value = data.repo || '';
+    if (origin && !origin.value) origin.value = data.allowed_origin || '';
     const msg = document.getElementById('sterling-sync-msg');
     if (msg) msg.textContent = data.configured ? '已配置同步密钥。' : '尚未配置；需先在 GitHub 同步处保存有 Contents 读写权限的 Token。';
   } catch (e) { /* Settings may not be visible yet. */ }
