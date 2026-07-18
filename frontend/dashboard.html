@@ -6616,7 +6616,7 @@ async function saveHealthSync(rotate) {
 }
 
 async function restoreHistoricalMemoTimes() {
-  if (!confirm('会把所有尚未标记的旧 Memo 的 Created 与 Last active 恢复为其标题中的时间。标题 2026-07-15 10-28-34 会恢复为 10:28:34；已恢复的 Memo 不会再被移动。继续吗？')) return;
+  if (!confirm('会把所有尚未标记的旧 Memo 的 Created 与 Last active 恢复为其标题中的时间；已恢复的 Memo 不会再被移动。继续吗？')) return;
   const msg = document.getElementById('health-sync-msg');
   try {
     const timezone = document.getElementById('health-sync-timezone');

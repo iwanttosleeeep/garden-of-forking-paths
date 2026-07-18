@@ -90,6 +90,7 @@ class PublicToolReport:
 @dataclass(frozen=True)
 class PublicToolDesignContract:
     normal_tools: frozenset[str]
+    explicit_private_readers: frozenset[str]
     compatibility_public_names: dict[str, str]
     engineering_public_aliases: dict[str, str]
     restricted_tools: frozenset[str]
@@ -99,6 +100,10 @@ class PublicToolDesignContract:
     def default(cls) -> "PublicToolDesignContract":
         return cls(
             normal_tools=frozenset({"hold", "grow", "trace", "breath", "pulse", "dream", "anchor", "i", "letter", "plan", "echo"}),
+            # These are deliberately bounded readers of private user-owned
+            # sources. They remain public MCP tools so Claude Connectors can
+            # call them, but never perform discovery or automatic retrieval.
+            explicit_private_readers=frozenset({"recall", "check_up", "read_journals"}),
             compatibility_public_names={
                 "release": "anchor",
                 "letter_write": "letter",
@@ -161,6 +166,11 @@ class PublicToolDesignContract:
 
         if key in self.normal_tools:
             return self._decision(tool, name, True, "allowed normal organ tool", tool_class="normal")
+
+        if key in self.explicit_private_readers:
+            return self._decision(
+                tool, name, True, "allowed explicit private reader", tool_class="private_reader"
+            )
 
         if key in self.compatibility_public_names:
             return self._decision(
