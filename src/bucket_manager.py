@@ -156,6 +156,10 @@ _METADATA_TEXT_LIMITS = {
     "grow_batch_id": _GROW_BATCH_ID_MAX,
     "last_merged_by": _SOURCE_TOOL_MAX,
     "_pre_anchor_source_tool": _SOURCE_TOOL_MAX,
+    # Journal imports keep their source date and stable upstream identifier.
+    # They are deliberately metadata rather than a new storage backend.
+    "journal_date": 32,
+    "journal_source_id": 128,
 }
 
 # --- _time_ripple：时间涾漪 ---
@@ -1139,7 +1143,8 @@ class BucketManager:
                   # 表示「最后一次合并是 hold 还是 grow 触发的」。
                   # _pre_anchor_source_tool 是 anchor 时保存的原始 source_tool，
                   # release 时自动恢复；None 表示删除该字段。
-                  "source_tool", "grow_batch_id", "last_merged_by", "_pre_anchor_source_tool"):
+                  "source_tool", "grow_batch_id", "last_merged_by", "_pre_anchor_source_tool",
+                  "journal_date", "journal_source_id", "journal_mood"):
             if k in kwargs:
                 if k == "weight" and kwargs[k] is not None:
                     post[k] = _clamp01(kwargs[k], _DEFAULT_VALENCE)

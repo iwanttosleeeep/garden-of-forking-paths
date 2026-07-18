@@ -59,6 +59,7 @@ from tools import anchor as _t_anchor
 from tools import plan as _t_plan
 from tools import dream as _t_dream
 from tools import i as _t_i
+from tools import journal as _t_journal
 
 # --- Load config & init logging / 加载配置 & 初始化日志 ---
 config = load_config()
@@ -783,6 +784,20 @@ async def dream(window_hours: Optional[int] = 48) -> str:
 # =============================================================
 
 
+@mcp_extra.tool()
+async def journal(
+    query: Optional[str] = "",
+    days: Optional[int] = 30,
+    limit: Optional[int] = 8,
+) -> str:
+    """读取从 Sterling 明确导入的日记。默认只返回近几天的记录数与心情均值，不展开正文；传 query=关键词时才返回相关日记原文。days=时间范围（1-365），limit=最多返回条数（1-20）。日记不会自动混入普通备忘录检索。"""
+    return await _with_notice(
+        _t_journal.dispatch(query=query, days=days, limit=limit),
+        op="journal",
+        args={"query": query, "days": days, "limit": limit},
+    )
+
+
 # ============================================================
 # OAuth 2.0 — MCP Remote Auth —— 已拆分到 web/oauth.py（路由在其 register 内注册）。
 # 这里仅把启动期 MCP 鉴权中间件要用的 _is_valid_mcp_token import 回来。
@@ -809,6 +824,7 @@ if __name__ == "__main__":
         build_http_app,
         merge_mcp_tool_registries,
     )
+
 
     try:
         _extra_count = merge_mcp_tool_registries(mcp, mcp_extra)

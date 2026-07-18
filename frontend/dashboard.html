@@ -2162,6 +2162,19 @@
         <div style="font-weight:600;font-size:13px;margin-bottom:6px;">退出登录</div>
         <button class="btn-danger" onclick="doLogout()" title="退出登录 / Log out" style="padding:0 14px;height:36px;font-size:12px;display:inline-flex;align-items:center;gap:5px;"><i data-lucide="log-out"></i> 退出登录</button>
       </div>
+
+      <div style="margin-top:22px;padding-top:16px;border-top:1px solid var(--border);">
+        <div style="font-weight:600;font-size:13px;margin-bottom:6px;">Sterling 日记</div>
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;line-height:1.65;">
+          从 Sterling 导出的 JSON 导入日记与心情。日记不会自动出现在普通备忘录检索中；AI 只会在明确调用日记工具时读取。
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input type="file" id="sterling-file-input" accept="application/json,.json" style="max-width:240px;font-size:12px;" />
+          <button onclick="importSterlingJournal()" style="font-size:12px;padding:0 12px;height:32px;display:inline-flex;align-items:center;gap:5px;"><i data-lucide="upload"></i> 导入 JSON</button>
+          <button onclick="loadJournalSummary()" title="刷新心情摘要" style="font-size:12px;padding:0 10px;height:32px;"><i data-lucide="refresh-cw"></i></button>
+        </div>
+        <div id="sterling-journal-summary" style="font-size:12px;color:var(--text-dim);line-height:1.7;margin-top:10px;">尚未读取日记摘要。</div>
+      </div>
     </div>
 
     <!-- ② 服务 -->
@@ -3600,6 +3613,7 @@ document.querySelectorAll('.tab').forEach(tab => {
       loadEnvVars();
       loadHostVault();
       loadLocalEmbStatus();
+      loadJournalSummary();
       // MCP 面板同步初始化（不依赖异步请求）
       const _mcpOriginEl = document.getElementById('mcp-local-origin');
       if (_mcpOriginEl) _mcpOriginEl.textContent = location.origin;
@@ -6368,6 +6382,53 @@ function exportClaudeDesktopConfig() {
   a.download = 'claude_desktop_config.json';
   a.click();
   URL.revokeObjectURL(a.href);
+}
+
+// ========================================
+// Sterling journal — explicit JSON import, never automatic browser access.
+// ========================================
+function renderJournalSummary(data, prefix) {
+  const el = document.getElementById('sterling-journal-summary');
+  if (!el) return;
+  if (!data || data.ok === false) {
+    el.textContent = (prefix || '读取失败：') + ((data && data.error) || '未知错误');
+    return;
+  }
+  const curve = Array.isArray(data.curve) ? data.curve : [];
+  const dots = curve.map(point => {
+    const mood = Number(point.mood);
+    return mood >= 4 ? '●' : mood >= 3 ? '•' : '○';
+  }).join('');
+  const average = data.average_mood == null ? '—' : Number(data.average_mood).toFixed(2) + '/5';
+  el.textContent = (prefix || '') + '已导入 ' + (data.count || 0) + ' 条；心情均值 ' + average
+    + (dots ? '；近 30 天 ' + dots : '') + '。';
+}
+
+async function loadJournalSummary() {
+  try {
+    const r = await authFetch('/api/journal/summary');
+    renderJournalSummary(await readJsonSafe(r));
+  } catch (e) {
+    renderJournalSummary({ok:false, error:e.message});
+  }
+}
+
+async function importSterlingJournal() {
+  const input = document.getElementById('sterling-file-input');
+  const file = input && input.files && input.files[0];
+  if (!file) { alert('请先选择 Sterling 导出的 .json 文件'); return; }
+  const fd = new FormData();
+  fd.append('file', file);
+  renderJournalSummary({ok:true, count:0, average_mood:null, curve:[]}, '导入中… ');
+  try {
+    const r = await fetch(BASE + '/api/journal/sterling', {method:'POST', body:fd, credentials:'same-origin'});
+    const data = await readJsonSafe(r);
+    if (!data.ok) throw new Error(data.error || '导入失败');
+    renderJournalSummary(data, '本次导入 ' + data.imported + ' 条，跳过重复 ' + data.skipped + ' 条。');
+    input.value = '';
+  } catch (e) {
+    renderJournalSummary({ok:false, error:e.message}, '导入失败：');
+  }
 }
 
 // ========================================
