@@ -7,6 +7,7 @@ The iPhone companion authenticates with a dedicated, revocable sync key.
 import hashlib
 import json
 import os
+import re
 import secrets
 import tempfile
 from datetime import date, datetime, timedelta
@@ -25,6 +26,7 @@ _FLOW_VALUES = {"none", "light", "medium", "heavy"}
 # Keep Shanghai as a compatibility alias for configurations saved by the last
 # release; new UI presents the preferred Hong Kong label instead.
 _TIMEZONES = {"UTC", "Asia/Hong_Kong", "Asia/Shanghai", "America/Los_Angeles", "America/New_York", "Europe/London", "Europe/Paris"}
+_MEMO_NAME_TIMESTAMP = re.compile(r"^(\d{4}-\d{2}-\d{2} \d{2}-\d{2}-\d{2})(.*)$")
 
 
 def _config() -> dict[str, Any]:
@@ -251,6 +253,16 @@ async def _repair_legacy_memo_timestamps() -> int:
             else:
                 corrected = parsed.astimezone(target).replace(tzinfo=None)
             updates[field] = corrected.isoformat(timespec="seconds")
+        # The homepage displays metadata.name, whose historical prefix was
+        # generated separately from created. Correct that visible prefix too.
+        name = str(meta.get("name") or "")
+        match = _MEMO_NAME_TIMESTAMP.match(name)
+        if match:
+            try:
+                name_time = datetime.strptime(match.group(1), "%Y-%m-%d %H-%M-%S")
+                updates["name"] = (name_time + offset).strftime("%Y-%m-%d %H-%M-%S") + match.group(2)
+            except ValueError:
+                pass
         if updates and await sh.bucket_mgr.update(bucket["id"], **updates):
             changed += 1
     return changed

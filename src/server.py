@@ -26,6 +26,7 @@ web._shared，然后以 @mcp.tool() 注册薄封装（真正的实现在 src/too
 
 import os
 import sys
+import json
 import logging
 import asyncio
 import time
@@ -797,6 +798,47 @@ async def echo(
         op="echo",
         args={"query": query, "days": days, "limit": limit},
     )
+
+
+@mcp_extra.tool()
+async def recall(title: str) -> str:
+    """读取一份指定标题的 Chat History Markdown 文档。title 必填，必须与 Chat History 页面显示的标题或文件名完全匹配；不会搜索或自动读取其他聊天记录。单次最多返回 30000 字符。"""
+    from web import chat_history as chat_library
+    wanted = str(title or "").strip()
+    if not wanted:
+        return "请提供 Chat History 文档的 title。"
+    documents = chat_library._list()
+    matches = [doc for doc in documents if wanted == doc["title"] or wanted == doc["file"]]
+    if not matches:
+        return f"未找到标题为「{wanted}」的 Chat History 文档。"
+    if len(matches) > 1:
+        return "标题不唯一，请改用文件名：" + "、".join(doc["file"] for doc in matches)
+    path = os.path.join(chat_library._directory(), matches[0]["file"])
+    with open(path, "r", encoding="utf-8") as handle:
+        content = handle.read(30001)
+    suffix = "\n\n[已截断至 30000 字符]" if len(content) > 30000 else ""
+    return f"=== Chat History · {matches[0]['title']} ===\n{content[:30000]}{suffix}"
+
+
+@mcp_extra.tool()
+async def check_up(days: Optional[int] = 7) -> str:
+    """读取最近 days 天（1-30）的 Health 每日汇总：睡眠、步数、静息心率、HRV、运动及已授权的周期数据。仅在明确需要健康记录时调用，不会自动读取。"""
+    try:
+        count = max(1, min(30, int(days if days is not None else 7)))
+    except (TypeError, ValueError, OverflowError):
+        return "days 必须是 1 到 30 的数字。"
+    from web import health_data
+    store = health_data._read_store()
+    rows = [store["daily"][key] for key in sorted(store["daily"], reverse=True)[:count]]
+    if not rows:
+        return "没有已同步的 Health 记录。"
+    return "=== Health summary ===\n" + json.dumps(rows, ensure_ascii=False, indent=2)
+
+
+@mcp_extra.tool()
+async def read_journals(days: Optional[int] = 7, query: Optional[str] = "", limit: Optional[int] = 8) -> str:
+    """读取最近 days 天（1-365）的 Sterling 日记。默认只返回摘要；只有提供 query 关键词时才展开匹配日记正文。"""
+    return await _t_journal.dispatch(query=query, days=days, limit=limit)
 
 
 # ============================================================

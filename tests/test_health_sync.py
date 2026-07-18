@@ -59,3 +59,25 @@ def test_health_duplicate_cleanup_keeps_the_original_earlier_iphone_day(monkeypa
 
     assert health_data._remove_adjacent_duplicate_days() == 1
     assert list(store["daily"]) == ["2026-07-17"]
+
+
+@pytest.mark.asyncio
+async def test_memo_time_repair_also_updates_the_visible_name_prefix(monkeypatch):
+    class Manager:
+        def __init__(self):
+            self.bucket = {"id": "memo-1", "metadata": {"created": "2026-07-15T02:28:34", "last_active": "2026-07-15T02:28:34", "name": "2026-07-15 02-28-34 a memo"}}
+            self.updates = {}
+
+        async def list_all(self, include_archive=False):
+            return [self.bucket]
+
+        async def update(self, bucket_id, **updates):
+            self.updates = updates
+            return True
+
+    manager = Manager()
+    monkeypatch.setattr(health_data.sh, "config", {"timezone": "Asia/Hong_Kong"})
+    monkeypatch.setattr(health_data.sh, "bucket_mgr", manager)
+
+    assert await health_data._repair_legacy_memo_timestamps() == 1
+    assert manager.updates["name"].startswith("2026-07-15 10-28-34")
