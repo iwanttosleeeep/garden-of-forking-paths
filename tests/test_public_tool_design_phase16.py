@@ -15,6 +15,17 @@ def test_public_tool_contract_accepts_normal_organ_tools(tool_name):
     assert decision.tool_class == "normal"
 
 
+@pytest.mark.parametrize("tool_name", ["recall", "check_up", "read_journals"])
+def test_public_tool_contract_accepts_explicit_private_readers(tool_name):
+    from ombrebrain.protocol import PublicToolDesignContract, PublicToolSpec
+
+    decision = PublicToolDesignContract.default().evaluate_tool(PublicToolSpec(name=tool_name))
+
+    assert decision.allowed is True
+    assert decision.reason == "allowed explicit private reader"
+    assert decision.tool_class == "private_reader"
+
+
 @pytest.mark.parametrize(
     ("tool_name", "replacement"),
     [

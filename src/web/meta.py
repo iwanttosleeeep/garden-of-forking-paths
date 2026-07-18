@@ -55,6 +55,27 @@ _AUTHOR_NOTE = {
     "support": "如果 OB 对你有用，可以在爱发电支持我们。如果没有，也感谢你用过它。",
 }
 
+
+async def _memo_stats() -> dict[str, int]:
+    """Count only Garden memos, never private Sterling journal entries.
+
+    Journal imports are stored in the same Markdown vault for durability, but
+    they are a separate user-authored surface and must not inflate the Memo
+    count shown in Settings.
+    """
+    counts = {"permanent": 0, "dynamic": 0, "archive": 0}
+    for bucket in await sh.bucket_mgr.list_all(include_archive=True):
+        if sh.is_sterling_journal(bucket):
+            continue
+        kind = str((bucket.get("metadata") or {}).get("type") or "dynamic")
+        if kind == "permanent":
+            counts["permanent"] += 1
+        elif kind == "archived":
+            counts["archive"] += 1
+        elif kind == "dynamic":
+            counts["dynamic"] += 1
+    return {**counts, "total": counts["permanent"] + counts["dynamic"]}
+
 def register(mcp) -> None:
 
     @mcp.custom_route("/api/version", methods=["GET"])
@@ -135,15 +156,15 @@ def register(mcp) -> None:
         if err:
             return err
         try:
-            stats = await sh.bucket_mgr.get_stats()
+            stats = await _memo_stats()
             return JSONResponse({
                 "decay_engine": "running" if sh.decay_engine.is_running else "stopped",
                 "embedding_enabled": sh.embedding_engine.enabled,
                 "buckets": {
-                    "permanent": stats.get("permanent_count", 0),
-                    "dynamic": stats.get("dynamic_count", 0),
-                    "archive": stats.get("archive_count", 0),
-                    "total": stats.get("permanent_count", 0) + stats.get("dynamic_count", 0),
+                    "permanent": stats["permanent"],
+                    "dynamic": stats["dynamic"],
+                    "archive": stats["archive"],
+                    "total": stats["total"],
                 },
                 "using_env_password": bool(os.environ.get("OMBRE_DASHBOARD_PASSWORD", "")),
                 "version": sh.version,
