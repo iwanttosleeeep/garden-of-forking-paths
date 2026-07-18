@@ -193,6 +193,41 @@ def _github_token() -> str:
     return str(os.environ.get("OMBRE_GITHUB_TOKEN") or (sh.config.get("github_sync") or {}).get("token") or "").strip()
 
 
+def _github_token_source() -> str:
+    return "env:OMBRE_GITHUB_TOKEN" if os.environ.get("OMBRE_GITHUB_TOKEN") else "config:github_sync.token"
+
+
+def _github_headers(token: str) -> dict[str, str]:
+    """Fine-grained PATs use the Bearer scheme shown in GitHub's REST docs."""
+    return {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+
+
+async def _validate_github_journal_access() -> dict[str, Any]:
+    cfg = _sync_config()
+    token = _github_token()
+    repo = str(cfg.get("repo") or "").strip()
+    if not token or not repo:
+        raise ValueError("请先完成 GitHub Token 与日记仓库配置")
+    async with httpx.AsyncClient(headers=_github_headers(token), timeout=20.0) as client:
+        who = await client.get(f"{_GITHUB_API}/user")
+        repo_check = await client.get(f"{_GITHUB_API}/repos/{repo}")
+    identity = ""
+    if who.status_code == 200:
+        identity = str(who.json().get("login") or "")
+    return {
+        "authenticated": who.status_code == 200,
+        "authenticated_as": identity,
+        "repo_access": repo_check.status_code == 200,
+        "repo_status": repo_check.status_code,
+        "token_source": _github_token_source(),
+        "repo": repo,
+    }
+
+
 async def _put_github_json(payload: dict[str, Any]) -> None:
     cfg = _sync_config()
     token = _github_token()
@@ -205,7 +240,7 @@ async def _put_github_json(payload: dict[str, Any]) -> None:
         raise ValueError("Sterling 同步仓库未配置；请在 Garden 设置中填写 owner/repo 并保存")
     if not path or ".." in path:
         raise ValueError("Sterling 同步文件路径无效")
-    headers = {"Authorization": f"token {token}", "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
+    headers = _github_headers(token)
     url = f"{_GITHUB_API}/repos/{repo}/contents/{path}"
     async with httpx.AsyncClient(headers=headers, timeout=30.0) as client:
         repo_check = await client.get(f"{_GITHUB_API}/repos/{repo}")
@@ -241,7 +276,7 @@ async def _get_github_json() -> dict[str, Any]:
     path = str(cfg.get("path") or "sterling-journal.json").strip().strip("/")
     if not token or not repo:
         raise ValueError("请先完成 Sterling 同步与 GitHub Token 配置")
-    headers = {"Authorization": f"token {token}", "Accept": "application/vnd.github+json"}
+    headers = _github_headers(token)
     async with httpx.AsyncClient(headers=headers, timeout=30.0) as client:
         response = await client.get(f"{_GITHUB_API}/repos/{repo}/contents/{path}", params={"ref": branch})
         if response.status_code == 404:
@@ -330,6 +365,19 @@ def register(mcp) -> None:
         try:
             payload = await _get_github_json()
             return JSONResponse(await _import_entries(_entries_from_export(payload)))
+        except Exception as exc:
+            return JSONResponse({"ok": False, "error": str(exc)}, status_code=400)
+
+    @mcp.custom_route("/api/journal/sync/validate", methods=["POST"])
+    async def api_sync_validate(request: Request) -> Response:
+        from starlette.responses import JSONResponse
+        err = sh._require_auth(request)
+        if err:
+            return err
+        try:
+            result = await _validate_github_journal_access()
+            result["ok"] = bool(result["authenticated"] and result["repo_access"])
+            return JSONResponse(result)
         except Exception as exc:
             return JSONResponse({"ok": False, "error": str(exc)}, status_code=400)
 

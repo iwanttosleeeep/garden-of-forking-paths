@@ -2182,6 +2182,7 @@
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;">
             <button onclick="saveSterlingSync(false)" style="font-size:12px;padding:0 12px;height:32px;">保存</button>
             <button onclick="saveSterlingSync(true)" style="font-size:12px;padding:0 12px;height:32px;">生成/轮换同步密钥</button>
+            <button onclick="validateSterlingSync()" style="font-size:12px;padding:0 12px;height:32px;">验证日记仓库</button>
             <button onclick="pullSterlingSync()" style="font-size:12px;padding:0 12px;height:32px;">从 GitHub 拉取</button>
           </div>
           <div id="sterling-sync-msg" style="font-size:12px;color:var(--text-dim);line-height:1.6;margin-top:8px;word-break:break-all;"></div>
@@ -6483,6 +6484,18 @@ async function pullSterlingSync() {
     msg.textContent = '拉取完成：导入 ' + data.imported + ' 条，跳过重复 ' + data.skipped + ' 条。';
     renderJournalSummary(data);
   } catch (e) { msg.textContent = '拉取失败：' + e.message; }
+}
+
+async function validateSterlingSync() {
+  const msg = document.getElementById('sterling-sync-msg');
+  try {
+    const data = await readJsonSafe(await authFetch('/api/journal/sync/validate', {method:'POST'}));
+    if (!data.ok) {
+      msg.textContent = '验证失败：' + (data.error || ('认证=' + data.authenticated + '，仓库访问=' + data.repo_access + '（HTTP ' + data.repo_status + '）'));
+      return;
+    }
+    msg.textContent = '验证成功：运行中 Token 来自 ' + data.token_source + '，认证账号 ' + data.authenticated_as + '，可访问 ' + data.repo + '。';
+  } catch (e) { msg.textContent = '验证失败：' + e.message; }
 }
 
 // ========================================
