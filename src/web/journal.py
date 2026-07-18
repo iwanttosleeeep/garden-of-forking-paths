@@ -201,8 +201,10 @@ async def _put_github_json(payload: dict[str, Any]) -> None:
     repo = str(cfg.get("repo") or "").strip()
     branch = str(cfg.get("branch") or "main").strip()
     path = str(cfg.get("path") or "sterling-journal.json").strip().strip("/")
-    if not repo or not path or ".." in path:
-        raise ValueError("Sterling 同步仓库或文件路径无效")
+    if not repo or "/" not in repo:
+        raise ValueError("Sterling 同步仓库未配置；请在 Garden 设置中填写 owner/repo 并保存")
+    if not path or ".." in path:
+        raise ValueError("Sterling 同步文件路径无效")
     headers = {"Authorization": f"token {token}", "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
     url = f"{_GITHUB_API}/repos/{repo}/contents/{path}"
     async with httpx.AsyncClient(headers=headers, timeout=30.0) as client:
@@ -297,8 +299,10 @@ def register(mcp) -> None:
             for field, default in (("repo", ""), ("branch", "main"), ("path", "sterling-journal.json"), ("allowed_origin", "")):
                 if field in body:
                     cfg[field] = str(body.get(field) or default).strip()
-            if cfg.get("repo") and "/" not in str(cfg["repo"]):
-                raise ValueError("仓库请填写 owner/repo")
+            if not cfg.get("repo") or "/" not in str(cfg["repo"]):
+                raise ValueError("请先填写日记仓库（例如 iwanttosleeeep/garden-journal-sync）")
+            if not cfg.get("allowed_origin"):
+                raise ValueError("请先填写 Sterling 地址")
             key = ""
             if body.get("rotate_key") or not cfg.get("token_hash"):
                 key = secrets.token_urlsafe(32)
