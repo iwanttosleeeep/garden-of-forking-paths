@@ -2218,8 +2218,10 @@
       <div style="margin-top:22px;padding-top:16px;border-top:1px solid var(--border);">
         <div style="font-weight:600;font-size:13px;margin-bottom:6px;">Garden Health Sync</div>
         <div style="font-size:12px;color:var(--text-dim);line-height:1.65;">iPhone 同伴 App 只上传每日汇总，不经过 GitHub。健康数据独立保存，不自动给 AI；月经周期仅显示在健康页。</div>
+        <div class="config-row" style="margin-top:9px;"><label>时区</label><select id="health-sync-timezone" style="flex:1;max-width:260px;"><option value="UTC">UTC ±0</option><option value="Asia/Shanghai">中国标准时间 UTC+8</option><option value="Asia/Tokyo">日本标准时间 UTC+9</option><option value="America/Los_Angeles">美国西海岸</option><option value="America/New_York">美国东海岸</option><option value="Europe/London">英国</option><option value="Europe/Paris">欧洲中部</option></select></div>
+        <div style="font-size:11px;color:var(--text-dim);line-height:1.6;margin-top:3px;">首次保存会一次性校正旧版 iPhone 的 Health 日期，以及既有备忘录/星图节点的错误时间；之后新记录直接按此时区写入。</div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:9px;">
-          <button onclick="saveHealthSync(false)" style="font-size:12px;padding:0 12px;height:32px;">生成同步密钥</button>
+          <button onclick="saveHealthSync(false)" style="font-size:12px;padding:0 12px;height:32px;">保存时区/生成同步密钥</button>
           <button onclick="saveHealthSync(true)" style="font-size:12px;padding:0 12px;height:32px;">轮换密钥</button>
         </div>
         <div id="health-sync-msg" style="font-size:12px;color:var(--text-dim);line-height:1.6;margin-top:8px;word-break:break-all;"></div>
@@ -6536,6 +6538,8 @@ async function loadHealthSync() {
   if (!msg) return;
   try {
     const data = await authFetch('/api/health/sync/status').then(readJsonSafe);
+    const timezone = document.getElementById('health-sync-timezone');
+    if (timezone) timezone.value = data.timezone || 'UTC';
     msg.textContent = data.configured ? '同步密钥已设置；需要时可轮换。' : '尚未生成同步密钥。';
   } catch (e) { msg.textContent = '读取失败：' + e.message; }
 }
@@ -6543,9 +6547,11 @@ async function loadHealthSync() {
 async function saveHealthSync(rotate) {
   const msg = document.getElementById('health-sync-msg');
   try {
-    const data = await authFetch('/api/health/sync/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({rotate_key:!!rotate})}).then(readJsonSafe);
+    const timezone = document.getElementById('health-sync-timezone');
+    const data = await authFetch('/api/health/sync/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({rotate_key:!!rotate, timezone: timezone ? timezone.value : 'UTC', repair_legacy_dates:true, repair_legacy_memo_timestamps:true})}).then(readJsonSafe);
     if (!data.ok) throw new Error(data.error || '保存失败');
-    msg.textContent = data.sync_key ? '请立刻复制到 GardenHealthSync（只显示这一次）：' + data.sync_key : '同步密钥已保留。';
+    const repaired = (data.repaired_days ? '已校正 ' + data.repaired_days + ' 天 Health 记录；' : '') + (data.repaired_memos ? '已校正 ' + data.repaired_memos + ' 条备忘录时间；' : '');
+    msg.textContent = data.sync_key ? repaired + '请立刻复制到 GardenHealthSync（只显示这一次）：' + data.sync_key : repaired + '时区已保存；同步密钥已保留。';
   } catch (e) { msg.textContent = '操作失败：' + e.message; }
 }
 

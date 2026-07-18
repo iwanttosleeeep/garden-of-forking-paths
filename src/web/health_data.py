@@ -9,8 +9,9 @@ import json
 import os
 import secrets
 import tempfile
-from datetime import date
+from datetime import date, datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import yaml
 from starlette.requests import Request
@@ -21,10 +22,16 @@ from . import _shared as sh
 _MAX_UPLOAD_BYTES = 256 * 1024
 _MAX_DAYS = 400
 _FLOW_VALUES = {"none", "light", "medium", "heavy"}
+_TIMEZONES = {"UTC", "Asia/Shanghai", "Asia/Tokyo", "America/Los_Angeles", "America/New_York", "Europe/London", "Europe/Paris"}
 
 
 def _config() -> dict[str, Any]:
     return sh.config.setdefault("health_sync", {})
+
+
+def _timezone() -> str:
+    value = str(sh.config.get("timezone") or _config().get("timezone") or "UTC")
+    return value if value in _TIMEZONES else "UTC"
 
 
 def _save_config() -> None:
@@ -38,6 +45,7 @@ def _save_config() -> None:
         with open(path, "r", encoding="utf-8") as handle:
             saved = yaml.safe_load(handle) or {}
     saved["health_sync"] = dict(_config())
+    saved["timezone"] = _timezone()
     with open(path, "w", encoding="utf-8") as handle:
         yaml.safe_dump(saved, handle, allow_unicode=True, default_flow_style=False)
 
@@ -152,7 +160,67 @@ def _sync_key_ok(request: Request) -> bool:
 
 
 def _status() -> dict[str, Any]:
-    return {"configured": bool(_config().get("token_hash")), "key_set": bool(_config().get("token_hash"))}
+    return {
+        "configured": bool(_config().get("token_hash")), "key_set": bool(_config().get("token_hash")),
+        "timezone": _timezone(), "legacy_dates_repaired": bool(_config().get("legacy_dates_repaired")),
+    }
+
+
+def _repair_legacy_dates() -> int:
+    """Correct the pre-1.0 iPhone client which formatted local midnight as UTC.
+
+    Only positive UTC offsets were affected: e.g. Shanghai local midnight became
+    the previous UTC date.  This action is explicit and recorded in config so a
+    later settings save cannot shift records a second time.
+    """
+    try:
+        offset = datetime.now(ZoneInfo(_timezone())).utcoffset() or timedelta()
+    except ZoneInfoNotFoundError:  # defensive; selectable values are fixed above
+        offset = timedelta()
+    if offset <= timedelta():
+        return 0
+    store = _read_store()
+    daily = store["daily"]
+    repaired: dict[str, Any] = {}
+    changed = 0
+    for key in sorted(daily):
+        entry = dict(daily[key]) if isinstance(daily[key], dict) else {"date": key}
+        try:
+            corrected = (date.fromisoformat(key) + timedelta(days=1)).isoformat()
+        except ValueError:
+            corrected = key
+        if corrected != key:
+            changed += 1
+        # In the unlikely case of a collision, preserve fields from both records.
+        repaired[corrected] = {**repaired.get(corrected, {}), **entry, "date": corrected}
+    store["daily"] = repaired
+    _write_store(store)
+    return changed
+
+
+async def _repair_legacy_memo_timestamps() -> int:
+    """Shift pre-setting naive UTC memo timestamps into the selected civil time."""
+    try:
+        offset = datetime.now(ZoneInfo(_timezone())).utcoffset() or timedelta()
+    except ZoneInfoNotFoundError:
+        offset = timedelta()
+    if not offset:
+        return 0
+    changed = 0
+    for bucket in await sh.bucket_mgr.list_all(include_archive=True):
+        meta = bucket.get("metadata") or {}
+        updates: dict[str, str] = {}
+        for field in ("created", "last_active"):
+            raw = str(meta.get(field) or "")
+            try:
+                parsed = datetime.fromisoformat(raw)
+            except ValueError:
+                continue
+            if parsed.tzinfo is None:
+                updates[field] = (parsed + offset).isoformat(timespec="seconds")
+        if updates and await sh.bucket_mgr.update(bucket["id"], **updates):
+            changed += 1
+    return changed
 
 
 def register(mcp) -> None:
@@ -179,12 +247,33 @@ def register(mcp) -> None:
             return err
         try:
             body = await request.json()
+            if not isinstance(body, dict):
+                raise ValueError("配置必须是 JSON 对象")
+            if "timezone" in body:
+                timezone = str(body.get("timezone") or "UTC")
+                if timezone not in _TIMEZONES:
+                    raise ValueError("不支持的时区")
+                _config()["timezone"] = timezone
+                sh.config["timezone"] = timezone
+                try:
+                    from utils import configure_timezone  # type: ignore
+                except ImportError:  # pragma: no cover
+                    from ..utils import configure_timezone  # type: ignore
+                configure_timezone(timezone)
             key = ""
             if body.get("rotate_key") or not _config().get("token_hash"):
                 key = secrets.token_urlsafe(32)
                 _config()["token_hash"] = hashlib.sha256(key.encode()).hexdigest()
+            repaired = 0
+            if body.get("repair_legacy_dates") and not _config().get("legacy_dates_repaired"):
+                repaired = _repair_legacy_dates()
+                _config()["legacy_dates_repaired"] = True
+            repaired_memos = 0
+            if body.get("repair_legacy_memo_timestamps") and not _config().get("legacy_memo_timestamps_repaired"):
+                repaired_memos = await _repair_legacy_memo_timestamps()
+                _config()["legacy_memo_timestamps_repaired"] = True
             _save_config()
-            return JSONResponse({"ok": True, **_status(), "sync_key": key})
+            return JSONResponse({"ok": True, **_status(), "sync_key": key, "repaired_days": repaired, "repaired_memos": repaired_memos})
         except Exception as exc:
             return JSONResponse({"ok": False, "error": str(exc)}, status_code=400)
 

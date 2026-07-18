@@ -24,6 +24,7 @@ utils.py — 整个项目共享的小工具集合
 """
 
 import os
+import time
 import re
 import sys
 import uuid
@@ -706,3 +707,17 @@ def now_iso() -> str:
     返回当前时间的 ISO 格式字符串。
     """
     return datetime.now().isoformat(timespec="seconds")
+
+
+def configure_timezone(value: str) -> str:
+    """Set the process-local civil timezone used for new Garden timestamps."""
+    from zoneinfo import ZoneInfo
+    try:
+        zone = ZoneInfo(str(value or "UTC"))
+    except Exception:
+        zone = ZoneInfo("UTC")
+    name = str(getattr(zone, "key", "UTC"))
+    os.environ["TZ"] = name
+    if hasattr(time, "tzset"):
+        time.tzset()
+    return name
