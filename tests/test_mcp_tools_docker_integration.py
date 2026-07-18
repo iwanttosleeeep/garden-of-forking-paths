@@ -266,7 +266,7 @@ def test_prompt_injection_text_is_returned_verbatim_but_marked_as_data(mcp_clien
 
 def test_path_traversal_shaped_bucket_id_is_treated_as_an_identifier(mcp_client):
     result = mcp_client.call("trace", {"bucket_id": "../../../../etc/passwd", "importance": 9})
-    assert "未找到记忆桶" in result
+    assert "未找到备忘录" in result
 
 
 def test_grow_rejects_excessive_source_before_llm_call(mcp_client):
