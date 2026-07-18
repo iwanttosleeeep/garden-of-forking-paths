@@ -1340,6 +1340,33 @@ class BucketManager:
         )
         return True
 
+    async def erase(self, bucket_id: str) -> bool:
+        """Permanently remove a bucket and its derived embeddings.
+
+        This is intentionally separate from ``delete`` (archive/tombstone) and
+        is only exposed by narrowly scoped callers such as private journal sync.
+        """
+        file_path = self._find_bucket_file(bucket_id)
+        if not file_path:
+            return False
+        try:
+            os.remove(file_path)
+        except OSError as exc:
+            logger.error("Failed to erase bucket %s: %s", bucket_id, exc)
+            return False
+        if self.embedding_outbox is not None:
+            try:
+                self.embedding_outbox.discard(bucket_id)
+            except Exception:
+                logger.warning("discard embedding outbox failed for erased bucket", exc_info=True)
+        if self.embedding_engine is not None:
+            try:
+                self.embedding_engine.delete_embedding(bucket_id)
+            except Exception:
+                logger.warning("delete embedding failed for erased bucket", exc_info=True)
+        self._invalidate_bm25()
+        return True
+
     # ---------------------------------------------------------
     # Touch bucket (refresh activation time + increment count)
     # 触碰桶（刷新激活时间 + 累加激活次数）

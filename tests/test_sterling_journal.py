@@ -55,7 +55,17 @@ class FakeBucketManager:
         return bucket_id
 
     async def update(self, bucket_id, **kwargs):
-        next(bucket for bucket in self.buckets if bucket["id"] == bucket_id)["metadata"].update(kwargs)
+        bucket = next(bucket for bucket in self.buckets if bucket["id"] == bucket_id)
+        bucket["metadata"].update(kwargs)
+        if "content" in kwargs:
+            bucket["content"] = kwargs["content"]
+
+    async def get(self, bucket_id):
+        return next((bucket for bucket in self.buckets if bucket["id"] == bucket_id), None)
+
+    async def erase(self, bucket_id):
+        self.buckets = [bucket for bucket in self.buckets if bucket["id"] != bucket_id]
+        return True
 
 
 @pytest.mark.asyncio
@@ -136,3 +146,19 @@ async def test_journal_entries_endpoint_keeps_imports_out_of_normal_memo_shape(m
         "id": "journal-1", "date": "2026-07-01", "mood": 4,
         "tags": ["work"], "content": "Sterling 日记 · 2026-07-01 · 心情 4/5\n\nfinished a task",
     }]
+
+
+@pytest.mark.asyncio
+async def test_journal_delete_erases_only_sterling_entries(monkeypatch):
+    mcp, manager = FakeMcp(), FakeBucketManager()
+    manager.buckets = [{"id": "journal-1", "content": "x", "metadata": {"source_tool": "sterling"}}]
+    monkeypatch.setattr(sh, "_require_auth", lambda request: None)
+    monkeypatch.setattr(sh, "bucket_mgr", manager)
+    journal_web.register(mcp)
+    request = FakeRequest(b"")
+    request.path_params = {"bucket_id": "journal-1"}
+
+    response = await mcp.routes[("/api/journal/entries/{bucket_id}", ("DELETE",))](request)
+
+    assert json.loads(bytes(response.body))["ok"] is True
+    assert manager.buckets == []

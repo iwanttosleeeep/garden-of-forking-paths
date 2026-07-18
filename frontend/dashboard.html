@@ -2223,6 +2223,8 @@
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:9px;">
           <button onclick="saveHealthSync(false)" style="font-size:12px;padding:0 12px;height:32px;">保存时区/生成同步密钥</button>
           <button onclick="saveHealthSync(true)" style="font-size:12px;padding:0 12px;height:32px;">轮换密钥</button>
+          <button onclick="removeDuplicateHealthDays()" style="font-size:12px;padding:0 12px;height:32px;">清理重复 Health 日期</button>
+          <button onclick="forceRepairMemoTimes()" style="font-size:12px;padding:0 12px;height:32px;">修正既有备忘录时间</button>
         </div>
         <div id="health-sync-msg" style="font-size:12px;color:var(--text-dim);line-height:1.6;margin-top:8px;word-break:break-all;"></div>
       </div>
@@ -6496,7 +6498,8 @@ async function loadJournalView() {
       return '<article style="background:var(--surface);border:1px solid var(--border);border-radius:2px;padding:16px 20px;box-shadow:4px 4px 10px var(--shadow-dark-subtle),-4px -4px 10px var(--shadow-light);">'
         + '<div style="display:flex;gap:10px;justify-content:space-between;font-size:11px;color:var(--text-dim);margin-bottom:9px;"><span>' + esc(entry.date || '未标注日期') + '</span><span>心情 ' + (entry.mood == null ? '—' : esc(String(entry.mood)) + '/5') + '</span></div>'
         + (tags ? '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;">' + tags + '</div>' : '')
-        + '<div style="white-space:pre-wrap;font-size:14px;line-height:1.75;color:var(--text);">' + esc(body) + '</div></article>';
+        + '<div style="white-space:pre-wrap;font-size:14px;line-height:1.75;color:var(--text);">' + esc(body) + '</div>'
+        + '<div style="margin-top:12px;"><button onclick="deleteJournalEntry(\'' + esc(entry.id) + '\')" style="font-size:11px;padding:0 10px;height:28px;color:var(--negative);">从 Garden 删除</button></div></article>';
     }).join('');
   } catch (e) {
     overview.textContent = '加载失败：' + e.message;
@@ -6553,6 +6556,36 @@ async function saveHealthSync(rotate) {
     const repaired = (data.repaired_days ? '已校正 ' + data.repaired_days + ' 天 Health 记录；' : '') + (data.repaired_memos ? '已校正 ' + data.repaired_memos + ' 条备忘录时间；' : '');
     msg.textContent = data.sync_key ? repaired + '请立刻复制到 GardenHealthSync（只显示这一次）：' + data.sync_key : repaired + '时区已保存；同步密钥已保留。';
   } catch (e) { msg.textContent = '操作失败：' + e.message; }
+}
+
+async function removeDuplicateHealthDays() {
+  if (!confirm('只会删除内容完全相同、日期相邻的较早一条 Health 记录。继续吗？')) return;
+  const msg = document.getElementById('health-sync-msg');
+  try {
+    const data = await authFetch('/api/health/sync/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({remove_duplicate_health_days:true})}).then(readJsonSafe);
+    if (!data.ok) throw new Error(data.error || '清理失败');
+    msg.textContent = '已删除 ' + (data.duplicates_removed || 0) + ' 条重复 Health 日期。';
+    loadHealthView();
+  } catch (e) { msg.textContent = '清理失败：' + e.message; }
+}
+
+async function forceRepairMemoTimes() {
+  if (!confirm('这会将尚未校正的既有备忘录时间按当前时区移动一次。确认后不可自动撤销，继续吗？')) return;
+  const msg = document.getElementById('health-sync-msg');
+  try {
+    const data = await authFetch('/api/health/sync/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({force_repair_memo_timestamps:true})}).then(readJsonSafe);
+    if (!data.ok) throw new Error(data.error || '修正失败');
+    msg.textContent = '已修正 ' + (data.repaired_memos || 0) + ' 条备忘录时间。请刷新备忘录或星图查看。';
+  } catch (e) { msg.textContent = '修正失败：' + e.message; }
+}
+
+async function deleteJournalEntry(id) {
+  if (!confirm('这会从 Garden 永久删除这条日记，不会移入归档。之后可从 Sterling 再次同步。继续吗？')) return;
+  try {
+    const data = await authFetch('/api/journal/entries/' + encodeURIComponent(id), {method:'DELETE'}).then(readJsonSafe);
+    if (!data.ok) throw new Error(data.error || '删除失败');
+    loadJournalView(); loadJournalSummary();
+  } catch (e) { alert('删除失败：' + e.message); }
 }
 
 async function importSterlingJournal() {

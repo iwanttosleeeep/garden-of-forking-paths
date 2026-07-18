@@ -47,3 +47,15 @@ def test_legacy_health_dates_stay_put_for_utc(monkeypatch):
 
     assert health_data._repair_legacy_dates() == 0
     assert list(store["daily"]) == ["2026-07-18"]
+
+
+def test_health_duplicate_cleanup_keeps_the_later_local_day(monkeypatch):
+    store = {"version": 1, "daily": {
+        "2026-07-17": {"date": "2026-07-17", "activity": {"steps": 100}},
+        "2026-07-18": {"date": "2026-07-18", "activity": {"steps": 100}},
+    }}
+    monkeypatch.setattr(health_data, "_read_store", lambda: store)
+    monkeypatch.setattr(health_data, "_write_store", lambda value: None)
+
+    assert health_data._remove_adjacent_duplicate_days() == 1
+    assert list(store["daily"]) == ["2026-07-18"]
