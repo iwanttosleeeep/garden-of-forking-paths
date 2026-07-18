@@ -1,6 +1,7 @@
 import pytest
 
 from web.health_data import _clean_day
+from web import health_data
 
 
 def test_health_daily_summary_accepts_only_the_small_daily_schema():
@@ -26,3 +27,54 @@ def test_health_daily_summary_accepts_only_the_small_daily_schema():
 def test_health_daily_summary_rejects_invalid_or_implausible_data(payload):
     with pytest.raises(ValueError):
         _clean_day(payload)
+
+
+@pytest.mark.asyncio
+async def test_restore_memo_times_uses_title_once_and_skips_journals(monkeypatch):
+    class Manager:
+        def __init__(self):
+            self.buckets = [
+                {"id": "memo", "metadata": {"name": "2026-07-15 10-28-34 a memo", "created": "2026-07-15T18:28:34", "last_active": "2026-07-15T18:28:34"}},
+                {"id": "journal", "metadata": {"name": "2026-07-15 10-28-34 journal", "source_tool": "sterling"}},
+            ]
+            self.updates = []
+
+        async def list_all(self, include_archive=False):
+            return self.buckets
+
+        async def update(self, bucket_id, **updates):
+            self.updates.append((bucket_id, updates))
+            return True
+
+    manager = Manager()
+    monkeypatch.setattr(health_data.sh, "config", {"timezone": "Asia/Hong_Kong"})
+    monkeypatch.setattr(health_data.sh, "bucket_mgr", manager)
+
+    assert await health_data._restore_memo_timestamps_from_titles() == 1
+    assert manager.updates == [("memo", {
+        "created": "2026-07-15T10:28:34", "last_active": "2026-07-15T10:28:34",
+        "timestamp_timezone": "Asia/Hong_Kong",
+    })]
+
+
+@pytest.mark.asyncio
+async def test_restore_memo_times_preserves_a_later_real_activation(monkeypatch):
+    class Manager:
+        async def list_all(self, include_archive=False):
+            return [{"id": "memo", "metadata": {
+                "name": "2026-07-15 10-28-34 a memo",
+                "created": "2026-07-15T18:28:34", "last_active": "2026-07-19T09:00:00",
+            }}]
+
+        async def update(self, bucket_id, **updates):
+            self.updates = updates
+            return True
+
+    manager = Manager()
+    monkeypatch.setattr(health_data.sh, "config", {"timezone": "Asia/Hong_Kong"})
+    monkeypatch.setattr(health_data.sh, "bucket_mgr", manager)
+
+    assert await health_data._restore_memo_timestamps_from_titles() == 1
+    assert manager.updates == {
+        "created": "2026-07-15T10:28:34", "timestamp_timezone": "Asia/Hong_Kong",
+    }

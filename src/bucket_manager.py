@@ -1151,7 +1151,7 @@ class BucketManager:
                   "journal_date", "journal_source_id", "journal_mood",
                   # Internal one-time timezone migration only; normal dashboard
                   # editing never presents these metadata fields.
-                  "created", "last_active"):
+                  "created", "last_active", "timestamp_timezone"):
             if k in kwargs:
                 if k == "weight" and kwargs[k] is not None:
                     post[k] = _clamp01(kwargs[k], _DEFAULT_VALENCE)
