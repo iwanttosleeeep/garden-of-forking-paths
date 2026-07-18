@@ -1785,6 +1785,7 @@
   <div class="tab" data-tab="plan"><span>计划</span><span class="tab-en">Plans</span></div>
   <div class="tab" data-tab="letters"><span>信</span><span class="tab-en">Letters</span></div>
   <div class="tab" data-tab="journal"><span>日记</span><span class="tab-en">Journal</span></div>
+  <div class="tab" data-tab="health"><span>健康</span><span class="tab-en">Health</span></div>
   <div class="tab" data-tab="anchors"><span>锚点</span><span class="tab-en">Anchors</span></div>
   <div class="tab" data-tab="logs"><span>日志</span><span class="tab-en">Logs</span></div>
   <div class="tab" data-tab="settings"><span>设置</span><span class="tab-en">Settings</span></div>
@@ -2066,6 +2067,18 @@
   </div>
 </div>
 
+<div class="content" id="health-view" style="display:none">
+  <div style="max-width:920px;margin:0 auto;">
+    <div class="config-section">
+      <h3>健康 / Health</h3>
+      <p style="font-size:12px;color:var(--text-dim);line-height:1.7;margin:4px 0 14px;">来自 iPhone 的每日汇总；不进入普通备忘录，也不会自动提供给 AI。睡眠评分仅在设备/应用已写入时显示。</p>
+      <div id="health-overview" style="font-size:13px;color:var(--text-dim);margin-bottom:14px;">加载中…</div>
+      <button onclick="loadHealthView()" title="刷新" style="padding:0 12px;height:32px;font-size:12px;"><i data-lucide="refresh-cw"></i> 刷新</button>
+      <div id="health-days" style="display:flex;flex-direction:column;gap:12px;margin-top:16px;"></div>
+    </div>
+  </div>
+</div>
+
 <!-- iter 2.0: anchor view / 坐标系备忘录面板 -->
 <div class="content" id="anchors-view" style="display:none">
   <div style="max-width:920px;margin:0 auto;">
@@ -2201,6 +2214,15 @@
           </div>
           <div id="sterling-sync-msg" style="font-size:12px;color:var(--text-dim);line-height:1.6;margin-top:8px;word-break:break-all;"></div>
         </details>
+      </div>
+      <div style="margin-top:22px;padding-top:16px;border-top:1px solid var(--border);">
+        <div style="font-weight:600;font-size:13px;margin-bottom:6px;">Garden Health Sync</div>
+        <div style="font-size:12px;color:var(--text-dim);line-height:1.65;">iPhone 同伴 App 只上传每日汇总，不经过 GitHub。健康数据独立保存，不自动给 AI；月经周期仅显示在健康页。</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:9px;">
+          <button onclick="saveHealthSync(false)" style="font-size:12px;padding:0 12px;height:32px;">生成同步密钥</button>
+          <button onclick="saveHealthSync(true)" style="font-size:12px;padding:0 12px;height:32px;">轮换密钥</button>
+        </div>
+        <div id="health-sync-msg" style="font-size:12px;color:var(--text-dim);line-height:1.6;margin-top:8px;word-break:break-all;"></div>
       </div>
     </div>
 
@@ -3622,6 +3644,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.getElementById('settings-view').style.display = target === 'settings' ? '' : 'none';
     document.getElementById('letters-view').style.display = target === 'letters' ? '' : 'none';
     document.getElementById('journal-view').style.display = target === 'journal' ? '' : 'none';
+    document.getElementById('health-view').style.display = target === 'health' ? '' : 'none';
     document.getElementById('anchors-view').style.display = target === 'anchors' ? '' : 'none';
     if (target !== 'network' && _netRAF) { cancelAnimationFrame(_netRAF); _netRAF = null; }
     if (target === 'network') loadNetwork();
@@ -3643,6 +3666,7 @@ document.querySelectorAll('.tab').forEach(tab => {
       loadLocalEmbStatus();
       loadJournalSummary();
       loadSterlingSync();
+      loadHealthSync();
       // MCP 面板同步初始化（不依赖异步请求）
       const _mcpOriginEl = document.getElementById('mcp-local-origin');
       if (_mcpOriginEl) _mcpOriginEl.textContent = location.origin;
@@ -3650,6 +3674,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     }
     if (target === 'letters') loadLetters();
     if (target === 'journal') loadJournalView();
+    if (target === 'health') loadHealthView();
     if (target === 'anchors') loadAnchorsView();
   });
 });
@@ -6474,6 +6499,54 @@ async function loadJournalView() {
   } catch (e) {
     overview.textContent = '加载失败：' + e.message;
   }
+}
+
+// Health is a deliberately separate private surface: no memo indexing or AI context.
+function healthValue(value, suffix) {
+  return value == null ? '—' : String(Math.round(Number(value) * 10) / 10) + (suffix || '');
+}
+
+async function loadHealthView() {
+  const overview = document.getElementById('health-overview');
+  const list = document.getElementById('health-days');
+  if (!overview || !list) return;
+  overview.textContent = '加载中…'; list.innerHTML = '';
+  try {
+    const data = await authFetch('/api/health/summary').then(readJsonSafe);
+    const days = data.days || [];
+    overview.textContent = days.length ? '已保存 ' + data.count + ' 天；以下为最近 ' + days.length + ' 天的 iPhone 汇总。' : '还没有 Health 同步记录。先在设置生成同步密钥，并在 GardenHealthSync 中填入 Garden 地址与密钥。';
+    list.innerHTML = days.map(day => {
+      const sleep = day.sleep || {}, activity = day.activity || {}, heart = day.heart || {}, vitals = day.vitals || {}, cycle = day.cycle || {};
+      const workout = (day.workouts || []).map(w => esc(w.type) + (w.duration_minutes == null ? '' : ' ' + healthValue(w.duration_minutes, ' 分钟'))).join(' · ') || '—';
+      const cycleText = cycle.flow ? ('周期：' + {none:'无记录',light:'少量',medium:'中等',heavy:'较多'}[cycle.flow] + (cycle.cycle_start ? '（开始）' : '')) : '';
+      return '<article style="background:var(--surface);border:1px solid var(--border);border-radius:2px;padding:16px 20px;box-shadow:4px 4px 10px var(--shadow-dark-subtle),-4px -4px 10px var(--shadow-light);">'
+        + '<div style="font-size:13px;font-weight:600;margin-bottom:10px;">' + esc(day.date) + '</div>'
+        + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;font-size:12px;color:var(--text-dim);line-height:1.7;">'
+        + '<span>睡眠 ' + healthValue(sleep.duration_hours, ' 小时') + (sleep.score == null ? '' : ' · ' + healthValue(sleep.score, ' 分')) + '</span>'
+        + '<span>步数 ' + healthValue(activity.steps) + '</span><span>静息心率 ' + healthValue(heart.resting_bpm, ' bpm') + '</span>'
+        + '<span>HRV ' + healthValue(heart.hrv_ms, ' ms') + '</span><span>呼吸 ' + healthValue(vitals.respiratory_rate, ' 次/分') + '</span>'
+        + (cycleText ? '<span>' + cycleText + '</span>' : '') + '</div>'
+        + '<div style="font-size:12px;color:var(--text-dim);margin-top:10px;">运动：' + workout + '</div></article>';
+    }).join('');
+  } catch (e) { overview.textContent = '加载失败：' + e.message; }
+}
+
+async function loadHealthSync() {
+  const msg = document.getElementById('health-sync-msg');
+  if (!msg) return;
+  try {
+    const data = await authFetch('/api/health/sync/status').then(readJsonSafe);
+    msg.textContent = data.configured ? '同步密钥已设置；需要时可轮换。' : '尚未生成同步密钥。';
+  } catch (e) { msg.textContent = '读取失败：' + e.message; }
+}
+
+async function saveHealthSync(rotate) {
+  const msg = document.getElementById('health-sync-msg');
+  try {
+    const data = await authFetch('/api/health/sync/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({rotate_key:!!rotate})}).then(readJsonSafe);
+    if (!data.ok) throw new Error(data.error || '保存失败');
+    msg.textContent = data.sync_key ? '请立刻复制到 GardenHealthSync（只显示这一次）：' + data.sync_key : '同步密钥已保留。';
+  } catch (e) { msg.textContent = '操作失败：' + e.message; }
 }
 
 async function importSterlingJournal() {

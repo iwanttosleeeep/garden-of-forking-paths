@@ -26,6 +26,7 @@ from . import hooks
 from . import buckets
 from . import import_api
 from . import journal
+from . import health_data
 from . import github
 from . import embedding
 from . import ollama_local
@@ -46,6 +47,7 @@ _WEB_MODULES = (
     ("web.buckets", buckets.register),
     ("web.import_api", import_api.register),
     ("web.journal", journal.register),
+    ("web.health_data", health_data.register),
     ("web.github", github.register),
     ("web.embedding", embedding.register),
     ("web.ollama_local", ollama_local.register),
