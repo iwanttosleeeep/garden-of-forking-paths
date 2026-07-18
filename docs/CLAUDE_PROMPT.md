@@ -29,6 +29,8 @@
 - **高频 5 个**：`breath` / `hold` / `grow` / `dream` / `trace`
 - **低频 7 个**：`anchor` / `release` / `pulse` / `plan` / `letter_write` / `letter_read` / `I`
 
+- **私有资料读取**：`recall(title)` 只读取指定 Chat History 文件；`check_up(days)` 读取 Health 汇总；`read_journals(days, query, limit)` 读取 Sterling 日记。三者都必须在用户明确需要时调用，绝不自动读取。
+
 连上 `/mcp` 就拥有全部十二种能力。
 
 ---

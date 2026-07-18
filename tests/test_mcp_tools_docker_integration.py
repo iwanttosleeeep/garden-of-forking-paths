@@ -1,4 +1,4 @@
-"""Real streamable-HTTP integration coverage for all 13 public MCP tools.
+"""Real streamable-HTTP integration coverage for all 16 public MCP tools.
 
 Run this file against an isolated Docker service by setting
 OMBRE_DOCKER_INTEGRATION_URL=http://ombre-brain:8000/mcp.
@@ -31,6 +31,9 @@ EXPECTED_TOOLS = {
     "I",
     "dream",
     "echo",
+    "recall",
+    "check_up",
+    "read_journals",
 }
 
 
@@ -137,7 +140,7 @@ def _hold(mcp_client: MCPClient, marker: str) -> str:
     )
 
 
-def test_manifest_exposes_exactly_the_documented_13_tools(mcp_client):
+def test_manifest_exposes_exactly_the_documented_16_tools(mcp_client):
     tools = mcp_client.list_tools()
     assert {tool["name"] for tool in tools} == EXPECTED_TOOLS
     assert all(tool.get("description") for tool in tools)
