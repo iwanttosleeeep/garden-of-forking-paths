@@ -356,6 +356,21 @@ def register(mcp) -> None:
             sh.logger.exception("journal summary failed")
             return JSONResponse({"ok": False, "error": str(exc)}, status_code=500)
 
+    @mcp.custom_route("/api/journal/entries/{bucket_id}", methods=["DELETE"])
+    async def api_journal_delete(request: Request) -> Response:
+        """Erase one Sterling entry from Garden without archiving it."""
+        from starlette.responses import JSONResponse
+        err = sh._require_auth(request)
+        if err:
+            return err
+        bucket_id = request.path_params["bucket_id"]
+        bucket = await sh.bucket_mgr.get(bucket_id)
+        if not bucket or (bucket.get("metadata") or {}).get("source_tool") != "sterling":
+            return JSONResponse({"ok": False, "error": "未找到 Sterling 日记"}, status_code=404)
+        if not await sh.bucket_mgr.erase(bucket_id):
+            return JSONResponse({"ok": False, "error": "删除失败"}, status_code=500)
+        return JSONResponse({"ok": True})
+
     @mcp.custom_route("/api/journal/sterling", methods=["POST"])
     async def api_import_sterling(request: Request) -> Response:
         from starlette.responses import JSONResponse

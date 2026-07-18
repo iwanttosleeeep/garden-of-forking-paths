@@ -200,6 +200,33 @@ def _repair_legacy_dates() -> int:
     return changed
 
 
+def _remove_adjacent_duplicate_days() -> int:
+    """Remove only identical day payloads on consecutive calendar dates.
+
+    This repairs the old UTC date-shift artifact without guessing about similar
+    but genuinely different days.  The later date wins because it is the local
+    day resent by the corrected iPhone client.
+    """
+    store = _read_store()
+    daily = store["daily"]
+    removed = 0
+    for older in sorted(list(daily)):
+        try:
+            newer = (date.fromisoformat(older) + timedelta(days=1)).isoformat()
+        except ValueError:
+            continue
+        if newer not in daily:
+            continue
+        old_payload = {key: value for key, value in daily[older].items() if key != "date"}
+        new_payload = {key: value for key, value in daily[newer].items() if key != "date"}
+        if old_payload == new_payload:
+            del daily[older]
+            removed += 1
+    if removed:
+        _write_store(store)
+    return removed
+
+
 async def _repair_legacy_memo_timestamps() -> int:
     """Shift pre-setting naive UTC memo timestamps into the selected civil time."""
     try:
@@ -274,8 +301,11 @@ def register(mcp) -> None:
             if body.get("repair_legacy_memo_timestamps") and not _config().get("legacy_memo_timestamps_repaired"):
                 repaired_memos = await _repair_legacy_memo_timestamps()
                 _config()["legacy_memo_timestamps_repaired"] = True
+            if body.get("force_repair_memo_timestamps"):
+                repaired_memos = await _repair_legacy_memo_timestamps()
+            duplicates_removed = _remove_adjacent_duplicate_days() if body.get("remove_duplicate_health_days") else 0
             _save_config()
-            return JSONResponse({"ok": True, **_status(), "sync_key": key, "repaired_days": repaired, "repaired_memos": repaired_memos})
+            return JSONResponse({"ok": True, **_status(), "sync_key": key, "repaired_days": repaired, "repaired_memos": repaired_memos, "duplicates_removed": duplicates_removed})
         except Exception as exc:
             return JSONResponse({"ok": False, "error": str(exc)}, status_code=400)
 

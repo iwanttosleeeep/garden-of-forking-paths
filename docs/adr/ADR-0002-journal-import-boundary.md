@@ -14,11 +14,11 @@ The import preserves a small personal record and a mood curve in the existing me
 
 ## How forgetting still works
 
-Imported entries retain the existing archive and `dont_surface` controls. They are hidden from unsolicited surfacing, not made immutable.
+Imported entries retain the existing archive and `dont_surface` controls. A user may also explicitly erase a Sterling-derived copy from Garden; the source remains in Sterling / its sync repository and can later be re-imported.
 
 ## How tombstones are preserved
 
-Deleting an imported entry follows the standard archive/tombstone path and preserves its original memo identifier.
+Normal Garden memos follow the standard archive/tombstone path. A narrowly scoped Journal-page erase is an exception for user-owned imported copies: it removes only a `source_tool: sterling` record from Garden rather than creating a hidden archive duplicate.
 
 ## How present thinking remains with the LLM
 
@@ -30,4 +30,4 @@ Directly reading Sterling browser localStorage was rejected because a server can
 
 ## Tests required
 
-Tests cover Sterling export parsing, stable-ID deduplication, `dont_surface` protection, mood-summary calculation, and the rule that raw journal text requires an explicit query.
+Tests cover Sterling export parsing, stable-ID refresh, explicit erase scope, `dont_surface` protection, mood-summary calculation, and the rule that raw journal text requires an explicit query.
