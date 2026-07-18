@@ -14,3 +14,12 @@ def test_dashboard_uses_memo_language_for_visible_memory_controls():
     assert "在备忘录详情页用" in dashboard
     assert "breath 默认条数" in dashboard
     assert "检查重复备忘录" in dashboard
+
+
+def test_me_settings_card_uses_the_standard_full_width_flow_layout():
+    dashboard = (Path(__file__).resolve().parent.parent / "frontend" / "dashboard.html").read_text(encoding="utf-8")
+
+    assert "#settings-view #sec-me" in dashboard
+    assert "width: 100%;" in dashboard
+    assert "text-align: left;" in dashboard
+    assert "#sec-me { min-height" not in dashboard
