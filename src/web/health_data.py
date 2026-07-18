@@ -204,8 +204,8 @@ def _remove_adjacent_duplicate_days() -> int:
     """Remove only identical day payloads on consecutive calendar dates.
 
     This repairs the old UTC date-shift artifact without guessing about similar
-    but genuinely different days.  The later date wins because it is the local
-    day resent by the corrected iPhone client.
+    but genuinely different days. The earlier date wins because it is the date
+    originally supplied by the iPhone; Garden must not reinterpret it.
     """
     store = _read_store()
     daily = store["daily"]
@@ -220,7 +220,7 @@ def _remove_adjacent_duplicate_days() -> int:
         old_payload = {key: value for key, value in daily[older].items() if key != "date"}
         new_payload = {key: value for key, value in daily[newer].items() if key != "date"}
         if old_payload == new_payload:
-            del daily[older]
+            del daily[newer]
             removed += 1
     if removed:
         _write_store(store)
@@ -228,13 +228,14 @@ def _remove_adjacent_duplicate_days() -> int:
 
 
 async def _repair_legacy_memo_timestamps() -> int:
-    """Shift pre-setting naive UTC memo timestamps into the selected civil time."""
+    """Convert both naive and explicit UTC memo timestamps into civil time."""
     try:
         offset = datetime.now(ZoneInfo(_timezone())).utcoffset() or timedelta()
     except ZoneInfoNotFoundError:
         offset = timedelta()
     if not offset:
         return 0
+    target = ZoneInfo(_timezone())
     changed = 0
     for bucket in await sh.bucket_mgr.list_all(include_archive=True):
         meta = bucket.get("metadata") or {}
@@ -246,7 +247,10 @@ async def _repair_legacy_memo_timestamps() -> int:
             except ValueError:
                 continue
             if parsed.tzinfo is None:
-                updates[field] = (parsed + offset).isoformat(timespec="seconds")
+                corrected = parsed + offset
+            else:
+                corrected = parsed.astimezone(target).replace(tzinfo=None)
+            updates[field] = corrected.isoformat(timespec="seconds")
         if updates and await sh.bucket_mgr.update(bucket["id"], **updates):
             changed += 1
     return changed
