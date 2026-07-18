@@ -23,3 +23,9 @@ def test_me_settings_card_uses_the_standard_full_width_flow_layout():
     assert "width: 100%;" in dashboard
     assert "text-align: left;" in dashboard
     assert "#sec-me { min-height" not in dashboard
+
+
+def test_me_settings_card_does_not_close_before_logout():
+    dashboard = (Path(__file__).resolve().parent.parent / "frontend" / "dashboard.html").read_text(encoding="utf-8")
+
+    assert "      <div>\n        </div>\n      </div>\n\n      <div>\n        <div style=\"font-weight:600;font-size:13px;margin-bottom:6px;\">退出登录" not in dashboard
