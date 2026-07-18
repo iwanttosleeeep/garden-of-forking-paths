@@ -89,7 +89,7 @@ async def test_items_share_batch_and_metadata(grow_rt):
 async def test_empty_items_creates_nothing(grow_rt):
     bucket_mgr, stub = grow_rt
     out = await grow_items(["", "   ", None])
-    assert "未创建任何桶" in out
+    assert "未创建任何备忘录" in out
     assert stub.analyze_calls == 0
     assert await bucket_mgr.list_all(include_archive=False) == []
 

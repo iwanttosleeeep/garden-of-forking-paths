@@ -151,7 +151,7 @@ async def dispatch(
 
     if feel:
         if not source_bucket or not source_bucket.strip():
-            return "feel 必须指向一条原始记忆（source_bucket 不能为空）。请先用 breath(query=...) 找到那条桶的 bucket_id，再传入 source_bucket=id。"
+            return "feel 必须指向一条原始备忘录（source_bucket 不能为空）。请先用 breath(query=...) 找到该条备忘录的 bucket_id，再传入 source_bucket=id。"
         result = await store_feel(
             content=content,
             extra_tags=extra_tags,

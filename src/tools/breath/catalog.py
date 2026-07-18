@@ -31,7 +31,7 @@ _SECTIONS = [
 
 
 async def surface_catalog(domain_filter: list[str] | None = None) -> str:
-    """返回全部记忆桶的紧凑目录。每桶一行：名称 | 域 | 重要度。"""
+    """返回全部备忘录的紧凑目录。每条一行：名称 | 域 | 重要度。"""
     try:
         buckets = await rt.bucket_mgr.list_all(include_archive=False)
     except Exception as e:
@@ -59,10 +59,10 @@ async def surface_catalog(domain_filter: list[str] | None = None) -> str:
 
     total = sum(len(v) for v in grouped.values())
     if total == 0:
-        return "没有匹配 domain 过滤的记忆桶。"
+        return "没有匹配 domain 过滤的备忘录。"
 
     parts = [
-        f"=== 记忆目录（{total} 桶）===",
+        f"=== 记忆目录（{total} 条）===",
         "先看目录定位，再 breath(query=...) 精准拉取正文。",
     ]
     for key, label in _SECTIONS:

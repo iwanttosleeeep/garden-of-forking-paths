@@ -45,6 +45,8 @@ docs/**/*
 !docs/INTERNALS.md
 !docs/MULTI_OWNER.md
 !docs/OPERATIONS.md
+!docs/adr/
+!docs/adr/**
 tests/
 deploy/
 *.md
