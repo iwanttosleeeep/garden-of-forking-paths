@@ -68,7 +68,7 @@ def _entry_content(entry: dict[str, Any], date: str, mood: int | None) -> str:
     if note:
         parts.append(note)
     if echo:
-        parts.append(f"回声：{echo}")
+        parts.append(f"Echo: {echo}")
     # A mood-only record is still useful for the curve.
     return "\n\n".join(parts)
 

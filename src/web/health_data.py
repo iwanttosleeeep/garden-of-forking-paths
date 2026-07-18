@@ -30,7 +30,7 @@ def _config() -> dict[str, Any]:
 
 
 def _timezone() -> str:
-    value = str(_config().get("timezone") or "UTC")
+    value = str(sh.config.get("timezone") or _config().get("timezone") or "UTC")
     return value if value in _TIMEZONES else "UTC"
 
 
@@ -45,6 +45,7 @@ def _save_config() -> None:
         with open(path, "r", encoding="utf-8") as handle:
             saved = yaml.safe_load(handle) or {}
     saved["health_sync"] = dict(_config())
+    saved["timezone"] = _timezone()
     with open(path, "w", encoding="utf-8") as handle:
         yaml.safe_dump(saved, handle, allow_unicode=True, default_flow_style=False)
 
@@ -197,6 +198,31 @@ def _repair_legacy_dates() -> int:
     return changed
 
 
+async def _repair_legacy_memo_timestamps() -> int:
+    """Shift pre-setting naive UTC memo timestamps into the selected civil time."""
+    try:
+        offset = datetime.now(ZoneInfo(_timezone())).utcoffset() or timedelta()
+    except ZoneInfoNotFoundError:
+        offset = timedelta()
+    if not offset:
+        return 0
+    changed = 0
+    for bucket in await sh.bucket_mgr.list_all(include_archive=True):
+        meta = bucket.get("metadata") or {}
+        updates: dict[str, str] = {}
+        for field in ("created", "last_active"):
+            raw = str(meta.get(field) or "")
+            try:
+                parsed = datetime.fromisoformat(raw)
+            except ValueError:
+                continue
+            if parsed.tzinfo is None:
+                updates[field] = (parsed + offset).isoformat(timespec="seconds")
+        if updates and await sh.bucket_mgr.update(bucket["id"], **updates):
+            changed += 1
+    return changed
+
+
 def register(mcp) -> None:
     from starlette.responses import JSONResponse
 
@@ -228,6 +254,12 @@ def register(mcp) -> None:
                 if timezone not in _TIMEZONES:
                     raise ValueError("不支持的时区")
                 _config()["timezone"] = timezone
+                sh.config["timezone"] = timezone
+                try:
+                    from utils import configure_timezone  # type: ignore
+                except ImportError:  # pragma: no cover
+                    from ..utils import configure_timezone  # type: ignore
+                configure_timezone(timezone)
             key = ""
             if body.get("rotate_key") or not _config().get("token_hash"):
                 key = secrets.token_urlsafe(32)
@@ -236,8 +268,12 @@ def register(mcp) -> None:
             if body.get("repair_legacy_dates") and not _config().get("legacy_dates_repaired"):
                 repaired = _repair_legacy_dates()
                 _config()["legacy_dates_repaired"] = True
+            repaired_memos = 0
+            if body.get("repair_legacy_memo_timestamps") and not _config().get("legacy_memo_timestamps_repaired"):
+                repaired_memos = await _repair_legacy_memo_timestamps()
+                _config()["legacy_memo_timestamps_repaired"] = True
             _save_config()
-            return JSONResponse({"ok": True, **_status(), "sync_key": key, "repaired_days": repaired})
+            return JSONResponse({"ok": True, **_status(), "sync_key": key, "repaired_days": repaired, "repaired_memos": repaired_memos})
         except Exception as exc:
             return JSONResponse({"ok": False, "error": str(exc)}, status_code=400)
 

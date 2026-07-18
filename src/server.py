@@ -44,7 +44,7 @@ from dehydrator import Dehydrator
 from decay_engine import DecayEngine
 from embedding_engine import EmbeddingEngine
 from embedding_outbox import EmbeddingOutbox
-from utils import get_version, load_config, setup_logging
+from utils import configure_timezone, get_version, load_config, setup_logging
 
 # --- iter 2.1：MCP 工具实现已按代码路径拆分到 tools/ 子包 ---
 # 本文件只保留 MCP 注册 + 路由（HTTP custom_route）+ 共享辅助。
@@ -63,6 +63,7 @@ from tools import journal as _t_journal
 
 # --- Load config & init logging / 加载配置 & 初始化日志 ---
 config = load_config()
+config["timezone"] = configure_timezone(config.get("timezone", "UTC"))
 setup_logging(config.get("log_level", "INFO"))
 logger = logging.getLogger("ombre_brain")
 
