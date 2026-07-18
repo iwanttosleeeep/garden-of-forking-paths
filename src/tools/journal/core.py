@@ -5,6 +5,7 @@ from datetime import date, timedelta
 from typing import Optional
 
 from .. import _runtime as rt
+from web._shared import is_sterling_journal
 
 
 def _mood(value) -> int | None:
@@ -35,7 +36,7 @@ async def journal_core(
     journals = []
     for bucket in buckets:
         meta = bucket.get("metadata") or {}
-        if meta.get("source_tool") != "sterling":
+        if not is_sterling_journal(bucket):
             continue
         entry_date = str(meta.get("journal_date") or meta.get("created") or "")[:10]
         if entry_date and entry_date < cutoff:

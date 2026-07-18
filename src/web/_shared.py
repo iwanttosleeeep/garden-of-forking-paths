@@ -135,6 +135,23 @@ def init_runtime(**kwargs) -> None:
     globals().update(kwargs)
 
 
+def is_sterling_journal(bucket: dict) -> bool:
+    """Return whether a record belongs to the private Sterling journal.
+
+    Older imports used the two marker tags before ``source_tool`` was added.
+    Keeping this predicate in one place prevents those legacy entries from
+    leaking back into normal memo views, search, or the forgotten group.
+    """
+    meta = bucket.get("metadata") or {}
+    if meta.get("source_tool") == "sterling":
+        return True
+    tags = meta.get("tags") or []
+    if isinstance(tags, str):
+        tags = [tags]
+    markers = {str(tag).strip().lower() for tag in tags}
+    return "__journal__" in markers or "source:sterling" in markers
+
+
 def replace_embedding_engine(engine) -> None:
     """Atomically publish a hot-reloaded embedding engine to all holders."""
     global embedding_engine

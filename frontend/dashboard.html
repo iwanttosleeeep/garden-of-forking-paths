@@ -2068,7 +2068,7 @@
   </div>
 </div>
 
-<div class="content" id="chats-view" style="display:none"><div style="max-width:920px;margin:0 auto;"><div class="config-section"><h3>Chat History</h3><p style="font-size:12px;color:var(--text-dim);">私有 Markdown 图书馆，不会写入备忘录、搜索或 AI 上下文。</p><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><input type="file" id="chat-history-file" accept="text/markdown,.md"><button onclick="uploadChatHistory()" style="font-size:12px;padding:0 12px;height:32px;">上传 Markdown</button><button onclick="loadChatHistory()" style="font-size:12px;padding:0 12px;height:32px;">刷新</button></div><div id="chat-history-list" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-top:16px;"></div></div></div></div>
+<div class="content" id="chats-view" style="display:none"><div style="max-width:920px;margin:0 auto;"><div class="config-section"><h3>Chat History</h3><p style="font-size:12px;color:var(--text-dim);line-height:1.7;">私有 Markdown 图书馆。正文不会进入 Memos、搜索或 AI 上下文；只有 <code>recall</code> 可明确读取指定文件。</p><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:13px 14px;border:1px dashed var(--border);background:var(--surface-solid);"><input type="file" id="chat-history-file" accept="text/markdown,.md" style="font-size:12px;max-width:330px;"><button onclick="uploadChatHistory()" class="btn-primary" style="font-size:12px;padding:0 13px;height:32px;">上传 .md</button><button onclick="loadChatHistory()" style="font-size:12px;padding:0 12px;height:32px;">刷新图书馆</button></div><div id="chat-history-msg" style="min-height:18px;margin-top:9px;font-size:12px;color:var(--text-dim);"></div><div id="chat-history-list" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(285px,1fr));gap:14px;margin-top:16px;"></div></div></div></div>
 
 <div class="content" id="health-view" style="display:none">
   <div style="max-width:920px;margin:0 auto;">
@@ -2222,12 +2222,10 @@
         <div style="font-weight:600;font-size:13px;margin-bottom:6px;">Garden Health Sync</div>
         <div style="font-size:12px;color:var(--text-dim);line-height:1.65;">iPhone 同伴 App 只上传每日汇总，不经过 GitHub。健康数据独立保存，不自动给 AI；月经周期仅显示在健康页。</div>
         <div class="config-row" style="margin-top:9px;"><label>Timezone</label><select id="health-sync-timezone" style="flex:1;max-width:260px;"><option value="UTC">UTC (UTC+00:00)</option><option value="Asia/Hong_Kong">Hong Kong (UTC+08:00)</option><option value="America/Los_Angeles">Los Angeles (UTC−08:00 / −07:00 DST)</option><option value="America/New_York">New York (UTC−05:00 / −04:00 DST)</option><option value="Europe/London">London (UTC+00:00 / +01:00 DST)</option><option value="Europe/Paris">Paris (UTC+01:00 / +02:00 DST)</option></select></div>
-        <div style="font-size:11px;color:var(--text-dim);line-height:1.6;margin-top:3px;">Health 日期完全以 iPhone 同步的日期为准，不会被 Garden 时区设置移动。时区设置只用于 Garden 新备忘录与旧备忘录时间修正。</div>
+        <div style="font-size:11px;color:var(--text-dim);line-height:1.6;margin-top:3px;">Health 日期完全以 iPhone 同步的日期为准，不会被 Garden 时区设置移动。旧备忘录的无时区标题会被安全地按 UTC 显示为所选时区，不会改写原记录。</div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:9px;">
           <button onclick="saveHealthSync(false)" style="font-size:12px;padding:0 12px;height:32px;">保存时区/生成同步密钥</button>
           <button onclick="saveHealthSync(true)" style="font-size:12px;padding:0 12px;height:32px;">轮换密钥</button>
-          <button onclick="removeDuplicateHealthDays()" style="font-size:12px;padding:0 12px;height:32px;">清理错位重复 Health 日期</button>
-          <button onclick="forceRepairMemoTimes()" style="font-size:12px;padding:0 12px;height:32px;">修正既有备忘录时间</button>
         </div>
         <div id="health-sync-msg" style="font-size:12px;color:var(--text-dim);line-height:1.6;margin-top:8px;word-break:break-all;"></div>
       </div>
@@ -3635,6 +3633,29 @@ async function readJsonSafe(resp) {
 const BASE = location.origin;
 let allBuckets = [];
 let currentFilter = 'all';
+// Legacy names were created in UTC without a timezone marker. Convert only
+// while drawing them; writing a conversion back would shift them again.
+let gardenTimezone = 'Asia/Hong_Kong';
+
+function formatDateInGardenTimezone(date) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: gardenTimezone, year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+  }).formatToParts(date).reduce((result, part) => { result[part.type] = part.value; return result; }, {});
+  return parts.year + '-' + parts.month + '-' + parts.day + ' ' + parts.hour + '-' + parts.minute + '-' + parts.second;
+}
+
+function displayMemoName(name, timestampTimezone) {
+  const raw = String(name || '');
+  const match = /^(\d{4}-\d{2}-\d{2} \d{2}-\d{2}-\d{2})(.*)$/.exec(raw);
+  if (!match || timestampTimezone) return raw;
+  const utc = new Date(match[1].replace(' ', 'T').replace(/(\d{2})-(\d{2})-(\d{2})$/, '$1:$2:$3') + 'Z');
+  return isNaN(utc) ? raw : formatDateInGardenTimezone(utc) + match[2];
+}
+
+function displayBucketName(bucket) {
+  return displayMemoName(bucket && bucket.name, bucket && bucket.timestamp_timezone);
+}
 
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
@@ -3810,7 +3831,7 @@ function renderBuckets(buckets) {
     return '<div class="' + rowCls + '" data-id="' + esc(b.id) + '" ' + rowClick + ' style="cursor:pointer;' + inlineStyle + '">' +
       '<div class="bucket-row-top">' +
         '<span class="' + iconCls + '">' + iconHtml + '</span>' +
-        '<span class="name" title="' + esc(b.name) + '">' + esc(b.name) + firstBadge + '</span>' +
+        '<span class="name" title="' + esc(displayBucketName(b)) + '">' + esc(displayBucketName(b)) + firstBadge + '</span>' +
         '<div class="bucket-row-tags">' +
           domainHtml +
           emotionHtml +
@@ -3865,7 +3886,7 @@ async function showDetail(id) {
         '</ul></div>';
     }
     content.innerHTML =
-      '<h2>' + esc(meta.name || id) + firstBadge + '</h2>' +
+      '<h2>' + esc(displayMemoName(meta.name || id, meta.timestamp_timezone)) + firstBadge + '</h2>' +
       whyHtml +
       '<div class="detail-meta">' +
         '<div class="field"><label>ID</label>' + id + '</div>' +
@@ -3947,7 +3968,7 @@ function renderForgottenGroup(forgotten) {
   listEl.innerHTML = forgotten.map(function(b) {
     return '<div class="bucket-row" style="opacity:0.6;">' +
       '<span class="icon"><i data-lucide="moon-off"></i></span>' +
-      '<span class="name" onclick="showDetail(\'' + b.id + '\')" style="cursor:pointer;">' + esc(b.name) + '</span>' +
+      '<span class="name" onclick="showDetail(\'' + b.id + '\')" style="cursor:pointer;">' + esc(displayBucketName(b)) + '</span>' +
       '<span class="domain">' + (b.domain || []).join(', ') + '</span>' +
       '<span class="time">' + formatTimeAgo(b.last_active || b.created) + '</span>' +
       '<button onclick="bucketAllowOne(\'' + b.id + '\')" title="允许浮现" style="font-size:11px;padding:2px 6px;margin-left:auto;display:inline-flex;align-items:center;"><i data-lucide="eye" style="width:12px;height:12px;"></i></button>' +
@@ -6162,7 +6183,7 @@ function formatGardenTimestamp(iso) {
   if (!iso) return '—';
   var d = new Date(iso);
   if (isNaN(d)) return esc(String(iso));
-  return d.toLocaleString(undefined, {year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false});
+  return d.toLocaleString(undefined, {timeZone:gardenTimezone, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false});
 }
 setInterval(pollHeartbeat, 15000);
 
@@ -6519,13 +6540,18 @@ async function loadJournalView() {
 }
 
 async function loadChatHistory() {
-  const list = document.getElementById('chat-history-list'); if (!list) return;
+  const list = document.getElementById('chat-history-list'), msg = document.getElementById('chat-history-msg'); if (!list) return;
   list.innerHTML = '<div style="color:var(--text-dim);">加载中…</div>';
   try {
     const data = await authFetch('/api/chat-history').then(readJsonSafe);
     const docs = data.documents || [];
-    list.innerHTML = docs.length ? docs.map(doc => '<article style="background:var(--surface);border:1px solid var(--border);padding:15px;border-radius:2px;"><div style="font-size:11px;color:var(--text-dim);margin-bottom:7px;">' + esc(doc.file) + ' · ' + Math.ceil((doc.size || 0) / 1024) + ' KB</div><input id="chat-title-' + esc(doc.file) + '" value="' + esc(doc.title) + '" style="width:100%;box-sizing:border-box;margin-bottom:7px;font-weight:600;"><textarea id="chat-description-' + esc(doc.file) + '" placeholder="Description" style="width:100%;box-sizing:border-box;min-height:70px;">' + esc(doc.description) + '</textarea><button onclick="saveChatHistory(\'' + esc(doc.file) + '\')" style="font-size:11px;padding:0 10px;height:28px;margin-top:8px;">保存</button></article>').join('') : '<div style="color:var(--text-dim);padding:24px;">还没有上传聊天记录。</div>';
-  } catch (e) { list.innerHTML = '<div style="color:var(--negative);">加载失败：' + esc(e.message) + '</div>'; }
+    if (msg) msg.textContent = docs.length ? docs.length + ' 个 Markdown 文档 · 选择卡片后可编辑标题与简介。' : '';
+    list.innerHTML = docs.length ? docs.map(doc => '<article style="background:var(--surface);border:1px solid var(--border);padding:17px;border-radius:4px;box-shadow:4px 4px 10px var(--shadow-dark-subtle),-4px -4px 10px var(--shadow-light);">'
+      + '<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:13px;"><div style="font-size:19px;line-height:1;">▤</div><div style="min-width:0;flex:1;"><div style="font-size:11px;color:var(--text-dim);word-break:break-all;">' + esc(doc.file) + '</div><div style="font-size:10px;color:var(--text-dim);margin-top:3px;">' + Math.max(1, Math.ceil((doc.size || 0) / 1024)) + ' KB · uploaded ' + esc(String(doc.uploaded_at || '').replace('T', ' ').slice(0, 16) || '—') + '</div></div></div>'
+      + '<label style="display:block;font-size:10px;letter-spacing:.08em;color:var(--text-dim);margin-bottom:4px;">TITLE</label><input id="chat-title-' + esc(doc.file) + '" value="' + esc(doc.title) + '" placeholder="Title" style="width:100%;box-sizing:border-box;margin-bottom:11px;font-weight:600;font-size:14px;">'
+      + '<label style="display:block;font-size:10px;letter-spacing:.08em;color:var(--text-dim);margin-bottom:4px;">DESCRIPTION</label><textarea id="chat-description-' + esc(doc.file) + '" placeholder="Add a short description…" style="width:100%;box-sizing:border-box;min-height:82px;resize:vertical;line-height:1.5;">' + esc(doc.description) + '</textarea>'
+      + '<div style="display:flex;justify-content:space-between;gap:8px;margin-top:12px;"><button onclick="saveChatHistory(\'' + esc(doc.file) + '\')" class="btn-primary" style="font-size:11px;padding:0 11px;height:29px;">保存修改</button><button onclick="deleteChatHistory(\'' + esc(doc.file) + '\')" style="font-size:11px;padding:0 10px;height:29px;color:var(--negative);border-color:var(--negative);">删除 .md</button></div></article>').join('') : '<div style="color:var(--text-dim);padding:24px;">还没有上传聊天记录。</div>';
+  } catch (e) { if (msg) msg.textContent = ''; list.innerHTML = '<div style="color:var(--negative);">加载失败：' + esc(e.message) + '</div>'; }
 }
 
 async function uploadChatHistory() {
@@ -6537,6 +6563,15 @@ async function uploadChatHistory() {
 
 async function saveChatHistory(name) {
   try { const data = await authFetch('/api/chat-history/' + encodeURIComponent(name), {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({title:document.getElementById('chat-title-' + name).value, description:document.getElementById('chat-description-' + name).value})}).then(readJsonSafe); if (!data.ok) throw new Error(data.error || '保存失败'); loadChatHistory(); } catch (e) { alert('保存失败：' + e.message); }
+}
+
+async function deleteChatHistory(name) {
+  if (!confirm('这会从 Garden 永久删除 “' + name + '” 及其标题、简介。确定吗？')) return;
+  try {
+    const data = await authFetch('/api/chat-history/' + encodeURIComponent(name), {method:'DELETE'}).then(readJsonSafe);
+    if (!data.ok) throw new Error(data.error || '删除失败');
+    loadChatHistory();
+  } catch (e) { alert('删除失败：' + e.message); }
 }
 
 // Health is a deliberately separate private surface: no memo indexing or AI context.
@@ -6576,6 +6611,7 @@ async function loadHealthSync() {
     const data = await authFetch('/api/health/sync/status').then(readJsonSafe);
     const timezone = document.getElementById('health-sync-timezone');
     if (timezone) timezone.value = data.timezone || 'UTC';
+    gardenTimezone = data.timezone || 'Asia/Hong_Kong';
     msg.textContent = data.configured ? '同步密钥已设置；需要时可轮换。' : '尚未生成同步密钥。';
   } catch (e) { msg.textContent = '读取失败：' + e.message; }
 }
@@ -6584,32 +6620,12 @@ async function saveHealthSync(rotate) {
   const msg = document.getElementById('health-sync-msg');
   try {
     const timezone = document.getElementById('health-sync-timezone');
-    const data = await authFetch('/api/health/sync/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({rotate_key:!!rotate, timezone: timezone ? timezone.value : 'UTC', repair_legacy_memo_timestamps:true})}).then(readJsonSafe);
+    const data = await authFetch('/api/health/sync/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({rotate_key:!!rotate, timezone: timezone ? timezone.value : 'UTC'})}).then(readJsonSafe);
     if (!data.ok) throw new Error(data.error || '保存失败');
-    const repaired = (data.repaired_days ? '已校正 ' + data.repaired_days + ' 天 Health 记录；' : '') + (data.repaired_memos ? '已校正 ' + data.repaired_memos + ' 条备忘录时间；' : '');
-    msg.textContent = data.sync_key ? repaired + '请立刻复制到 GardenHealthSync（只显示这一次）：' + data.sync_key : repaired + '时区已保存；同步密钥已保留。';
+    gardenTimezone = data.timezone || gardenTimezone;
+    loadBuckets();
+    msg.textContent = data.sync_key ? '请立刻复制到 GardenHealthSync（只显示这一次）：' + data.sync_key : '时区已保存；同步密钥已保留。';
   } catch (e) { msg.textContent = '操作失败：' + e.message; }
-}
-
-async function removeDuplicateHealthDays() {
-  if (!confirm('只会删除内容完全相同、日期相邻的较晚一条 Health 记录，保留 iPhone 原本的较早日期。继续吗？')) return;
-  const msg = document.getElementById('health-sync-msg');
-  try {
-    const data = await authFetch('/api/health/sync/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({remove_duplicate_health_days:true})}).then(readJsonSafe);
-    if (!data.ok) throw new Error(data.error || '清理失败');
-    msg.textContent = '已删除 ' + (data.duplicates_removed || 0) + ' 条重复 Health 日期。';
-    loadHealthView();
-  } catch (e) { msg.textContent = '清理失败：' + e.message; }
-}
-
-async function forceRepairMemoTimes() {
-  if (!confirm('这会将尚未校正的既有备忘录时间按当前时区移动一次。确认后不可自动撤销，继续吗？')) return;
-  const msg = document.getElementById('health-sync-msg');
-  try {
-    const data = await authFetch('/api/health/sync/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({force_repair_memo_timestamps:true})}).then(readJsonSafe);
-    if (!data.ok) throw new Error(data.error || '修正失败');
-    msg.textContent = '已修正 ' + (data.repaired_memos || 0) + ' 条备忘录时间。请刷新备忘录或星图查看。';
-  } catch (e) { msg.textContent = '修正失败：' + e.message; }
 }
 
 async function deleteJournalEntry(id) {

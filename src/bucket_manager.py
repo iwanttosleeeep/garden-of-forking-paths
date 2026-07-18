@@ -827,6 +827,10 @@ class BucketManager:
             "created": now_iso(),
             "last_active": now_iso(),
             "activation_count": 0,
+            # Names and timestamps created from now on are already in this
+            # civil timezone.  Legacy records lack the marker and are rendered
+            # as UTC in the dashboard without mutating their source files.
+            "timestamp_timezone": os.environ.get("TZ", "UTC"),
         }
         if pinned:
             metadata["pinned"] = True

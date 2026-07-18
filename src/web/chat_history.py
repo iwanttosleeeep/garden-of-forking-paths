@@ -115,3 +115,25 @@ def register(mcp) -> None:
             return JSONResponse({"ok": True, "documents": _list()})
         except ValueError as exc:
             return JSONResponse({"ok": False, "error": str(exc)}, status_code=400)
+
+    @mcp.custom_route("/api/chat-history/{name}", methods=["DELETE"])
+    async def delete_chat(request: Request) -> Response:
+        """Permanently remove one uploaded Markdown document and its metadata."""
+        err = sh._require_auth(request)
+        if err:
+            return err
+        try:
+            name = _safe_name(request.path_params["name"])
+            path = os.path.join(_directory(), name)
+            if not os.path.isfile(path):
+                raise ValueError("未找到文件")
+            os.unlink(path)
+            index = _index()
+            index.pop(name, None)
+            _write_index(index)
+            return JSONResponse({"ok": True})
+        except ValueError as exc:
+            return JSONResponse({"ok": False, "error": str(exc)}, status_code=400)
+        except OSError:
+            sh.logger.exception("chat-history delete failed")
+            return JSONResponse({"ok": False, "error": "删除文件失败"}, status_code=500)

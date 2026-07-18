@@ -29,6 +29,7 @@ from datetime import datetime, timedelta
 
 from ombrebrain.policy.surfacing import SurfacePolicyVM
 from .. import _runtime as rt
+from web._shared import is_sterling_journal
 from utils import parse_bool, parse_iso_datetime
 from ._verbatim import render_stored_bucket
 
@@ -55,6 +56,7 @@ def _can_surface(bucket: dict) -> bool:
 async def surface_default(max_results: int, max_tokens: int, tag_filter: list) -> str:
     try:
         all_buckets = await rt.bucket_mgr.list_all(include_archive=False)
+        all_buckets = [bucket for bucket in all_buckets if not is_sterling_journal(bucket)]
     except Exception as e:
         rt.logger.error(f"Failed to list buckets for surfacing / 浮现列桶失败: {e}")
         return "记忆系统暂时无法访问。"
