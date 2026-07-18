@@ -573,7 +573,7 @@ def register(mcp) -> None:
         return JSONResponse({
             "error": "physical_deletion_forbidden",
             "message": (
-                "Ombre Brain 不提供物理删除记忆桶的能力。请使用归档或主动遗忘；"
+                "Ombre Brain 不提供物理删除备忘录的能力。请使用归档或主动遗忘；"
                 "Markdown 文件会继续保留。"
             ),
             "philosophy": "记忆会被遗忘，但绝不能被抹去。",

@@ -72,9 +72,9 @@ async def test_pulse_shows_special_bucket_counts_separately(monkeypatch):
 
     result = await anchor_core.pulse()
 
-    assert "feel 桶: 4 条" in result
-    assert "plan 桶: 5 条" in result
-    assert "letter 桶: 6 封" in result
+    assert "feel 备忘录: 4 条" in result
+    assert "plan 备忘录: 5 条" in result
+    assert "letter 备忘录: 6 封" in result
 
 
 @pytest.mark.asyncio

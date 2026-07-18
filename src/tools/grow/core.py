@@ -43,7 +43,7 @@ async def grow_core(content: str) -> str:
     except Exception as e:
         rt.logger.error(f"Diary digest failed / 日记整理失败: {e}")
         raise RuntimeError(
-            f"API key 未配置或调用失败，日记拆分无法完成，桶未创建。请检查 OMBRE_COMPRESS_API_KEY。（错误：{e}）"
+            f"API key 未配置或调用失败，日记拆分无法完成，备忘录未创建。请检查 OMBRE_COMPRESS_API_KEY。（错误：{e}）"
         ) from e
 
     if not isinstance(items, list) or not items:
@@ -129,7 +129,7 @@ async def grow_items(items: list) -> str:
         if s:
             clean.append(s)
     if not clean:
-        return "items 为空或都不合法，未创建任何桶。"
+        return "items 为空或都不合法，未创建任何备忘录。"
 
     batch_id = f"g_{uuid.uuid4().hex[:12]}"
     results = []

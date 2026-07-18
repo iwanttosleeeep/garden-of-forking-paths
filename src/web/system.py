@@ -552,7 +552,7 @@ async def build_system_diagnostics() -> dict[str, Any]:
         archive = int(stats.get("archive_count", 0) or 0)
         checks.append(_check(
             "buckets",
-            "记忆桶",
+            "备忘录",
             "ok",
             f"共 {permanent + dynamic} 条活跃记忆，归档 {archive} 条",
             details={
@@ -565,9 +565,9 @@ async def build_system_diagnostics() -> dict[str, Any]:
     except Exception as e:
         checks.append(_check(
             "buckets",
-            "记忆桶",
+            "备忘录",
             "warning",
-            f"记忆桶统计读取失败：{e}",
+            f"备忘录统计读取失败：{e}",
             action="查看日志页或检查 bucket markdown frontmatter",
         ))
 

@@ -53,7 +53,7 @@ def format_dream_output(
         )
 
     header = (
-        f"=== Dreaming · 过去 {window_hours} 小时全量记忆（{len(recent)} 个桶）===\n"
+        f"=== Dreaming · 过去 {window_hours} 小时全量记忆（{len(recent)} 条备忘录）===\n"
         "以下是你最近的记忆。用第一人称想：\n"
         "- 这些东西里有什么在你这里留下了重量？\n"
         "- 有什么还没想清楚？\n"
@@ -79,7 +79,7 @@ def format_dream_output(
             )
         final_text += (
             "\n\n=== 核心准则参考 ===\n"
-            "这些是 pinned/permanent 桶，只作为梦里的边界与背景，不当作普通待消化事项。\n\n"
+            "这些是 pinned/permanent 备忘录，只作为梦里的边界与背景，不当作普通待消化事项。\n\n"
             + "\n---\n".join(core_lines)
         )
 

@@ -33,7 +33,7 @@ async def grow_shortpath(content: str) -> str:
         analysis = await rt.dehydrator.analyze(content)
     except Exception as e:
         raise RuntimeError(
-            f"API key 未配置或调用失败，打标无法完成，桶未创建。请检查 OMBRE_COMPRESS_API_KEY。（错误：{e}）"
+            f"API key 未配置或调用失败，打标无法完成，备忘录未创建。请检查 OMBRE_COMPRESS_API_KEY。（错误：{e}）"
         ) from e
     importance = analysis.get("importance", 5) if isinstance(analysis.get("importance"), int) else 5
     # iter 2.0：短路径也是一次 grow 调用 → 仍生成 batch_id，便于 dashboard 聚合，

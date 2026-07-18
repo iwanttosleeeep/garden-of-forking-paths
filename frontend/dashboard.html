@@ -752,7 +752,7 @@
     .filters { gap: 7px; margin-bottom: 16px; }
     .filter-btn { padding: 6px 13px; font-size: 11px; }
 
-    /* ── Content & bucket rows ── */
+    /* ── Content & memo rows ── */
     .content { padding: 16px 12px; }
     .bucket-row { padding: 12px 14px; gap: 4px; }
     .bucket-row-tags { display: none; }
@@ -852,6 +852,8 @@
     box-shadow: 8px 8px 22px var(--shadow-dark-subtle), -7px -7px 16px var(--shadow-light), inset 0 1px 0 rgba(255,255,255,0.55);
   }
   .config-section { padding: 26px 28px; }
+  /* 门牌保持紧凑；“我”与其余设置卡片采用一致的常规高度。 */
+  #sec-me { min-height: 360px; }
   .config-section h3 {
     font-family:'Share Tech Mono',monospace;
     color: var(--text);
@@ -1214,7 +1216,7 @@
     40%      { transform: scale(1.12); opacity: 1;    box-shadow: 0 0 5px 2px rgba(126,173,104,0.40); }
   }
 
-  /* —— ② pinned 桶 hover：图标被「钉住」般亮起光晕 —— */
+  /* —— ② pinned 备忘录 hover：图标被「钉住」般亮起光晕 —— */
   .bucket-row .pin-ic svg { transition: color .25s ease, filter .25s ease, transform .25s ease; }
   .bucket-row:hover .pin-ic svg {
     color: var(--accent);
@@ -1243,7 +1245,7 @@
   .bucket-row:hover .feel-face { animation: ob-bob .7s ease-in-out; }
   .bucket-row .icon svg, .bucket-row .icon svg.lucide { display: block; }
 
-  /* —— ⑥ letter 桶详情：像翻开信纸一样展开 —— */
+  /* —— ⑥ letter 备忘录详情：像翻开信纸一样展开 —— */
   @keyframes ob-unfold {
     0%   { transform: scaleY(0.55); opacity: 0; }
     60%  { transform: scaleY(1.02); opacity: 1; }
@@ -1252,7 +1254,7 @@
   .detail-panel.letter-mode .detail-content { transform-origin: top center; animation: ob-unfold .5s cubic-bezier(.2,.7,.3,1) both; }
   .detail-panel.letter-mode h2::before { content:'✉ '; color: var(--accent); }
 
-  /* —— ⑦ anchor 桶详情：周围浮出引力线，暗示「这是坐标系」 —— */
+  /* —— ⑦ anchor 备忘录详情：周围浮出引力线，暗示「这是坐标系」 —— */
   .detail-panel.anchor-mode::before {
     content:''; position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: 0.5;
     background:
@@ -1607,7 +1609,7 @@
     border-bottom: 1px solid var(--border);
   }
   .self-compose {
-    padding: 14px 24px;
+    padding: 10px 24px;
     border-bottom: 1px solid var(--border);
     display: grid;
     grid-template-columns: 1fr auto;
@@ -1616,7 +1618,8 @@
   }
   .self-compose textarea {
     grid-column: 1 / -1;
-    min-height: 78px;
+    min-height: 56px;
+    max-height: 96px;
     resize: vertical;
     font: inherit;
     line-height: 1.55;
@@ -1799,7 +1802,7 @@
   <div class="bucket-list" id="bucket-list">
     <div class="loading">加载中…</div>
   </div>
-  <!-- iter 1.9 C: 已主动遗忘的桶折叠区 / collapsible voluntary-forgotten group -->
+  <!-- iter 1.9 C: 已主动遗忘的备忘录折叠区 / collapsible voluntary-forgotten group -->
   <details id="forgotten-group" style="margin-top:18px;display:none;">
     <summary style="cursor:pointer;font-size:13px;color:var(--text-dim);padding:6px 0;">
       <i data-lucide="moon-off" style="width:14px;height:14px;vertical-align:-2px;"></i>
@@ -2184,8 +2187,8 @@
       <div style="margin-bottom:18px;">
         <div style="font-weight:600;font-size:13px;margin-bottom:6px;">修复钉选计数</div>
         <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;line-height:1.6;">
-          若「永久桶计数」明显大于面板里实际的钉选数（取消钉选后计数不减、钉新桶老报上限），
-          点这里清理残留的孤儿固化桶：把它们降级回动态桶，释放配额、解开权重卡死。安全幂等，可重复点。
+          若「永久备忘录计数」明显大于面板里实际的钉选数（取消钉选后计数不减、钉新备忘录老报上限），
+          点这里清理残留的孤儿固化备忘录：把它们降级回动态备忘录，释放配额、解开权重卡死。安全幂等，可重复点。
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
           <button onclick="fixPinnedDesync()" title="检查并修复 / Check &amp; fix" style="font-size:12px;padding:0 12px;height:32px;display:inline-flex;align-items:center;gap:5px;"><i data-lucide="wrench"></i> 检查并修复</button>
@@ -2230,7 +2233,7 @@
         </div>
         <div id="dehy-preset-hint" style="margin-top:-4px;margin-bottom:10px;padding-left:122px;font-size:11px;color:var(--text-light);line-height:1.6;">先选服务商，会自动填好 Base URL 和正确的模型名。</div>
         <div id="dehy-key-notice" style="display:none;font-size:12px;color:var(--warning);margin-bottom:10px;padding:7px 10px;background:rgba(184,153,98,0.08);border-radius:4px;line-height:1.6;">
-          <svg class="icon icon-warn" aria-hidden="true"><use href="#i-warn"></use></svg> 压缩 API Key 未配置，桶内容将无法被自动脱水压缩，记忆系统无法正常运行。请在下方输入框填入 Key 并点击「保存 Key」。
+          <svg class="icon icon-warn" aria-hidden="true"><use href="#i-warn"></use></svg> 压缩 API Key 未配置，备忘录内容将无法被自动脱水压缩，记忆系统无法正常运行。请在下方输入框填入 Key 并点击「保存 Key」。
         </div>
         <div class="config-row">
           <label>格式</label>
@@ -2332,8 +2335,8 @@
           <div id="emb-migrate-status" style="margin-top:8px;font-size:12px;line-height:1.6;color:var(--text);"></div>
           <div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border,#ddd);">
             <div style="font-size:12px;color:var(--text-light);margin-bottom:6px;">
-              只给「文件在、向量缺」的桶补一发（不动已有向量、不重算全库，省额度）。
-              老的 permanent / 钉选桶若搜不到，多半是缺向量，点这个补齐。
+              只给「文件在、向量缺」的备忘录补一发（不动已有向量、不重算全库，省额度）。
+              老的 permanent / 钉选备忘录若搜不到，多半是缺向量，点这个补齐。
             </div>
             <button id="emb-backfill-btn" type="button" onclick="startBackfill()" style="padding:6px 12px;display:inline-flex;align-items:center;gap:6px;"><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg> 补齐缺失向量</button>
             <div id="emb-backfill-status" style="margin-top:8px;font-size:12px;line-height:1.6;color:var(--text);"></div>
@@ -2396,17 +2399,17 @@
         <button class="btn-primary" onclick="saveConfig(true)" title="保存配置 / Save config" style="padding:0 14px;height:36px;display:inline-flex;align-items:center;gap:5px;"><i data-lucide="check"></i> 保存配置</button>
         <span id="config-status" style="font-size:13px;"></span>
       </div>
-      <div style="margin-top:6px;font-size:11px;color:var(--text-light);">注：本「保存」按钮同时提交「③ 引擎」与「④ 桶行为」中除采样外的所有字段（同一个 /api/config 接口），并立即写入 config.yaml。</div>
+      <div style="margin-top:6px;font-size:11px;color:var(--text-light);">注：本「保存」按钮同时提交「③ 引擎」与「④ 备忘录行为」中除采样外的所有字段（同一个 /api/config 接口），并立即写入 config.yaml。</div>
     </div>
 
-    <!-- ④ 桶行为 -->
+    <!-- ④ 备忘录行为 -->
     <div class="config-section" id="sec-bucket">
       <h3>④ 备忘录行为</h3>
 
       <div style="margin-bottom:18px;">
         <div style="font-weight:600;font-size:13px;margin-bottom:6px;">呼吸采样 <span style="font-size:11px;color:var(--text-dim);font-weight:400;">/ Breath Sampling</span></div>
         <div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;line-height:1.6;">
-          关掉 = breath 永远返回得分最高的那条；打开 = 按 score^(1/温度) 加权采样，让中等分数的桶也有机会浮现。温度越高越随机；候选不足时自动回退。
+          关掉 = breath 永远返回得分最高的那条；打开 = 按 score^(1/温度) 加权采样，让中等分数的备忘录也有机会浮现。温度越高越随机；候选不足时自动回退。
         </div>
         <div class="config-row" style="align-items:center;">
           <label>启用加权采样</label>
@@ -2436,8 +2439,8 @@
       <div>
         <div style="font-weight:600;font-size:13px;margin-bottom:6px;">默认参数（与「③ 引擎」共用「保存」按钮）</div>
         <div class="config-row"><label>合并阈值</label><input type="number" id="cfg-merge" min="0" max="100" /></div>
-        <div style="margin-top:-4px;padding-left:122px;font-size:11px;color:var(--text-light);">0-100，越高越难合并相似桶</div>
-        <div class="config-row"><label>breath 默认桶数</label><input type="number" id="cfg-sf-breath-results" min="1" max="50" /></div>
+        <div style="margin-top:-4px;padding-left:122px;font-size:11px;color:var(--text-light);">0-100，越高越难合并相似备忘录</div>
+        <div class="config-row"><label>breath 默认条数</label><input type="number" id="cfg-sf-breath-results" min="1" max="50" /></div>
         <div style="margin-top:-4px;padding-left:122px;font-size:11px;color:var(--text-light);">1-50。AI 调用 breath() 不指定 max_results 时使用此默认值</div>
         <div class="config-row"><label>breath 默认 token</label><input type="number" id="cfg-sf-breath-tokens" min="500" max="20000" step="500" /></div>
         <div style="margin-top:-4px;padding-left:122px;font-size:11px;color:var(--text-light);">500-20000。breath 单次返回总 token 上限</div>
@@ -2709,11 +2712,11 @@
       <div style="margin-bottom:18px;">
         <div style="font-weight:600;font-size:13px;margin-bottom:6px;">数据导出 / 健康</div>
         <div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;line-height:1.6;">
-          导出打包当前所有 bucket markdown + embeddings.db（<strong>不包含 config / 密钥</strong>），可用于本地备份或跨设备迁移。<br>
-          重复桶：每次 hold/grow 后系统会标记相似度 &gt; 0.95 的对，下面可逐对处理。
+          导出打包当前所有 memos markdown + embeddings.db（<strong>不包含 config / 密钥</strong>），可用于本地备份或跨设备迁移。<br>
+          重复备忘录：每次 hold/grow 后系统会标记相似度 &gt; 0.95 的对，下面可逐对处理。
         </div>
         <button class="btn-primary" onclick="downloadExport()" style="display:inline-flex;align-items:center;gap:6px;"><svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg> 导出全部为 zip</button>
-        <button onclick="loadDuplicates()" class="icon-btn" style="margin-left:8px;"><i data-lucide="copy"></i> 检查重复桶</button>
+        <button onclick="loadDuplicates()" class="icon-btn" style="margin-left:8px;"><i data-lucide="copy"></i> 检查重复备忘录</button>
         <div id="duplicates-list" style="margin-top:14px;font-size:12px;"></div>
       </div>
 
@@ -2739,7 +2742,7 @@
           <div id="migrate-parse-info" style="font-size:12px;color:var(--text-dim);margin-bottom:8px;line-height:1.7;"></div>
 
           <div id="migrate-conflicts-section" style="display:none;">
-            <div style="font-weight:600;font-size:12px;margin-bottom:6px;"><svg class="icon icon-warn" aria-hidden="true"><use href="#i-warn"></use></svg> 以下 bucket 在当前系统中已存在，请为每个冲突选择处理方式：</div>
+            <div style="font-weight:600;font-size:12px;margin-bottom:6px;"><svg class="icon icon-warn" aria-hidden="true"><use href="#i-warn"></use></svg> 以下备忘录在当前系统中已存在，请为每个冲突选择处理方式：</div>
             <div id="migrate-conflicts-list" style="max-height:280px;overflow-y:auto;font-size:12px;"></div>
           </div>
 
@@ -3147,7 +3150,7 @@ async function loadSettingsStatus() {
     else noticeEl.style.display = 'none';
     el.innerHTML = `
       <b>版本</b>：${d.version}<br>
-      <b>Bucket 总数</b>：${(d.buckets?.total ?? 0)} （永久:${d.buckets?.permanent ?? 0} / 动态:${d.buckets?.dynamic ?? 0} / 归档:${d.buckets?.archive ?? 0}）<br>
+      <b>备忘录总数</b>：${(d.buckets?.total ?? 0)} （永久:${d.buckets?.permanent ?? 0} / 动态:${d.buckets?.dynamic ?? 0} / 归档:${d.buckets?.archive ?? 0}）<br>
       <b>衰减引擎</b>：${d.decay_engine}<br>
       <b>向量搜索</b>：${d.embedding_enabled ? '已启用' : '未启用'}<br>
     `;
@@ -3233,7 +3236,7 @@ async function fixPinnedDesync() {
       msgEl.innerHTML = _SV.ok + ` 计数已对齐，当前钉选 ${pd.pinned} 个，无需修复`;
       return;
     }
-    if (!confirm(`发现 ${n} 个孤儿固化桶（已取消钉选却没降级）。\n将把它们降级回动态桶（释放配额、解开权重卡死），不会删除内容。是否继续？\n\nFound ${n} orphaned pinned bucket(s). They will be demoted back to dynamic (freeing quota, unblocking weight). Continue?`)) {
+    if (!confirm(`发现 ${n} 条孤儿固化备忘录（已取消钉选却没降级）。\n将把它们降级回动态备忘录（释放配额、解开权重卡死），不会删除内容。是否继续？\n\nFound ${n} orphaned pinned memos. They will be demoted back to dynamic memos (freeing quota, unblocking weight). Continue?`)) {
       msgEl.style.color = 'var(--text-dim)'; msgEl.textContent = '已取消';
       return;
     }
@@ -3364,7 +3367,7 @@ async function testSamplingBreath() {
     const d = await readJsonSafe(resp);
     const items = (d.buckets || d.results || []).slice(0, 5);
     if (!items.length) {
-      out.textContent = '没有候选桶（库可能是空的）';
+      out.textContent = '没有候选备忘录（库可能是空的）';
       return;
     }
     out.innerHTML = '本次浮现：<br/>' + items.map((b, i) => {
@@ -3440,7 +3443,7 @@ async function toolTestBreath() {
     if (!resp) return;
     var d = await readJsonSafe(resp);
     var items = (d.buckets || d.results || []).slice(0, 5);
-    if (!items.length) { out.textContent = '没有候选桶（库可能是空的）'; return; }
+    if (!items.length) { out.textContent = '没有候选备忘录（库可能是空的）'; return; }
     out.innerHTML = '<b style="color:var(--accent)">本次浮现：</b><br>' + items.map(function (b, i) {
       var nm = esc(b.name || b.id || '(无名)');
       var sc = (b.score != null) ? ' · ' + Number(b.score).toFixed(3) : '';
@@ -3768,7 +3771,7 @@ async function showDetail(id) {
     var firstBadge = meta.first_of_kind ? '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--accent);margin-left:8px;"><i data-lucide="sparkles" style="width:12px;height:12px;"></i>首次出现</span>' : '';
     var weightHtml = (meta.type === 'plan' && meta.weight != null) ? ('<div class="field"><label>承诺重量</label><span style="display:inline-block;width:80px;height:6px;background:var(--border);border-radius:3px;vertical-align:middle;overflow:hidden;"><span style="display:block;width:' + Math.round(meta.weight*100) + '%;height:100%;background:var(--accent);"></span></span> ' + (meta.weight*100).toFixed(0) + '% · ' + weightAnchorLabel(meta.weight) + '</div>') : '';
     // iter 1.9 D3: triggered_by 渲染成可跳转链接
-    var triggerHtml = meta.triggered_by ? ('<div class="field"><label>源 bucket</label><a href="javascript:void(0)" onclick="showDetail(\'' + meta.triggered_by + '\')" style="color:var(--accent);text-decoration:underline;font-size:11px;">' + esc(meta.triggered_by) + ' →</a></div>') : '';
+    var triggerHtml = meta.triggered_by ? ('<div class="field"><label>源备忘录</label><a href="javascript:void(0)" onclick="showDetail(\'' + meta.triggered_by + '\')" style="color:var(--accent);text-decoration:underline;font-size:11px;">' + esc(meta.triggered_by) + ' →</a></div>') : '';
     // iter 1.9 D2: 反向链——这条触发了哪些 feel
     var triggeredFeelsHtml = '';
     if (b.triggered_feels && b.triggered_feels.length) {
@@ -3911,7 +3914,7 @@ async function bucketResolve(id) {
 }
 
 async function bucketArchive(id) {
-  if (!confirm('确认归档此桶？归档后将从浮现/搜索中隐藏，但文件仍保留在 archive/ 目录。\n\nArchive this bucket? It will be hidden from surfacing/search, but the file stays in archive/.')) return;
+  if (!confirm('确认归档此备忘录？归档后将从浮现/搜索中隐藏，但文件仍保留在 archive/ 目录。\n\nArchive this memo? It will be hidden from surfacing/search, but the file stays in archive/.')) return;
   try {
     var res = await fetch(BASE + '/api/bucket/' + id + '/archive', { method: 'POST' });
     if (!res.ok) throw new Error(await res.text());
@@ -3921,7 +3924,7 @@ async function bucketArchive(id) {
 }
 
 async function bucketDelete(id) {
-  if (!confirm('这会把此备忘录移入删除档案，并从日常界面隐藏；文件仍保留在 archive/ 中。继续？\n\nThis moves the bucket to the delete archive and hides it from everyday views; the file stays in archive/. Continue?')) return;
+  if (!confirm('这会把此备忘录移入删除档案，并从日常界面隐藏；文件仍保留在 archive/ 中。继续？\n\nThis moves the memo to the delete archive and hides it from everyday views; the file stays in archive/. Continue?')) return;
   try {
     var res = await fetch(BASE + '/api/bucket/' + id + '?confirm=true', { method: 'DELETE' });
     if (!res.ok) throw new Error(await res.text());
@@ -4591,7 +4594,7 @@ function startFernweh(canvas, ctx, W, H, data) {
   _netRAF = requestAnimationFrame(frame);
 }
 
-// 旧的桶级网络（embedding 模式仍然能切到）
+// 旧的备忘录级网络（embedding 模式仍然能切到）
 function drawBucketNetwork(ctx, W, H, data) {
   var nodes = data.nodes || [], edges = data.edges || [];
   if (!nodes.length) {
@@ -5002,7 +5005,7 @@ function _startEmbMigratePolling() {
   _embMigratePollTimer = setInterval(pollEmbMigrateStatus, 3000);
 }
 
-// --- 补齐缺失向量（backfill）：只给缺向量的桶补一发，不重算全库 ---
+// --- 补齐缺失向量（backfill）：只给缺向量的备忘录补一发，不重算全库 ---
 var _embBackfillPollTimer = null;
 function _renderBackfillStatus(s) {
   var el = document.getElementById('emb-backfill-status');
@@ -5010,7 +5013,7 @@ function _renderBackfillStatus(s) {
   if (!s || s.status === 'idle') { el.innerHTML = ''; return; }
   var html = '';
   if (s.status === 'scanning') {
-    html = '扫描全库，找缺向量的桶…';
+    html = '扫描全库，找缺向量的备忘录…';
   } else if (s.status === 'embedding') {
     var tot = s.missing || 0;
     var pct = tot > 0 ? Math.floor(((s.done + s.failed) / tot) * 100) : 0;
@@ -5023,7 +5026,7 @@ function _renderBackfillStatus(s) {
       + '<br><span style="color:var(--text-light)">记忆原文已安全保存；即使网络暂时不可用，服务也会继续重试。</span>';
   } else if (s.status === 'done') {
     if ((s.missing || 0) === 0) {
-      html = '<b style="color:var(--positive,#2a8)">' + _SV.ok + ' 全部桶都有向量，无需补齐。</b>';
+      html = '<b style="color:var(--positive,#2a8)">' + _SV.ok + ' 全部备忘录都有向量，无需补齐。</b>';
     } else {
       html = '<b style="color:var(--positive,#2a8)">' + _SV.ok + ' 完成：</b>扫描 ' + s.scanned
         + ' · 缺失 ' + s.missing + ' · 补齐 ' + s.done
@@ -5051,7 +5054,7 @@ async function pollBackfillStatus() {
 }
 
 async function startBackfill() {
-  if (!confirm('补齐缺失向量：\n\n· 只给 embeddings.db 里没有的桶生成向量，不动已有向量\n· 比「重算全库」省额度，幂等，可反复点\n· 后台运行，期间可正常使用\n\n开始？\n\nBackfill missing embeddings:\n\n· Only generates vectors for buckets missing from embeddings.db; leaves existing ones untouched\n· Cheaper than a full recompute, idempotent, safe to click repeatedly\n· Runs in the background; the app stays usable\n\nStart?')) return;
+  if (!confirm('补齐缺失向量：\n\n· 只给 embeddings.db 里没有的备忘录生成向量，不动已有向量\n· 比「重算全库」省额度，幂等，可反复点\n· 后台运行，期间可正常使用\n\n开始？\n\nBackfill missing embeddings:\n\n· Only generates vectors for memos missing from embeddings.db; leaves existing ones untouched\n· Cheaper than a full recompute, idempotent, safe to click repeatedly\n· Runs in the background; the app stays usable\n\nStart?')) return;
   var st = document.getElementById('emb-backfill-status');
   var btn = document.getElementById('emb-backfill-btn');
   if (st) st.textContent = '启动中… / Starting…';
@@ -5075,7 +5078,7 @@ async function startBackfill() {
 document.addEventListener('click', function(e) {
   if (e.target && e.target.id === 'emb-migrate-btn') {
     var targetBackend = document.getElementById('cfg-emb-backend').value;
-    var msg = '即将用「' + targetBackend + '」后端重算所有 bucket 的向量。\n\n'
+    var msg = '即将用「' + targetBackend + '」后端重算所有备忘录的向量。\n\n'
       + '· 会先备份 embeddings.db → embeddings.db.backup\n'
       + '· 后台跑，每批 10 条间隔 0.5s，期间正常使用\n'
       + '· 切到 api 需先在「向量化 API Key」环境变量里配好 key\n\n'
@@ -5459,7 +5462,7 @@ async function runGithubSync() {
   var msg = document.getElementById('gh-msg');
   var btn = document.getElementById('gh-sync-btn');
   btn.disabled = true; btn.textContent = '同步中… / Syncing…';
-  msg.textContent = '正在上传 bucket 文件到 GitHub…'; msg.style.color = '';
+  msg.textContent = '正在上传备忘录文件到 GitHub…'; msg.style.color = '';
   try {
     var res = await authFetch('/api/github/sync', {method: 'POST'});
     var d = await readJsonSafe(res);
@@ -5494,7 +5497,7 @@ async function runGithubImport(force) {
       msg.innerHTML = _SV.ok + ' 导入完成：恢复 ' + (d.imported||0) + ' 条记忆' + extra
         + (d.pre_import_backup ? '<br><span style="color:var(--text-light)">本地备份：<code>' + esc(d.pre_import_backup) + '</code></span>' : '');
       msg.style.color = 'var(--success, green)';
-      // 导入后自动重建向量（恢复的桶 embeddings.db 里还没有）
+      // 导入后自动重建向量（恢复的备忘录在 embeddings.db 里还没有）
       if (typeof startBackfill === 'function') {
         msg.innerHTML += '<br>正在为恢复的记忆重建向量索引…';
         try { await _runBackfillSilent(); msg.innerHTML += ' ' + _SV.ok; } catch(e){}
@@ -6421,7 +6424,7 @@ function renderMigrateParsed(d) {
   let infoHtml = d.integrity_verified
     ? `<span style="color:var(--positive)">${_SV.ok} 备份清单与 SHA-256 校验通过。</span> `
     : `<span style="color:var(--negative)">${_SV.warn} ${esc(d.integrity_warning || '旧版备份没有完整性清单，无法确认是否齐全。')}</span> `;
-  infoHtml += `解析到 <strong>${d.total_buckets}</strong> 个 bucket。`;
+  infoHtml += `解析到 <strong>${d.total_buckets}</strong> 条备忘录。`;
   if (hasEmb) {
     if (embMatch) {
       infoHtml += ` <span style="color:var(--positive)">${_SV.ok} Embedding 模型一致（${esc(importModel)}），向量数据将一并导入。</span>`;
@@ -6727,7 +6730,7 @@ async function loadAnchorsView() {
     const d = await resp.json();
     cnt.innerHTML = `<b>${d.count}</b> / ${d.limit} 槽已用`;
     if (d.count === 0) {
-      list.innerHTML = '<div style="color:var(--text-dim);font-size:12px;padding:14px 0;">还没有 anchor。在桶详情页用 ' + _SV.anchor + ' 按钮把一条「定义我们是谁」的事实钉为坐标系。</div>';
+      list.innerHTML = '<div style="color:var(--text-dim);font-size:12px;padding:14px 0;">还没有 anchor。在备忘录详情页用 ' + _SV.anchor + ' 按钮把一条「定义我们是谁」的事实钉为坐标系。</div>';
       refreshAnchorCounter();
       return;
     }

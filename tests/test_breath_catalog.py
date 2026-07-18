@@ -74,7 +74,7 @@ async def test_catalog_one_line_per_bucket_no_content(bucket_mgr):
     assert "绝不能出现" not in out
     assert "私密正文" not in out
     # 总数
-    assert "2 桶" in out
+    assert "2 条" in out
 
 
 @pytest.mark.asyncio

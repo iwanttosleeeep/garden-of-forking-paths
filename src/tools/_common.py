@@ -42,7 +42,7 @@ import uuid
 from . import _runtime as rt
 
 _EMBED_WARN = (
-    "向量化失败，该桶不参与语义检索，仅支持关键词匹配。请检查 OMBRE_EMBED_API_KEY。"
+    "向量化失败，该备忘录不参与语义检索，仅支持关键词匹配。请检查 OMBRE_EMBED_API_KEY。"
 )
 
 # ============================================================
@@ -418,7 +418,7 @@ async def check_pinned_quota() -> str | None:
     cur = await count_pinned()
     if cur >= cap:
         return (
-            f"pinned 桶已达上限（{cur}/{cap}），建议先用 trace(bucket_id, pinned=0) "
+            f"pinned 备忘录已达上限（{cur}/{cap}），建议先用 trace(bucket_id, pinned=0) "
             "清理低优先级钉选；或在 config.limits.max_pinned 调高上限。"
         )
     return None
@@ -465,7 +465,7 @@ async def enforce_high_importance_quota(importance: int) -> int:
         )
         _push_warning_safe(
             "OB-I001",
-            f"当前已有 {cur} 条 importance≥{_HIGH_IMP_THRESHOLD}（硬上限 {_HIGH_IMP_HARD_CAP}），新桶 importance 自动降级为 {_HIGH_IMP_DEGRADE_TO}",
+            f"当前已有 {cur} 条 importance≥{_HIGH_IMP_THRESHOLD}（硬上限 {_HIGH_IMP_HARD_CAP}），新备忘录 importance 自动降级为 {_HIGH_IMP_DEGRADE_TO}",
         )
         return _HIGH_IMP_DEGRADE_TO
     if cur >= _HIGH_IMP_SOFT_WARN:
@@ -495,7 +495,7 @@ async def enforce_pinned_quota(pinned: bool) -> bool:
         )
         _push_warning_safe(
             "OB-I002",
-            f"当前已有 {cur} 条 pinned（硬上限 {cap}），本次未钉成功，已保留为普通桶",
+            f"当前已有 {cur} 条 pinned（硬上限 {cap}），本次未钉成功，已保留为普通备忘录",
         )
         return False
     if cap > 0 and cur >= soft:

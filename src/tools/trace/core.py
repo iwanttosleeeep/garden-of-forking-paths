@@ -149,16 +149,16 @@ async def trace_core(
     # --- Delete 模式（F-10：软删除，移入 archive/ + 标 deleted_at）---
     if delete:
         success = await rt.bucket_mgr.delete(bucket_id)
-        return f"已将记忆桶存入档案（不可在日常召回中浮现）: {bucket_id}" if success else f"未找到记忆桶: {bucket_id}"
+        return f"已将备忘录存入档案（不可在日常召回中浮现）: {bucket_id}" if success else f"未找到备忘录: {bucket_id}"
 
     bucket = await rt.bucket_mgr.get(bucket_id)
     if not bucket:
-        return f"未找到记忆桶: {bucket_id}"
+        return f"未找到备忘录: {bucket_id}"
 
     meta = bucket.get("metadata", {})
     if 1 <= importance <= 10 and (meta.get("pinned") or meta.get("protected")):
         return (
-            f"记忆桶 {bucket_id} 是 pinned/protected 核心桶，importance 被锁定为 10，"
+            f"备忘录 {bucket_id} 是 pinned/protected 核心备忘录，importance 被锁定为 10，"
             "本次未修改。请先 trace(bucket_id, pinned=0)，再单独 trace(bucket_id, importance=...)。"
         )
 
@@ -258,5 +258,5 @@ async def trace_core(
         else:
             changed += " → 已取消隐藏，重新参与浮现"
     if cascaded:
-        changed += f" → 同步把 {len(cascaded)} 个关联事件桶也标为已放下（{', '.join(cascaded)}）"
-    return f"已修改记忆桶 {bucket_id}: {changed}"
+        changed += f" → 同步把 {len(cascaded)} 条关联事件备忘录也标为已放下（{', '.join(cascaded)}）"
+    return f"已修改备忘录 {bucket_id}: {changed}"
