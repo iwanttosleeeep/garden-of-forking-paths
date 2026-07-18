@@ -22,7 +22,9 @@ from . import _shared as sh
 _MAX_UPLOAD_BYTES = 256 * 1024
 _MAX_DAYS = 400
 _FLOW_VALUES = {"none", "light", "medium", "heavy"}
-_TIMEZONES = {"UTC", "Asia/Shanghai", "Asia/Tokyo", "America/Los_Angeles", "America/New_York", "Europe/London", "Europe/Paris"}
+# Keep Shanghai as a compatibility alias for configurations saved by the last
+# release; new UI presents the preferred Hong Kong label instead.
+_TIMEZONES = {"UTC", "Asia/Hong_Kong", "Asia/Shanghai", "America/Los_Angeles", "America/New_York", "Europe/London", "Europe/Paris"}
 
 
 def _config() -> dict[str, Any]:

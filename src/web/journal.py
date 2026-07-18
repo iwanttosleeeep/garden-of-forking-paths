@@ -14,6 +14,7 @@ import secrets
 from collections import defaultdict
 from datetime import datetime
 from typing import Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import httpx
 import yaml
@@ -42,9 +43,26 @@ def _entries_from_export(payload: Any) -> list[dict[str, Any]]:
 
 
 def _journal_date(value: Any) -> str:
-    raw = str(value or "").strip()
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        raw = str(value)
+    else:
+        raw = str(value or "").strip()
     if not raw:
         return ""
+    # Sterling's PWA stores timestamp as Unix milliseconds.  Treating that
+    # number as an ISO string previously produced a blank/invalid journal date.
+    try:
+        numeric = float(raw)
+        if numeric >= 1_000_000_000:
+            seconds = numeric / 1000 if numeric >= 100_000_000_000 else numeric
+            timezone = str(sh.config.get("timezone") or "UTC")
+            try:
+                zone = ZoneInfo(timezone)
+            except ZoneInfoNotFoundError:
+                zone = ZoneInfo("UTC")
+            return datetime.fromtimestamp(seconds, tz=zone).date().isoformat()
+    except ValueError:
+        pass
     try:
         return datetime.fromisoformat(raw.replace("Z", "+00:00")).date().isoformat()
     except ValueError:
@@ -102,15 +120,15 @@ def _summary_from_buckets(buckets: list[dict[str, Any]]) -> dict[str, Any]:
 async def _import_entries(entries: list[dict[str, Any]]) -> dict[str, Any]:
     """Import entries exactly once; shared by file upload and sync endpoints."""
     existing = await sh.bucket_mgr.list_all(include_archive=True)
-    existing_ids = {
-        str((bucket.get("metadata") or {}).get("journal_source_id"))
+    existing_by_source_id = {
+        str((bucket.get("metadata") or {}).get("journal_source_id")): bucket
         for bucket in existing
         if (bucket.get("metadata") or {}).get("source_tool") == "sterling"
     }
-    imported = skipped = 0
+    imported = skipped = refreshed = 0
     for entry in entries:
         source_id = str(entry.get("id") or "").strip()
-        if not source_id or source_id in existing_ids:
+        if not source_id:
             skipped += 1
             continue
         date = _journal_date(entry.get("timestamp") or entry.get("createdAt"))
@@ -120,6 +138,17 @@ async def _import_entries(entries: list[dict[str, Any]]) -> dict[str, Any]:
         if mood is not None:
             tags.append(f"mood:{mood}")
         tags.extend(str(tag).strip()[:80] for tag in original_tags if str(tag).strip())
+        existing_bucket = existing_by_source_id.get(source_id)
+        if existing_bucket:
+            # Re-import is a safe repair path for older Garden versions: it
+            # fills Unix-millisecond dates and changes the old 回声 label to Echo.
+            await sh.bucket_mgr.update(
+                existing_bucket["id"], content=_entry_content(entry, date, mood), tags=tags,
+                name=f"Sterling {date}" if date else "Sterling 日记", journal_date=date,
+                journal_mood=mood,
+            )
+            refreshed += 1
+            continue
         bucket_id = await sh.bucket_mgr.create(
             content=_entry_content(entry, date, mood), tags=tags, importance=3,
             domain=["日记"], valence=((mood - 1) / 4) if mood is not None else 0.5,
@@ -130,10 +159,10 @@ async def _import_entries(entries: list[dict[str, Any]]) -> dict[str, Any]:
             bucket_id, dont_surface=True, journal_date=date,
             journal_source_id=source_id, journal_mood=mood,
         )
-        existing_ids.add(source_id)
+        existing_by_source_id[source_id] = {"id": bucket_id, "metadata": {"journal_source_id": source_id}}
         imported += 1
     buckets = await sh.bucket_mgr.list_all(include_archive=False)
-    return {"ok": True, "imported": imported, "skipped": skipped, **_summary_from_buckets(buckets)}
+    return {"ok": True, "imported": imported, "refreshed": refreshed, "skipped": skipped, **_summary_from_buckets(buckets)}
 
 
 def _sync_config() -> dict[str, Any]:
