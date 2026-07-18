@@ -852,8 +852,15 @@
     box-shadow: 8px 8px 22px var(--shadow-dark-subtle), -7px -7px 16px var(--shadow-light), inset 0 1px 0 rgba(255,255,255,0.55);
   }
   .config-section { padding: 26px 28px; }
-  /* 门牌保持紧凑；“我”与其余设置卡片采用一致的常规高度。 */
-  #sec-me { min-height: 360px; }
+  /* 门牌保持紧凑；“我”卡片强制沿用其他设置卡片的全宽、左对齐流式布局。 */
+  #settings-view #sec-me {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    margin-left: 0;
+    margin-right: 0;
+    text-align: left;
+  }
   .config-section h3 {
     font-family:'Share Tech Mono',monospace;
     color: var(--text);
