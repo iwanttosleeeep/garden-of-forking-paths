@@ -2219,11 +2219,11 @@
         <div style="font-weight:600;font-size:13px;margin-bottom:6px;">Garden Health Sync</div>
         <div style="font-size:12px;color:var(--text-dim);line-height:1.65;">iPhone 同伴 App 只上传每日汇总，不经过 GitHub。健康数据独立保存，不自动给 AI；月经周期仅显示在健康页。</div>
         <div class="config-row" style="margin-top:9px;"><label>Timezone</label><select id="health-sync-timezone" style="flex:1;max-width:260px;"><option value="UTC">UTC (UTC+00:00)</option><option value="Asia/Hong_Kong">Hong Kong (UTC+08:00)</option><option value="America/Los_Angeles">Los Angeles (UTC−08:00 / −07:00 DST)</option><option value="America/New_York">New York (UTC−05:00 / −04:00 DST)</option><option value="Europe/London">London (UTC+00:00 / +01:00 DST)</option><option value="Europe/Paris">Paris (UTC+01:00 / +02:00 DST)</option></select></div>
-        <div style="font-size:11px;color:var(--text-dim);line-height:1.6;margin-top:3px;">首次保存会一次性校正旧版 iPhone 的 Health 日期，以及既有备忘录/星图节点的错误时间；之后新记录直接按此时区写入。</div>
+        <div style="font-size:11px;color:var(--text-dim);line-height:1.6;margin-top:3px;">Health 日期完全以 iPhone 同步的日期为准，不会被 Garden 时区设置移动。时区设置只用于 Garden 新备忘录与旧备忘录时间修正。</div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:9px;">
           <button onclick="saveHealthSync(false)" style="font-size:12px;padding:0 12px;height:32px;">保存时区/生成同步密钥</button>
           <button onclick="saveHealthSync(true)" style="font-size:12px;padding:0 12px;height:32px;">轮换密钥</button>
-          <button onclick="removeDuplicateHealthDays()" style="font-size:12px;padding:0 12px;height:32px;">清理重复 Health 日期</button>
+          <button onclick="removeDuplicateHealthDays()" style="font-size:12px;padding:0 12px;height:32px;">清理错位重复 Health 日期</button>
           <button onclick="forceRepairMemoTimes()" style="font-size:12px;padding:0 12px;height:32px;">修正既有备忘录时间</button>
         </div>
         <div id="health-sync-msg" style="font-size:12px;color:var(--text-dim);line-height:1.6;margin-top:8px;word-break:break-all;"></div>
@@ -6551,7 +6551,7 @@ async function saveHealthSync(rotate) {
   const msg = document.getElementById('health-sync-msg');
   try {
     const timezone = document.getElementById('health-sync-timezone');
-    const data = await authFetch('/api/health/sync/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({rotate_key:!!rotate, timezone: timezone ? timezone.value : 'UTC', repair_legacy_dates:true, repair_legacy_memo_timestamps:true})}).then(readJsonSafe);
+    const data = await authFetch('/api/health/sync/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({rotate_key:!!rotate, timezone: timezone ? timezone.value : 'UTC', repair_legacy_memo_timestamps:true})}).then(readJsonSafe);
     if (!data.ok) throw new Error(data.error || '保存失败');
     const repaired = (data.repaired_days ? '已校正 ' + data.repaired_days + ' 天 Health 记录；' : '') + (data.repaired_memos ? '已校正 ' + data.repaired_memos + ' 条备忘录时间；' : '');
     msg.textContent = data.sync_key ? repaired + '请立刻复制到 GardenHealthSync（只显示这一次）：' + data.sync_key : repaired + '时区已保存；同步密钥已保留。';
@@ -6559,7 +6559,7 @@ async function saveHealthSync(rotate) {
 }
 
 async function removeDuplicateHealthDays() {
-  if (!confirm('只会删除内容完全相同、日期相邻的较早一条 Health 记录。继续吗？')) return;
+  if (!confirm('只会删除内容完全相同、日期相邻的较晚一条 Health 记录，保留 iPhone 原本的较早日期。继续吗？')) return;
   const msg = document.getElementById('health-sync-msg');
   try {
     const data = await authFetch('/api/health/sync/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({remove_duplicate_health_days:true})}).then(readJsonSafe);
