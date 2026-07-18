@@ -8,8 +8,8 @@ DecayEngine / EmbeddingEngine，把它们注入 tools._runtime 与
 web._shared，然后以 @mcp.tool() 注册薄封装（真正的实现在 src/tools/<工具>/ 下面）。
 
 关键行为：
-- 启动后暴露 12 个 MCP 工具：breath/hold/grow/trace/anchor/release/
-  pulse/plan/letter_write/letter_read/dream/I；每个入口 ≤ 10 行，只负责转发
+- 启动后暴露 13 个 MCP 工具：breath/hold/grow/trace/anchor/release/
+  pulse/plan/letter_write/letter_read/dream/I/journal；每个入口 ≤ 10 行，只负责转发
 - Dashboard / HTTP 路由全部已拆分到 src/web/<域>.py（每个模块 register(mcp)），
   本文件仅在启动时调用 web.register_all(mcp) 装配；共享依赖见 web/_shared.py
 - 仍保留在本文件：进程启动、引擎初始化、GitHub 后台同步循环、Webhook 推送、
@@ -20,7 +20,7 @@ web._shared，然后以 @mcp.tool() 注册薄封装（真正的实现在 src/too
 - 不写 HTTP 路由处理（全在 web/* 下）；不写 LLM prompt（dehydrator 负责）
 - 不直接读写桶文件（bucket_manager 负责）
 
-对外暴露：mcp/mcp_extra 两个实例 + 12 个 @mcp*.tool() 函数；HTTP 路由在 src/web/*
+对外暴露：mcp/mcp_extra 两个实例 + 13 个 @mcp*.tool() 函数；HTTP 路由在 src/web/*
 ========================================
 """
 
@@ -59,6 +59,7 @@ from tools import anchor as _t_anchor
 from tools import plan as _t_plan
 from tools import dream as _t_dream
 from tools import i as _t_i
+from tools import journal as _t_journal
 
 # --- Load config & init logging / 加载配置 & 初始化日志 ---
 config = load_config()
@@ -783,6 +784,20 @@ async def dream(window_hours: Optional[int] = 48) -> str:
 # =============================================================
 
 
+@mcp_extra.tool()
+async def journal(
+    query: Optional[str] = "",
+    days: Optional[int] = 30,
+    limit: Optional[int] = 8,
+) -> str:
+    """读取从 Sterling 明确导入的日记。默认只返回近几天的记录数与心情均值，不展开正文；传 query=关键词时才返回相关日记原文。days=时间范围（1-365），limit=最多返回条数（1-20）。日记不会自动混入普通备忘录检索。"""
+    return await _with_notice(
+        _t_journal.dispatch(query=query, days=days, limit=limit),
+        op="journal",
+        args={"query": query, "days": days, "limit": limit},
+    )
+
+
 # ============================================================
 # OAuth 2.0 — MCP Remote Auth —— 已拆分到 web/oauth.py（路由在其 register 内注册）。
 # 这里仅把启动期 MCP 鉴权中间件要用的 _is_valid_mcp_token import 回来。
@@ -798,7 +813,7 @@ if __name__ == "__main__":
 
     # iter 2.2：合并为单连接器 /mcp。
     # 当初（iter 2.1）拆 /mcp + /mcp-extra 是因为 claude.ai 连接器存在 5 工具上限；
-    # 该上限现已解除，12 个工具全部挂在主实例 mcp 上对外暴露一条 /mcp 即可，
+    # 该上限现已解除，13 个工具全部挂在主实例 mcp 上对外暴露一条 /mcp 即可，
     # 顺带消除「第二个连接器」在 Claude.ai 侧的 OAuth/连接器校验疑难。
     # mcp_extra 仅作历史工具分组容器保留（7 个 @mcp_extra.tool() 注册不动），
     # 这里把它的工具回灌进 mcp，让 stdio / sse / streamable-http 三种 transport 一致。
@@ -809,6 +824,7 @@ if __name__ == "__main__":
         build_http_app,
         merge_mcp_tool_registries,
     )
+
 
     try:
         _extra_count = merge_mcp_tool_registries(mcp, mcp_extra)
@@ -845,7 +861,7 @@ if __name__ == "__main__":
             lifecycle=_runtime_lifecycle,
         )
         if transport == "streamable-http":
-            logger.info("MCP 单连接器 /mcp：12 个工具统一对外暴露")
+            logger.info("MCP 单连接器 /mcp：13 个工具统一对外暴露")
         logger.info("CORS middleware enabled for remote transport / 已启用 CORS 中间件")
         logger.info(
             "MCP request body limit: %s",
@@ -863,7 +879,7 @@ if __name__ == "__main__":
             logger.warning(
                 "=" * 60 + "\n"
                 "⚠️  MCP 认证已关闭 (mcp_require_auth: false)：/mcp 无需任何令牌即可直连，\n"
-                "    12 个记忆工具全部对外开放——任何能访问本端口的人都能读写你的全部记忆。\n"
+                "    13 个记忆工具全部对外开放——任何能访问本端口的人都能读写你的全部记忆。\n"
                 "    本服务监听 0.0.0.0，若端口暴露到局域网/公网，请务必用反代鉴权、防火墙\n"
                 "    或仅绑定 127.0.0.1 保护；仅在可信内网/本机自有前端场景才建议关闭鉴权。\n"
                 + "=" * 60
@@ -891,5 +907,5 @@ if __name__ == "__main__":
         )
         uvicorn.run(_app, host=_BIND_HOST, port=OMBRE_PORT)
     else:
-        # stdio：工具已在启动入口处统一回灌进 mcp（12 个全暴露），这里直接跑。
+        # stdio：工具已在启动入口处统一回灌进 mcp（13 个全暴露），这里直接跑。
         mcp.run(transport=transport)

@@ -2162,6 +2162,31 @@
         <div style="font-weight:600;font-size:13px;margin-bottom:6px;">退出登录</div>
         <button class="btn-danger" onclick="doLogout()" title="退出登录 / Log out" style="padding:0 14px;height:36px;font-size:12px;display:inline-flex;align-items:center;gap:5px;"><i data-lucide="log-out"></i> 退出登录</button>
       </div>
+
+      <div style="margin-top:22px;padding-top:16px;border-top:1px solid var(--border);">
+        <div style="font-weight:600;font-size:13px;margin-bottom:6px;">Sterling 日记</div>
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;line-height:1.65;">
+          从 Sterling 导出的 JSON 导入日记与心情。日记不会自动出现在普通备忘录检索中；AI 只会在明确调用日记工具时读取。
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input type="file" id="sterling-file-input" accept="application/json,.json" style="max-width:240px;font-size:12px;" />
+          <button onclick="importSterlingJournal()" style="font-size:12px;padding:0 12px;height:32px;display:inline-flex;align-items:center;gap:5px;"><i data-lucide="upload"></i> 导入 JSON</button>
+          <button onclick="loadJournalSummary()" title="刷新心情摘要" style="font-size:12px;padding:0 10px;height:32px;"><i data-lucide="refresh-cw"></i></button>
+        </div>
+        <div id="sterling-journal-summary" style="font-size:12px;color:var(--text-dim);line-height:1.7;margin-top:10px;">尚未读取日记摘要。</div>
+        <details style="margin-top:12px;">
+          <summary style="cursor:pointer;font-size:12px;color:var(--text-dim);">配置 Sterling 一键同步</summary>
+          <div style="margin-top:10px;font-size:12px;color:var(--text-dim);line-height:1.6;">Garden 保存 GitHub Token；Sterling 只保存一枚可轮换、只用于日记同步的密钥。</div>
+          <div class="config-row" style="margin-top:8px;"><label>日记仓库</label><input id="sterling-sync-repo" placeholder="iwanttosleeeep/garden-journal-sync" style="flex:1;" /></div>
+          <div class="config-row"><label>Sterling 地址</label><input id="sterling-sync-origin" placeholder="https://你的-sterling-site" style="flex:1;" /></div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;">
+            <button onclick="saveSterlingSync(false)" style="font-size:12px;padding:0 12px;height:32px;">保存</button>
+            <button onclick="saveSterlingSync(true)" style="font-size:12px;padding:0 12px;height:32px;">生成/轮换同步密钥</button>
+            <button onclick="pullSterlingSync()" style="font-size:12px;padding:0 12px;height:32px;">从 GitHub 拉取</button>
+          </div>
+          <div id="sterling-sync-msg" style="font-size:12px;color:var(--text-dim);line-height:1.6;margin-top:8px;word-break:break-all;"></div>
+        </details>
+      </div>
     </div>
 
     <!-- ② 服务 -->
@@ -3600,6 +3625,8 @@ document.querySelectorAll('.tab').forEach(tab => {
       loadEnvVars();
       loadHostVault();
       loadLocalEmbStatus();
+      loadJournalSummary();
+      loadSterlingSync();
       // MCP 面板同步初始化（不依赖异步请求）
       const _mcpOriginEl = document.getElementById('mcp-local-origin');
       if (_mcpOriginEl) _mcpOriginEl.textContent = location.origin;
@@ -6368,6 +6395,93 @@ function exportClaudeDesktopConfig() {
   a.download = 'claude_desktop_config.json';
   a.click();
   URL.revokeObjectURL(a.href);
+}
+
+// ========================================
+// Sterling journal — explicit JSON import, never automatic browser access.
+// ========================================
+function renderJournalSummary(data, prefix) {
+  const el = document.getElementById('sterling-journal-summary');
+  if (!el) return;
+  if (!data || data.ok === false) {
+    el.textContent = (prefix || '读取失败：') + ((data && data.error) || '未知错误');
+    return;
+  }
+  const curve = Array.isArray(data.curve) ? data.curve : [];
+  const dots = curve.map(point => {
+    const mood = Number(point.mood);
+    return mood >= 4 ? '●' : mood >= 3 ? '•' : '○';
+  }).join('');
+  const average = data.average_mood == null ? '—' : Number(data.average_mood).toFixed(2) + '/5';
+  el.textContent = (prefix || '') + '已导入 ' + (data.count || 0) + ' 条；心情均值 ' + average
+    + (dots ? '；近 30 天 ' + dots : '') + '。';
+}
+
+async function loadJournalSummary() {
+  try {
+    const r = await authFetch('/api/journal/summary');
+    renderJournalSummary(await readJsonSafe(r));
+  } catch (e) {
+    renderJournalSummary({ok:false, error:e.message});
+  }
+}
+
+async function importSterlingJournal() {
+  const input = document.getElementById('sterling-file-input');
+  const file = input && input.files && input.files[0];
+  if (!file) { alert('请先选择 Sterling 导出的 .json 文件'); return; }
+  const fd = new FormData();
+  fd.append('file', file);
+  renderJournalSummary({ok:true, count:0, average_mood:null, curve:[]}, '导入中… ');
+  try {
+    const r = await fetch(BASE + '/api/journal/sterling', {method:'POST', body:fd, credentials:'same-origin'});
+    const data = await readJsonSafe(r);
+    if (!data.ok) throw new Error(data.error || '导入失败');
+    renderJournalSummary(data, '本次导入 ' + data.imported + ' 条，跳过重复 ' + data.skipped + ' 条。');
+    input.value = '';
+  } catch (e) {
+    renderJournalSummary({ok:false, error:e.message}, '导入失败：');
+  }
+}
+
+async function loadSterlingSync() {
+  try {
+    const data = await readJsonSafe(await authFetch('/api/journal/sync/status'));
+    const repo = document.getElementById('sterling-sync-repo');
+    const origin = document.getElementById('sterling-sync-origin');
+    if (repo) repo.value = data.repo || '';
+    if (origin) origin.value = data.allowed_origin || '';
+    const msg = document.getElementById('sterling-sync-msg');
+    if (msg) msg.textContent = data.configured ? '已配置同步密钥。' : '尚未配置；需先在 GitHub 同步处保存有 Contents 读写权限的 Token。';
+  } catch (e) { /* Settings may not be visible yet. */ }
+}
+
+async function saveSterlingSync(rotate) {
+  const msg = document.getElementById('sterling-sync-msg');
+  try {
+    const data = await readJsonSafe(await authFetch('/api/journal/sync/config', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        repo: document.getElementById('sterling-sync-repo').value.trim(),
+        allowed_origin: document.getElementById('sterling-sync-origin').value.trim(),
+        rotate_key: !!rotate,
+      }),
+    }));
+    if (!data.ok) throw new Error(data.error || '保存失败');
+    msg.textContent = data.sync_key
+      ? '请立刻复制此同步密钥到 Sterling（仅显示这一次）：' + data.sync_key
+      : '同步配置已保存。';
+  } catch (e) { msg.textContent = '保存失败：' + e.message; }
+}
+
+async function pullSterlingSync() {
+  const msg = document.getElementById('sterling-sync-msg');
+  try {
+    const data = await readJsonSafe(await authFetch('/api/journal/sync/pull', {method:'POST'}));
+    if (!data.ok) throw new Error(data.error || '拉取失败');
+    msg.textContent = '拉取完成：导入 ' + data.imported + ' 条，跳过重复 ' + data.skipped + ' 条。';
+    renderJournalSummary(data);
+  } catch (e) { msg.textContent = '拉取失败：' + e.message; }
 }
 
 // ========================================
