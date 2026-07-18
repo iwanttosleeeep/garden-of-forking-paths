@@ -22,7 +22,7 @@ from . import _shared as sh
 _MAX_UPLOAD_BYTES = 256 * 1024
 _MAX_DAYS = 400
 _FLOW_VALUES = {"none", "light", "medium", "heavy"}
-_TIMEZONES = {"UTC", "Asia/Shanghai", "Asia/Tokyo", "America/Los_Angeles", "America/New_York", "Europe/London", "Europe/Paris"}
+_TIMEZONES = {"UTC", "Asia/Shanghai", "America/Los_Angeles", "America/New_York", "Europe/London", "Europe/Paris"}
 
 
 def _config() -> dict[str, Any]:
@@ -198,14 +198,20 @@ def _repair_legacy_dates() -> int:
     return changed
 
 
-async def _repair_legacy_memo_timestamps() -> int:
-    """Shift pre-setting naive UTC memo timestamps into the selected civil time."""
+async def _repair_legacy_memo_timestamps(*, only_aware: bool = False) -> int:
+    """Convert old UTC memo timestamps into the selected civil time.
+
+    A first migration handled historical naive timestamps. If it has already
+    run, a retry safely handles only explicit ``Z``/``+00:00`` timestamps,
+    avoiding a second shift of those already corrected naive values.
+    """
     try:
         offset = datetime.now(ZoneInfo(_timezone())).utcoffset() or timedelta()
     except ZoneInfoNotFoundError:
         offset = timedelta()
     if not offset:
         return 0
+    target = ZoneInfo(_timezone())
     changed = 0
     for bucket in await sh.bucket_mgr.list_all(include_archive=True):
         meta = bucket.get("metadata") or {}
@@ -217,7 +223,10 @@ async def _repair_legacy_memo_timestamps() -> int:
             except ValueError:
                 continue
             if parsed.tzinfo is None:
-                updates[field] = (parsed + offset).isoformat(timespec="seconds")
+                if not only_aware:
+                    updates[field] = (parsed + offset).isoformat(timespec="seconds")
+            else:
+                updates[field] = parsed.astimezone(target).replace(tzinfo=None).isoformat(timespec="seconds")
         if updates and await sh.bucket_mgr.update(bucket["id"], **updates):
             changed += 1
     return changed
@@ -269,8 +278,10 @@ def register(mcp) -> None:
                 repaired = _repair_legacy_dates()
                 _config()["legacy_dates_repaired"] = True
             repaired_memos = 0
-            if body.get("repair_legacy_memo_timestamps") and not _config().get("legacy_memo_timestamps_repaired"):
-                repaired_memos = await _repair_legacy_memo_timestamps()
+            if body.get("repair_legacy_memo_timestamps"):
+                repaired_memos = await _repair_legacy_memo_timestamps(
+                    only_aware=bool(_config().get("legacy_memo_timestamps_repaired"))
+                )
                 _config()["legacy_memo_timestamps_repaired"] = True
             _save_config()
             return JSONResponse({"ok": True, **_status(), "sync_key": key, "repaired_days": repaired, "repaired_memos": repaired_memos})
