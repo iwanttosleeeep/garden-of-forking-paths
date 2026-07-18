@@ -1606,6 +1606,34 @@
     flex-shrink: 0;
     border-bottom: 1px solid var(--border);
   }
+  .self-compose {
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .self-compose textarea {
+    grid-column: 1 / -1;
+    min-height: 78px;
+    resize: vertical;
+    font: inherit;
+    line-height: 1.55;
+  }
+  .self-compose select, .self-compose textarea {
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 8px 10px;
+    color: var(--text);
+    background: var(--surface);
+  }
+  .self-compose-msg {
+    grid-column: 1 / -1;
+    min-height: 15px;
+    font-size: 11px;
+    color: var(--text-light);
+  }
   .self-filter-btn {
     padding: 4px 12px;
     font-size: 11px;
@@ -7067,6 +7095,21 @@ async function syncExistingHuman() {
       <i data-lucide="x" style="width:16px;height:16px;"></i>
     </button>
   </div>
+  <div class="self-compose">
+    <select id="self-aspect" aria-label="自我认知维度">
+      <option value="">未分类</option>
+      <option value="nature">nature</option>
+      <option value="values">values</option>
+      <option value="patterns">patterns</option>
+      <option value="limits">limits</option>
+      <option value="becoming">becoming</option>
+      <option value="uncertainty">uncertainty</option>
+      <option value="stance">stance</option>
+    </select>
+    <button type="button" class="btn-primary" onclick="saveSelfEntry()">写入</button>
+    <textarea id="self-content" maxlength="51200" placeholder="写下一条关于「我」的观察、立场或限制…"></textarea>
+    <div class="self-compose-msg" id="self-compose-msg"></div>
+  </div>
   <div class="self-panel-filters" id="self-filters">
     <button class="self-filter-btn active" data-aspect="" onclick="setSelfFilter(this)">全部</button>
     <button class="self-filter-btn" data-aspect="nature" onclick="setSelfFilter(this)">nature</button>
@@ -7121,6 +7164,29 @@ async function loadSelfEntries() {
     renderSelfEntries();
   } catch (e) {
     body.innerHTML = '<div class="self-panel-empty">' + esc(e.message) + '</div>';
+  }
+}
+
+async function saveSelfEntry() {
+  const contentEl = document.getElementById('self-content');
+  const aspectEl = document.getElementById('self-aspect');
+  const msg = document.getElementById('self-compose-msg');
+  const content = (contentEl.value || '').trim();
+  if (!content) { msg.textContent = '请先写下内容。'; return; }
+  msg.textContent = '写入中…';
+  try {
+    const res = await authFetch('/api/self', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({content: content, aspect: aspectEl.value || ''}),
+    });
+    const data = await readJsonSafe(res);
+    if (!res || !data || !data.ok) throw new Error((data && data.error) || '写入失败');
+    contentEl.value = '';
+    msg.textContent = '已写入。';
+    await loadSelfEntries();
+  } catch (e) {
+    msg.textContent = e.message || '写入失败';
   }
 }
 

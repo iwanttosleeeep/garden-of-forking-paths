@@ -21,6 +21,7 @@ import os
 import uuid
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 
@@ -351,6 +352,34 @@ class GitHubSync:
                 "content": json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True),
             })
 
+            # 空仓库无法直接使用 Git Trees API：即使没有 base_tree，GitHub 仍会
+            # 在 POST /git/trees 返回 409 "Git Repository is empty"。先用
+            # Contents API 写入 manifest 以创建首个 commit，再按正常批量路径提交
+            # 全量记忆。manifest 会在下面的提交中被更新为同一轮的最终内容。
+            if bootstrap_branch:
+                bootstrap_path = quote(manifest_path, safe="/")
+                bootstrap_content = next(
+                    entry["content"] for entry in entries if entry["path"] == manifest_path
+                )
+                r = await self._request(
+                    c,
+                    "PUT",
+                    f"{_API}/repos/{self.repo}/contents/{bootstrap_path}",
+                    json={
+                        "message": "Ombre Brain backup bootstrap",
+                        "content": base64.b64encode(bootstrap_content.encode("utf-8")).decode("ascii"),
+                        "branch": self.branch,
+                    },
+                )
+                r.raise_for_status()
+                r = await self._request(c, "GET", f"{_API}/repos/{self.repo}/git/ref/heads/{self.branch}")
+                r.raise_for_status()
+                head_sha = r.json()["object"]["sha"]
+                r = await self._request(c, "GET", f"{_API}/repos/{self.repo}/git/commits/{head_sha}")
+                r.raise_for_status()
+                base_tree_sha = r.json()["tree"]["sha"]
+                bootstrap_branch = False
+
             # 4. 分块创建 tree，块间用 base_tree 串联
             cur_base = base_tree_sha
             for i in range(0, len(entries), _TREE_CHUNK):
@@ -379,17 +408,11 @@ class GitHubSync:
             r.raise_for_status()
             commit_sha: str = r.json()["sha"]
 
-            # 6. 更新已有 branch ref；空仓库首次提交则创建 branch ref
-            if bootstrap_branch:
-                r = await self._request(
-                    c, "POST", f"{_API}/repos/{self.repo}/git/refs",
-                    json={"ref": f"refs/heads/{self.branch}", "sha": commit_sha},
-                )
-            else:
-                r = await self._request(
-                    c, "PATCH", f"{_API}/repos/{self.repo}/git/refs/heads/{self.branch}",
-                    json={"sha": commit_sha, "force": False},
-                )
+            # 6. 更新 branch ref（空仓库已由 Contents API 建立首个提交）
+            r = await self._request(
+                c, "PATCH", f"{_API}/repos/{self.repo}/git/refs/heads/{self.branch}",
+                json={"sha": commit_sha, "force": False},
+            )
             r.raise_for_status()
 
         return len(files)

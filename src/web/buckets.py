@@ -29,9 +29,20 @@ except ImportError:  # pragma: no cover
     from ..utils import strip_wikilinks, parse_bool  # type: ignore
 
 try:
-    from tools._common import check_pinned_quota as _check_pinned_quota  # type: ignore
+    from tools._common import (  # type: ignore
+        check_content_size,
+        check_metadata_size,
+        check_pinned_quota as _check_pinned_quota,
+    )
 except ImportError:  # pragma: no cover
-    from ..tools._common import check_pinned_quota as _check_pinned_quota  # type: ignore
+    from ..tools._common import (  # type: ignore
+        check_content_size,
+        check_metadata_size,
+        check_pinned_quota as _check_pinned_quota,
+    )
+
+
+_SELF_ASPECTS = {"nature", "values", "patterns", "limits", "becoming", "uncertainty", "stance"}
 
 
 async def rename_human_in_buckets(old: str, new: str) -> dict:
@@ -605,6 +616,52 @@ def register(mcp) -> None:
             return JSONResponse(result)
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
+
+    @mcp.custom_route("/api/self", methods=["POST"])
+    async def api_self_write(request: Request) -> Response:
+        """Write one I/self entry from the dashboard."""
+        from starlette.responses import JSONResponse
+        err = sh._require_auth(request)
+        if err:
+            return err
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"ok": False, "error": "无效 JSON"}, status_code=400)
+
+        content = str(body.get("content") or "").strip()
+        aspect = str(body.get("aspect") or "").strip().lower()
+        if not content:
+            return JSONResponse({"ok": False, "error": "请先写下内容"}, status_code=400)
+        metadata_err = check_metadata_size(aspect=aspect)
+        if metadata_err:
+            return JSONResponse({"ok": False, "error": metadata_err}, status_code=400)
+        if aspect and aspect not in _SELF_ASPECTS:
+            return JSONResponse({"ok": False, "error": "aspect 无效"}, status_code=400)
+        content_err = check_content_size(content)
+        if content_err:
+            return JSONResponse({"ok": False, "error": content_err}, status_code=400)
+
+        tags = ["__i__"] + ([f"aspect:{aspect}"] if aspect else [])
+        try:
+            bucket_id = await sh.bucket_mgr.create(
+                content=content,
+                tags=tags,
+                importance=6,
+                domain=["self"],
+                valence=0.5,
+                arousal=0.3,
+                name=None,
+                bucket_type="i",
+                why_remembered="",
+                weight=0.8,
+                source_tool="I",
+            )
+            await sh.bucket_mgr.update(bucket_id, dont_surface=True)
+            return JSONResponse({"ok": True, "id": bucket_id, "aspect": aspect})
+        except Exception as e:
+            logger.exception("self entry write failed")
+            return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 
     # =============================================================
