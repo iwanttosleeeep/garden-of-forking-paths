@@ -9,7 +9,7 @@ web._shared，然后以 @mcp.tool() 注册薄封装（真正的实现在 src/too
 
 关键行为：
 - 启动后暴露 13 个 MCP 工具：breath/hold/grow/trace/anchor/release/
-  pulse/plan/letter_write/letter_read/dream/I/journal；每个入口 ≤ 10 行，只负责转发
+  pulse/plan/letter_write/letter_read/dream/I/echo；每个入口 ≤ 10 行，只负责转发
 - Dashboard / HTTP 路由全部已拆分到 src/web/<域>.py（每个模块 register(mcp)），
   本文件仅在启动时调用 web.register_all(mcp) 装配；共享依赖见 web/_shared.py
 - 仍保留在本文件：进程启动、引擎初始化、GitHub 后台同步循环、Webhook 推送、
@@ -785,15 +785,15 @@ async def dream(window_hours: Optional[int] = 48) -> str:
 
 
 @mcp_extra.tool()
-async def journal(
+async def echo(
     query: Optional[str] = "",
     days: Optional[int] = 30,
     limit: Optional[int] = 8,
 ) -> str:
-    """读取从 Sterling 明确导入的日记。默认只返回近几天的记录数与心情均值，不展开正文；传 query=关键词时才返回相关日记原文。days=时间范围（1-365），limit=最多返回条数（1-20）。日记不会自动混入普通备忘录检索。"""
+    """回响从 Sterling 明确导入的日记。默认只返回近几天的记录数与心情均值，不展开正文；传 query=关键词时才返回相关日记原文。days=时间范围（1-365），limit=最多返回条数（1-20）。日记不会自动混入普通备忘录检索。"""
     return await _with_notice(
         _t_journal.dispatch(query=query, days=days, limit=limit),
-        op="journal",
+        op="echo",
         args={"query": query, "days": days, "limit": limit},
     )
 
