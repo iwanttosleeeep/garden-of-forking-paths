@@ -1621,6 +1621,9 @@
     font: inherit;
     line-height: 1.55;
   }
+  .self-compose textarea::placeholder {
+    font-size: 11px;
+  }
   .self-compose select, .self-compose textarea {
     border: 1px solid var(--border);
     border-radius: 3px;
@@ -3404,11 +3407,6 @@ async function loadToolsPanel() {
       raw.sampling = s;
     }
   } catch (e) { errs.push('采样配置: ' + (e.message || e)); }
-  try {
-    if (r2 && r2.ok) {
-      var t = await r2.json();
-    }
-  } catch (e) { errs.push('隧道状态: ' + (e.message || e)); }
   var pre = document.getElementById('tools-raw');
   if (pre) pre.textContent = JSON.stringify(raw, null, 2);
   if (errs.length) _toolsMsg('部分状态读取失败 — ' + errs.join('；'), 'err');

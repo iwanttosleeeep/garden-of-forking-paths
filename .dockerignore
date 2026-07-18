@@ -47,8 +47,6 @@ docs/**/*
 !docs/OPERATIONS.md
 tests/
 deploy/
-# 例外：构建期需要它下载 cloudflared（见 Dockerfile 的 COPY），必须进构建上下文
-!deploy/fetch_cloudflared.py
 *.md
 !docs/CLAUDE_PROMPT.md
 !docs/INTERNALS.md
@@ -56,6 +54,7 @@ deploy/
 !docs/OPERATIONS.md
 !README.md
 !CHANGELOG.md
+*.patch
 
 # 日志与临时文件
 *.log
