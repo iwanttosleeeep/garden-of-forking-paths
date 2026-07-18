@@ -22,6 +22,7 @@ tools/breath/importance.py — importance_min 模式
 """
 
 from .. import _runtime as rt
+from web._shared import is_sterling_journal
 from ._verbatim import render_stored_bucket
 
 _BUDGET_NOTICE = "token 预算不足：下一条重要记忆未被截断或摘要，请提高 max_tokens 后重试。"
@@ -94,6 +95,7 @@ def _select_importance_buckets(buckets: list[dict], importance_min: int, limit: 
 async def surface_by_importance(importance_min: int, max_tokens: int, tag_filter: list) -> str:
     try:
         all_buckets = await rt.bucket_mgr.list_all(include_archive=False)
+        all_buckets = [bucket for bucket in all_buckets if not is_sterling_journal(bucket)]
     except Exception as e:
         return f"记忆系统暂时无法访问: {e}"
     filtered = [

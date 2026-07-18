@@ -46,7 +46,7 @@ def register(mcp) -> None:
                 if not _SURFACE_POLICY.evaluate_bucket(b, mode="search").allowed:
                     continue
                 meta = b.get("metadata", {})
-                if meta.get("source_tool") == "sterling":
+                if sh.is_sterling_journal(b):
                     continue
                 result.append({
                     "id": b["id"],
@@ -75,7 +75,8 @@ def register(mcp) -> None:
         if err:
             return err
         try:
-            all_b = await sh.bucket_mgr.list_all(include_archive=False)
+            all_b = [bucket for bucket in await sh.bucket_mgr.list_all(include_archive=False)
+                     if not sh.is_sterling_journal(bucket)]
             seen: set[frozenset] = set()
             pairs: list[dict] = []
             index = {b["id"]: b for b in all_b}
@@ -126,7 +127,7 @@ def register(mcp) -> None:
             mode = "concept"
         try:
             all_buckets = [bucket for bucket in await sh.bucket_mgr.list_all(include_archive=False)
-                           if (bucket.get("metadata") or {}).get("source_tool") != "sterling"]
+                           if not sh.is_sterling_journal(bucket)]
 
             if mode == "embedding":
                 # 旧的桶→桶相似度图（保留）
@@ -252,7 +253,7 @@ def register(mcp) -> None:
         try:
             n = min(int(request.query_params.get("n", "10")), 50)
             all_buckets = [bucket for bucket in await sh.bucket_mgr.list_all(include_archive=False)
-                           if (bucket.get("metadata") or {}).get("source_tool") != "sterling"]
+                           if not sh.is_sterling_journal(bucket)]
             results = []
             for bucket in all_buckets:
                 if not _SURFACE_POLICY.evaluate_bucket(bucket, mode="spontaneous").allowed:
@@ -289,7 +290,7 @@ def register(mcp) -> None:
 
         try:
             all_buckets = [bucket for bucket in await sh.bucket_mgr.list_all(include_archive=False)
-                           if (bucket.get("metadata") or {}).get("source_tool") != "sterling"]
+                           if not sh.is_sterling_journal(bucket)]
             results = []
             w = {
                 "topic": sh.bucket_mgr.w_topic,

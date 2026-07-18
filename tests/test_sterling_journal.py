@@ -19,6 +19,11 @@ class FakeMcp:
         return decorator
 
 
+def test_legacy_sterling_marker_is_recognized_as_a_private_journal():
+    assert sh.is_sterling_journal({"metadata": {"tags": ["__journal__", "source:sterling"]}})
+    assert not sh.is_sterling_journal({"metadata": {"tags": ["work"]}})
+
+
 class FakeUpload:
     def __init__(self, payload):
         self.payload = payload

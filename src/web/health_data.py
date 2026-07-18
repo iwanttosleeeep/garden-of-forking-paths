@@ -1,18 +1,16 @@
-"""Private, daily HealthKit summaries.
+"""Private, daily HealthKit summaries outside the memo store.
 
-Health data is deliberately kept outside the memo store and has no MCP tool.
 The iPhone companion authenticates with a dedicated, revocable sync key.
+Health data is only exposed through the explicit ``check_up`` connector tool.
 """
 
 import hashlib
 import json
 import os
-import re
 import secrets
 import tempfile
-from datetime import date, datetime, timedelta
+from datetime import date
 from typing import Any
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import yaml
 from starlette.requests import Request
@@ -26,7 +24,6 @@ _FLOW_VALUES = {"none", "light", "medium", "heavy"}
 # Keep Shanghai as a compatibility alias for configurations saved by the last
 # release; new UI presents the preferred Hong Kong label instead.
 _TIMEZONES = {"UTC", "Asia/Hong_Kong", "Asia/Shanghai", "America/Los_Angeles", "America/New_York", "Europe/London", "Europe/Paris"}
-_MEMO_NAME_TIMESTAMP = re.compile(r"^(\d{4}-\d{2}-\d{2} \d{2}-\d{2}-\d{2})(.*)$")
 
 
 def _config() -> dict[str, Any]:
@@ -166,106 +163,8 @@ def _sync_key_ok(request: Request) -> bool:
 def _status() -> dict[str, Any]:
     return {
         "configured": bool(_config().get("token_hash")), "key_set": bool(_config().get("token_hash")),
-        "timezone": _timezone(), "legacy_dates_repaired": bool(_config().get("legacy_dates_repaired")),
+        "timezone": _timezone(),
     }
-
-
-def _repair_legacy_dates() -> int:
-    """Correct the pre-1.0 iPhone client which formatted local midnight as UTC.
-
-    Only positive UTC offsets were affected: e.g. Shanghai local midnight became
-    the previous UTC date.  This action is explicit and recorded in config so a
-    later settings save cannot shift records a second time.
-    """
-    try:
-        offset = datetime.now(ZoneInfo(_timezone())).utcoffset() or timedelta()
-    except ZoneInfoNotFoundError:  # defensive; selectable values are fixed above
-        offset = timedelta()
-    if offset <= timedelta():
-        return 0
-    store = _read_store()
-    daily = store["daily"]
-    repaired: dict[str, Any] = {}
-    changed = 0
-    for key in sorted(daily):
-        entry = dict(daily[key]) if isinstance(daily[key], dict) else {"date": key}
-        try:
-            corrected = (date.fromisoformat(key) + timedelta(days=1)).isoformat()
-        except ValueError:
-            corrected = key
-        if corrected != key:
-            changed += 1
-        # In the unlikely case of a collision, preserve fields from both records.
-        repaired[corrected] = {**repaired.get(corrected, {}), **entry, "date": corrected}
-    store["daily"] = repaired
-    _write_store(store)
-    return changed
-
-
-def _remove_adjacent_duplicate_days() -> int:
-    """Remove only identical day payloads on consecutive calendar dates.
-
-    This repairs the old UTC date-shift artifact without guessing about similar
-    but genuinely different days. The earlier date wins because it is the date
-    originally supplied by the iPhone; Garden must not reinterpret it.
-    """
-    store = _read_store()
-    daily = store["daily"]
-    removed = 0
-    for older in sorted(list(daily)):
-        try:
-            newer = (date.fromisoformat(older) + timedelta(days=1)).isoformat()
-        except ValueError:
-            continue
-        if newer not in daily:
-            continue
-        old_payload = {key: value for key, value in daily[older].items() if key != "date"}
-        new_payload = {key: value for key, value in daily[newer].items() if key != "date"}
-        if old_payload == new_payload:
-            del daily[newer]
-            removed += 1
-    if removed:
-        _write_store(store)
-    return removed
-
-
-async def _repair_legacy_memo_timestamps() -> int:
-    """Convert both naive and explicit UTC memo timestamps into civil time."""
-    try:
-        offset = datetime.now(ZoneInfo(_timezone())).utcoffset() or timedelta()
-    except ZoneInfoNotFoundError:
-        offset = timedelta()
-    if not offset:
-        return 0
-    target = ZoneInfo(_timezone())
-    changed = 0
-    for bucket in await sh.bucket_mgr.list_all(include_archive=True):
-        meta = bucket.get("metadata") or {}
-        updates: dict[str, str] = {}
-        for field in ("created", "last_active"):
-            raw = str(meta.get(field) or "")
-            try:
-                parsed = datetime.fromisoformat(raw)
-            except ValueError:
-                continue
-            if parsed.tzinfo is None:
-                corrected = parsed + offset
-            else:
-                corrected = parsed.astimezone(target).replace(tzinfo=None)
-            updates[field] = corrected.isoformat(timespec="seconds")
-        # The homepage displays metadata.name, whose historical prefix was
-        # generated separately from created. Correct that visible prefix too.
-        name = str(meta.get("name") or "")
-        match = _MEMO_NAME_TIMESTAMP.match(name)
-        if match:
-            try:
-                name_time = datetime.strptime(match.group(1), "%Y-%m-%d %H-%M-%S")
-                updates["name"] = (name_time + offset).strftime("%Y-%m-%d %H-%M-%S") + match.group(2)
-            except ValueError:
-                pass
-        if updates and await sh.bucket_mgr.update(bucket["id"], **updates):
-            changed += 1
-    return changed
 
 
 def register(mcp) -> None:
@@ -309,19 +208,8 @@ def register(mcp) -> None:
             if body.get("rotate_key") or not _config().get("token_hash"):
                 key = secrets.token_urlsafe(32)
                 _config()["token_hash"] = hashlib.sha256(key.encode()).hexdigest()
-            repaired = 0
-            if body.get("repair_legacy_dates") and not _config().get("legacy_dates_repaired"):
-                repaired = _repair_legacy_dates()
-                _config()["legacy_dates_repaired"] = True
-            repaired_memos = 0
-            if body.get("repair_legacy_memo_timestamps") and not _config().get("legacy_memo_timestamps_repaired"):
-                repaired_memos = await _repair_legacy_memo_timestamps()
-                _config()["legacy_memo_timestamps_repaired"] = True
-            if body.get("force_repair_memo_timestamps"):
-                repaired_memos = await _repair_legacy_memo_timestamps()
-            duplicates_removed = _remove_adjacent_duplicate_days() if body.get("remove_duplicate_health_days") else 0
             _save_config()
-            return JSONResponse({"ok": True, **_status(), "sync_key": key, "repaired_days": repaired, "repaired_memos": repaired_memos, "duplicates_removed": duplicates_removed})
+            return JSONResponse({"ok": True, **_status(), "sync_key": key})
         except Exception as exc:
             return JSONResponse({"ok": False, "error": str(exc)}, status_code=400)
 

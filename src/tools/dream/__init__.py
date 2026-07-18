@@ -18,6 +18,7 @@ dispatch() 只负责把这三步串起来。
 from typing import Optional
 
 from .. import _runtime as rt
+from web._shared import is_sterling_journal
 from .candidates import collect_candidates, collect_core_context
 from .hints import build_connection_hint, build_crystal_hint
 from .output import format_dream_output
@@ -28,6 +29,7 @@ async def dispatch(window_hours: Optional[int] = 48) -> str:
 
     try:
         all_buckets = await rt.bucket_mgr.list_all(include_archive=False)
+        all_buckets = [bucket for bucket in all_buckets if not is_sterling_journal(bucket)]
     except Exception as e:
         rt.logger.error(f"Dream failed to list buckets: {e}")
         return "记忆系统暂时无法访问。"

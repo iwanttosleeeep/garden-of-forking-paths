@@ -127,7 +127,7 @@ def register(mcp) -> None:
             result = []
             for b in all_buckets:
                 meta = b.get("metadata", {})
-                if meta.get("deleted_at") or meta.get("source_tool") == "sterling":
+                if meta.get("deleted_at") or sh.is_sterling_journal(b):
                     continue
                 result.append({
                     "id": b["id"],
@@ -144,6 +144,7 @@ def register(mcp) -> None:
                     "digested": meta.get("digested", False),
                     "created": meta.get("created", ""),
                     "last_active": meta.get("last_active", ""),
+                    "timestamp_timezone": meta.get("timestamp_timezone", ""),
                     "activation_count": meta.get("activation_count", 0),
                     "score": sh.decay_engine.calculate_score(meta),
                     "content_preview": strip_wikilinks(b.get("content", ""))[:200],

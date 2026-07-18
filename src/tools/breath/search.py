@@ -30,6 +30,7 @@ import random
 
 from ombrebrain.policy.surfacing import SurfacePolicyVM
 from .. import _runtime as rt
+from web._shared import is_sterling_journal
 from ._verbatim import render_stored_bucket
 
 _SURFACE_POLICY = SurfacePolicyVM.default()
@@ -105,7 +106,8 @@ async def surface_search(
 
     matches = [
         b for b in matches
-        if _can_surface_search(b)
+        if not is_sterling_journal(b)
+        and _can_surface_search(b)
         and b["metadata"].get("type") not in ("feel", "plan", "letter")
     ]
     matches = [b for b in matches if _bucket_has_tags(b["metadata"], tag_filter)]
@@ -142,6 +144,7 @@ async def surface_search(
     if not budget_blocked and len(matches) < min(3, max_results) and random.random() < 0.4:
         try:
             all_buckets = await rt.bucket_mgr.list_all(include_archive=False)
+            all_buckets = [bucket for bucket in all_buckets if not is_sterling_journal(bucket)]
             matched_ids = {b["id"] for b in matches}
             low_weight = [
                 b for b in all_buckets

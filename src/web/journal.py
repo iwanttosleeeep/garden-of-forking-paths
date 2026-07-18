@@ -94,7 +94,7 @@ def _entry_content(entry: dict[str, Any], date: str, mood: int | None) -> str:
 def _summary_from_buckets(buckets: list[dict[str, Any]]) -> dict[str, Any]:
     journals = [
         bucket for bucket in buckets
-        if (bucket.get("metadata") or {}).get("source_tool") == "sterling"
+        if sh.is_sterling_journal(bucket)
         and not (bucket.get("metadata") or {}).get("deleted_at")
     ]
     days: dict[str, list[int]] = defaultdict(list)
@@ -123,7 +123,7 @@ async def _import_entries(entries: list[dict[str, Any]]) -> dict[str, Any]:
     existing_by_source_id = {
         str((bucket.get("metadata") or {}).get("journal_source_id")): bucket
         for bucket in existing
-        if (bucket.get("metadata") or {}).get("source_tool") == "sterling"
+        if sh.is_sterling_journal(bucket)
     }
     imported = skipped = refreshed = 0
     for entry in entries:
@@ -328,7 +328,7 @@ def register(mcp) -> None:
             entries = []
             for bucket in buckets:
                 meta = bucket.get("metadata") or {}
-                if meta.get("source_tool") != "sterling" or meta.get("deleted_at"):
+                if not sh.is_sterling_journal(bucket) or meta.get("deleted_at"):
                     continue
                 entries.append({
                     "id": bucket.get("id", ""),
@@ -365,7 +365,7 @@ def register(mcp) -> None:
             return err
         bucket_id = request.path_params["bucket_id"]
         bucket = await sh.bucket_mgr.get(bucket_id)
-        if not bucket or (bucket.get("metadata") or {}).get("source_tool") != "sterling":
+        if not bucket or not sh.is_sterling_journal(bucket):
             return JSONResponse({"ok": False, "error": "未找到 Sterling 日记"}, status_code=404)
         if not await sh.bucket_mgr.erase(bucket_id):
             return JSONResponse({"ok": False, "error": "删除失败"}, status_code=500)
