@@ -99,3 +99,24 @@ async def test_journal_tool_only_reveals_text_for_explicit_query():
 
     assert "finished a task" not in summary
     assert "finished a task" in result
+
+
+@pytest.mark.asyncio
+async def test_journal_entries_endpoint_keeps_imports_out_of_normal_memo_shape(monkeypatch):
+    mcp = FakeMcp()
+    journal_web.register(mcp)
+    manager = FakeBucketManager()
+    manager.buckets = [{
+        "id": "journal-1", "content": "Sterling 日记 · 2026-07-01 · 心情 4/5\n\nfinished a task",
+        "metadata": {"source_tool": "sterling", "journal_date": "2026-07-01", "journal_mood": 4, "tags": ["__journal__", "source:sterling", "work"]},
+    }]
+    monkeypatch.setattr(sh, "_require_auth", lambda request: None)
+    monkeypatch.setattr(sh, "bucket_mgr", manager)
+
+    response = await mcp.routes[("/api/journal/entries", ("GET",))](FakeRequest(b""))
+    data = json.loads(bytes(response.body))
+
+    assert data["entries"] == [{
+        "id": "journal-1", "date": "2026-07-01", "mood": 4,
+        "tags": ["work"], "content": "Sterling 日记 · 2026-07-01 · 心情 4/5\n\nfinished a task",
+    }]

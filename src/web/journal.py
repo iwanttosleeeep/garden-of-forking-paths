@@ -287,6 +287,33 @@ async def _get_github_json() -> dict[str, Any]:
 
 
 def register(mcp) -> None:
+    @mcp.custom_route("/api/journal/entries", methods=["GET"])
+    async def api_journal_entries(request: Request) -> Response:
+        """Return imported diary records only; never mix them into normal memo lists."""
+        from starlette.responses import JSONResponse
+        err = sh._require_auth(request)
+        if err:
+            return err
+        try:
+            buckets = await sh.bucket_mgr.list_all(include_archive=False)
+            entries = []
+            for bucket in buckets:
+                meta = bucket.get("metadata") or {}
+                if meta.get("source_tool") != "sterling" or meta.get("deleted_at"):
+                    continue
+                entries.append({
+                    "id": bucket.get("id", ""),
+                    "date": str(meta.get("journal_date") or meta.get("created") or "")[:10],
+                    "mood": _mood(meta.get("journal_mood")),
+                    "tags": [tag for tag in (meta.get("tags") or []) if not str(tag).startswith(("__", "source:", "mood:"))],
+                    "content": bucket.get("content", ""),
+                })
+            entries.sort(key=lambda item: (item["date"], item["id"]), reverse=True)
+            return JSONResponse({"ok": True, "entries": entries[:200]})
+        except Exception as exc:
+            sh.logger.exception("journal entries failed")
+            return JSONResponse({"ok": False, "error": str(exc)}, status_code=500)
+
     @mcp.custom_route("/api/journal/summary", methods=["GET"])
     async def api_journal_summary(request: Request) -> Response:
         from starlette.responses import JSONResponse
