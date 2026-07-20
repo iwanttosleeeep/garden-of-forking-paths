@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Garden of Forking Paths</title>
 <meta name="theme-color" content="#EDE3CB">
-<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-<link rel="apple-touch-icon" href="/static/icon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/static/icon-180.png">
 <link rel="manifest" href="/static/manifest.json">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500;600&family=Noto+Sans+SC:wght@400;500&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
@@ -37,6 +37,12 @@
     --lcd-dim: #6E9486;
     --lcd-glow: rgba(110, 148, 134, 0.18);
     --feel-tint: #D9A8A0;
+    /* 每个空间只取一支低饱和主色，避免日间界面变成彩虹。 */
+    --section-sea: #6E9486;
+    --section-sea-wash: #E1ECE7;
+    --section-rose: #D9A8A0;
+    --section-rose-wash: #F2E3DF;
+    --section-sun-wash: #F2E7C9;
     --shell-radius: 24px;
     --radius-inner: 16px;
     --radius-control: 12px;
@@ -842,6 +848,23 @@
                 0 0 0 2px var(--accent-glow), inset 0 0 14px rgba(175,195,230,0.10);
   }
   .tab.active .tab-en { color: var(--accent); }
+  /* 区域色只在当前标签与它的主面板出现：颜色是导航，不是装饰噪音。 */
+  .tab[data-tab="tools"].active,
+  .tab[data-tab="health"].active {
+    color: var(--section-sea);
+    box-shadow: 4px 4px 11px var(--shadow-dark-subtle), -4px -4px 9px var(--shadow-light),
+                0 0 0 2px rgba(110,148,134,.22), inset 0 0 14px rgba(110,148,134,.10);
+  }
+  .tab[data-tab="tools"].active .tab-en,
+  .tab[data-tab="health"].active .tab-en { color: var(--section-sea); }
+  .tab[data-tab="journal"].active,
+  .tab[data-tab="chats"].active {
+    color: #B77D76;
+    box-shadow: 4px 4px 11px var(--shadow-dark-subtle), -4px -4px 9px var(--shadow-light),
+                0 0 0 2px rgba(217,168,160,.28), inset 0 0 14px rgba(217,168,160,.12);
+  }
+  .tab[data-tab="journal"].active .tab-en,
+  .tab[data-tab="chats"].active .tab-en { color: #B77D76; }
   .tab:active { transform: translateY(1px); box-shadow: inset 3px 3px 7px var(--shadow-dark-subtle), inset -2px -2px 6px var(--shadow-light); }
   .tab-spacer { box-shadow: none; background: transparent; }
 
@@ -1002,6 +1025,41 @@
   .bucket-row:hover { transform: translateY(-2px); box-shadow: 7px 7px 17px var(--shadow-dark), -5px -5px 12px var(--shadow-light); }
   .bucket-row:active { transform: translateY(0); box-shadow: inset 3px 3px 7px var(--shadow-dark-subtle), inset -2px -2px 5px var(--shadow-light); }
   .bucket-row .score, .bucket-row .time { font-family:'Share Tech Mono',monospace; }
+
+  /* ============ 日间花园：按“房间”分色，不把每一张卡涂满 ============ */
+  #list-view .filters {
+    padding: 12px;
+    border-radius: 18px;
+    background: var(--section-sun-wash);
+    box-shadow: inset 2px 2px 7px rgba(143,119,60,.12), inset -2px -2px 6px rgba(255,255,255,.48);
+  }
+  #list-view .bucket-row { border-left: 5px solid var(--accent) !important; }
+  #list-view .bucket-row:nth-child(3n + 2) { border-left-color: var(--section-sea) !important; }
+  #list-view .bucket-row:nth-child(3n) { border-left-color: var(--section-rose) !important; }
+  #list-view .bucket-row.faded { border-left-color: var(--border-strong) !important; }
+
+  #tools-view .config-section,
+  #health-view .config-section {
+    background: var(--section-sea-wash);
+    box-shadow: 8px 8px 22px rgba(70,105,91,.16), -7px -7px 16px rgba(255,255,255,.62), inset 0 1px 0 rgba(255,255,255,.64);
+  }
+  #tools-view .config-section h3,
+  #health-view .config-section h3 { color: var(--lcd-text); }
+  #tools-view .tool-card { background: rgba(255,255,255,.38); }
+
+  #journal-view .config-section,
+  #chats-view .config-section {
+    background: var(--section-rose-wash);
+    box-shadow: 8px 8px 22px rgba(132,83,76,.16), -7px -7px 16px rgba(255,255,255,.62), inset 0 1px 0 rgba(255,255,255,.65);
+  }
+  #journal-view .config-section h3,
+  #chats-view .config-section h3 { color: #8F5D58; }
+  #chats-view #chat-history-list > * { background: rgba(255,255,255,.34); }
+
+  #letters-view .config-section,
+  #plan-view .config-section { background: #F4EACF; }
+  #letters-view .config-section h3,
+  #plan-view .config-section h3 { color: #9B6D1E; }
 
   /* ============ 详情面板操作按钮组：宽松排版，字文绝不溢出 ============ */
   .detail-actions {

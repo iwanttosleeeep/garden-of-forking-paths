@@ -4,14 +4,20 @@
   "description": "A breathing, fading, surfacing memory system for AI models.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0E1524",
-  "theme_color": "#0E1524",
+  "background_color": "#EDE3CB",
+  "theme_color": "#EDE3CB",
   "icons": [
     {
-      "src": "/static/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "src": "/static/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }
