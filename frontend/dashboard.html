@@ -163,6 +163,7 @@
   }
   .tab.active .tab-en { color: var(--accent-light); }
   .tab-spacer { flex: 1; pointer-events: none; }
+  .tab-row-break { flex-basis: 100%; height: 0; pointer-events: none; }
   /* Lucide SVG inline-icon defaults */
   [data-lucide], svg.lucide {
     width: 14px; height: 14px; vertical-align: -2px;
@@ -890,6 +891,21 @@
   .tab[data-tab="anchors"].active .tab-en { color: currentColor; }
   .tab:active { transform: translateY(1px); box-shadow: inset 3px 3px 7px var(--shadow-dark-subtle), inset -2px -2px 6px var(--shadow-light); }
   .tab-spacer { box-shadow: none; background: transparent; }
+  .plan-status-legend {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: var(--surface);
+    color: #45391F;
+    font-size: 11px;
+    box-shadow: 4px 4px 10px var(--shadow-dark-subtle), -4px -4px 10px var(--shadow-light);
+  }
+  .plan-status-legend .icon-ok { color: var(--positive); }
+  .plan-status-legend .icon-err { color: var(--negative); }
+  .plan-status-legend .icon-reopen { color: var(--accent); }
 
   /* ============ 模块块：Bento 注塑外壳（无边框，靠留白+柔影聚合） ============ */
   .config-section, .breath-info, .breath-flow {
@@ -1923,6 +1939,7 @@
   <div class="tab" data-tab="chats"><span>聊天记录</span><span class="tab-en">Chat History</span></div>
   <div class="tab" data-tab="health"><span>健康</span><span class="tab-en">Health</span></div>
   <div class="tab" data-tab="anchors"><span>锚点</span><span class="tab-en">Anchors</span></div>
+  <div class="tab-row-break" aria-hidden="true"></div>
   <div class="tab" data-tab="logs"><span>日志</span><span class="tab-en">Logs</span></div>
   <div class="tab" data-tab="tools"><span>工具箱</span><span class="tab-en">Toolbox</span></div>
   <div class="tab" data-tab="settings"><span>设置</span><span class="tab-en">Settings</span></div>
@@ -2131,7 +2148,7 @@
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
         <button class="btn-secondary" onclick="loadPlans()" title="刷新" style="padding:6px 10px;font-size:12px;"><i data-lucide="refresh-cw"></i></button>
         <span id="plan-stats" style="font-size:12px;color:var(--text-dim);"></span>
-        <span style="margin-left:auto;font-size:11px;color:var(--text-light);display:inline-flex;align-items:center;gap:4px;"><svg class="icon icon-ok" aria-hidden="true"><use href="#i-check"></use></svg> 完成 / <svg class="icon icon-err" aria-hidden="true"><use href="#i-x"></use></svg> 放弃 / <svg class="icon" aria-hidden="true" style="transform:scaleX(-1)"><use href="#i-clock"></use></svg> 重新激活</span>
+        <span class="plan-status-legend"><svg class="icon icon-ok" aria-hidden="true"><use href="#i-check"></use></svg> 完成 / <svg class="icon icon-err" aria-hidden="true"><use href="#i-x"></use></svg> 放弃 / <svg class="icon icon-reopen" aria-hidden="true" style="transform:scaleX(-1)"><use href="#i-clock"></use></svg> 重新激活</span>
       </div>
       <div id="plan-board" style="display:flex;flex-direction:column;gap:24px;">
         <div style="text-align:center;color:var(--text-dim);padding:36px 0;font-size:13px;">点击「刷新」加载…</div>
@@ -6718,7 +6735,7 @@ async function loadHealthView() {
       return '<article style="background:var(--surface);border:1px solid var(--border);border-radius:2px;padding:16px 20px;box-shadow:4px 4px 10px var(--shadow-dark-subtle),-4px -4px 10px var(--shadow-light);">'
         + '<div style="font-size:13px;font-weight:600;margin-bottom:10px;">' + esc(day.date) + '</div>'
         + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;font-size:12px;color:var(--text-dim);line-height:1.7;">'
-        + '<span>睡眠 ' + healthValue(sleep.duration_hours, ' 小时') + (sleep.score == null ? '' : ' · ' + healthValue(sleep.score, ' 分') + (sleep.score_source === 'garden_estimate' ? '（估算）' : '')) + '</span>'
+        + '<span>睡眠 ' + healthValue(sleep.duration_hours, ' 小时') + '</span>'
         + '<span>入睡 ' + (sleep.bedtime ? esc(String(sleep.bedtime).slice(11, 16)) : '—') + '</span>'
         + '<span>步数 ' + healthValue(activity.steps) + '</span><span>静息心率 ' + healthValue(heart.resting_bpm, ' bpm') + '</span>'
         + '<span>HRV ' + healthValue(heart.hrv_ms, ' ms') + '</span><span>呼吸 ' + healthValue(vitals.respiratory_rate, ' 次/分') + '</span>'
@@ -7211,7 +7228,7 @@ async function loadAnchorsView() {
     const d = await resp.json();
     cnt.innerHTML = `<b>${d.count}</b> / ${d.limit} 槽已用`;
     if (d.count === 0) {
-      list.innerHTML = '<div style="color:var(--text-dim);font-size:12px;padding:14px 0;">还没有 anchor。在备忘录详情页用 ' + _SV.anchor + ' 按钮把一条「定义我们是谁」的事实钉为坐标系。</div>';
+      list.innerHTML = '<div style="color:var(--text);font-size:12px;padding:14px 0;">还没有 anchor。在备忘录详情页用 ' + _SV.anchor + ' 按钮把一条「定义我们是谁」的事实钉为坐标系。</div>';
       refreshAnchorCounter();
       return;
     }

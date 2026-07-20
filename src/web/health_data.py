@@ -21,6 +21,7 @@ from . import _shared as sh
 
 _MAX_UPLOAD_BYTES = 256 * 1024
 _MAX_DAYS = 400
+_MAX_RETAINED_DAYS = 30
 _FLOW_VALUES = {"none", "light", "medium", "heavy"}
 # Keep Shanghai as a compatibility alias for configurations saved by the last
 # release; new UI presents the preferred Hong Kong label instead.
@@ -107,7 +108,7 @@ def _clean_day(item: Any) -> dict[str, Any]:
         raise ValueError("日期必须是 YYYY-MM-DD") from exc
     result: dict[str, Any] = {"date": day}
     for section, fields in {
-        "sleep": {"duration_hours": (0, 24), "score": (0, 100)},
+        "sleep": {"duration_hours": (0, 24)},
         "activity": {"steps": (0, 200000), "active_energy_kcal": (0, 30000)},
         "heart": {"resting_bpm": (20, 250), "hrv_ms": (0, 500)},
         "vitals": {"respiratory_rate": (0, 80), "wrist_temperature_c": (25, 45), "blood_oxygen_pct": (0, 100)},
@@ -127,10 +128,6 @@ def _clean_day(item: Any) -> dict[str, Any]:
         except ValueError as exc:
             raise ValueError("sleep.bedtime 必须是 ISO 8601 时间") from exc
         result.setdefault("sleep", {})["bedtime"] = bedtime.isoformat()
-    if isinstance(sleep, dict) and sleep.get("score_source") is not None:
-        if sleep["score_source"] != "garden_estimate":
-            raise ValueError("sleep.score_source 无效")
-        result.setdefault("sleep", {})["score_source"] = "garden_estimate"
     cycle = item.get("cycle")
     if cycle is not None:
         if not isinstance(cycle, dict):
@@ -165,6 +162,13 @@ def _clean_day(item: Any) -> dict[str, Any]:
             })
         result["workouts"] = clean_workouts
     return result
+
+
+def _prune_daily(store: dict[str, Any]) -> None:
+    """Keep only the newest daily summaries; Health is a short rolling view."""
+    daily = store["daily"]
+    for obsolete_date in sorted(daily, reverse=True)[_MAX_RETAINED_DAYS:]:
+        del daily[obsolete_date]
 
 
 def _sync_key_ok(request: Request) -> bool:
@@ -278,6 +282,7 @@ def register(mcp) -> None:
             cleaned = [_clean_day(day) for day in days]
             store = _read_store()
             store["daily"].update({day["date"]: day for day in cleaned})
+            _prune_daily(store)
             _write_store(store)
             return JSONResponse({"ok": True, "received": len(cleaned), "stored_days": len(store["daily"])})
         except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:

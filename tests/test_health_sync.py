@@ -1,6 +1,6 @@
 import pytest
 
-from web.health_data import _clean_day
+from web.health_data import _clean_day, _prune_daily
 from web import health_data
 
 
@@ -16,7 +16,9 @@ def test_health_daily_summary_accepts_only_the_small_daily_schema():
     assert day["date"] == "2026-07-18"
     assert day["activity"]["steps"] == 4567
     assert day["cycle"]["flow"] == "light"
-    assert day["sleep"] == {"duration_hours": 7.5, "bedtime": "2026-07-17T23:40:00+08:00", "score": 87.0, "score_source": "garden_estimate"}
+    # Scores from older companion builds are deliberately discarded: Apple
+    # Health has no portable sleep-score field, and Garden no longer estimates one.
+    assert day["sleep"] == {"duration_hours": 7.5, "bedtime": "2026-07-17T23:40:00+08:00"}
 
 
 @pytest.mark.parametrize("payload", [
@@ -25,11 +27,23 @@ def test_health_daily_summary_accepts_only_the_small_daily_schema():
     {"date": "2026-07-18", "cycle": {"flow": "unknown"}},
     {"date": "2026-07-18", "workouts": [{}]},
     {"date": "2026-07-18", "sleep": {"bedtime": "after lunch"}},
-    {"date": "2026-07-18", "sleep": {"score_source": "apple"}},
 ])
 def test_health_daily_summary_rejects_invalid_or_implausible_data(payload):
     with pytest.raises(ValueError):
         _clean_day(payload)
+
+
+def test_health_daily_store_keeps_only_the_newest_30_days():
+    store = {"daily": {
+        f"2026-07-{day:02d}": {"date": f"2026-07-{day:02d}"}
+        for day in range(1, 32)
+    }}
+
+    _prune_daily(store)
+
+    assert len(store["daily"]) == 30
+    assert "2026-07-01" not in store["daily"]
+    assert "2026-07-31" in store["daily"]
 
 
 @pytest.mark.asyncio
