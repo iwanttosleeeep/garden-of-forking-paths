@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Garden of Forking Paths</title>
-<meta name="theme-color" content="#0E1524">
+<meta name="theme-color" content="#EDE3CB">
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="apple-touch-icon" href="/static/icon.svg">
 <link rel="manifest" href="/static/manifest.json">
@@ -12,30 +12,31 @@
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
 <style>
   :root {
-    /* === The Garden of Forking Paths — 午夜蓝夜间掌机 === */
-    --bg: #0E1524;
-    --bg-gradient: #0E1524;
-    --surface: #18213A;
-    --surface-solid: #151D33;
-    --border: #2A3554;
-    --border-strong: #3A4668;
-    --text: #E8ECF4;
-    --text-dim: #9BA6BE;
-    --text-light: #6B7590;
-    --accent: #AFC3E6;
-    --accent-light: #C7D6EE;
-    --accent-glow: rgba(175, 195, 230, 0.22);
-    --accent-contrast: #0E1524;
-    --positive: #7BA694;
-    --negative: #C56A5A;
-    --warning: #C0A468;
-    --shadow-light: rgba(140, 165, 220, 0.12);
-    --shadow-dark: rgba(0, 0, 0, 0.45);
-    --shadow-dark-subtle: rgba(0, 0, 0, 0.25);
-    --lcd: #0A1120;
-    --lcd-text: #A8C7E8;
-    --lcd-dim: #5E7896;
-    --lcd-glow: rgba(168, 199, 232, 0.20);
+    /* === Moonrise Kingdom — 柯尼华岛的白昼 === */
+    --bg: #EDE3CB;
+    --bg-gradient: #EDE3CB;
+    --surface: #F4EDDA;
+    --surface-solid: #FBF6E7;
+    --border: #C9B78D;
+    --border-strong: #AA976D;
+    --text: #45391F;
+    --text-dim: #7A6C4C;
+    --text-light: #A09373;
+    --accent: #D99A2B;
+    --accent-light: #E8B95C;
+    --accent-glow: rgba(217, 154, 43, 0.20);
+    --accent-contrast: #45391F;
+    --negative: #A8431F;
+    --positive: #7A8B3A;
+    --warning: #B9862F;
+    --shadow-light: rgba(255, 253, 244, 0.78);
+    --shadow-dark: rgba(104, 84, 44, 0.20);
+    --shadow-dark-subtle: rgba(104, 84, 44, 0.12);
+    --lcd: #CFE7DB;
+    --lcd-text: #2F4F4F;
+    --lcd-dim: #6E9486;
+    --lcd-glow: rgba(110, 148, 134, 0.18);
+    --feel-tint: #D9A8A0;
     --shell-radius: 24px;
     --radius-inner: 16px;
     --radius-control: 12px;
@@ -1854,10 +1855,10 @@
 
 <div class="content" id="network-view" style="display:none">
   <div class="network-legend">
-    <div class="legend-item"><span class="legend-dot" style="background:#AFC3E6"></span> [[双链]]</div>
-    <div class="legend-item"><span class="legend-dot" style="background:#7BA694"></span> #tag</div>
-    <div class="legend-item"><span class="legend-dot" style="background:#C0A468"></span> 既是双链也是 tag</div>
-    <div class="legend-item" style="margin-left:18px;"><span style="display:inline-block;width:18px;height:2px;background:#5E7896;margin-right:6px;vertical-align:middle;"></span> 共现（同一条备忘录里出现）</div>
+    <div class="legend-item"><span class="legend-dot" style="background:var(--accent)"></span> [[双链]]</div>
+    <div class="legend-item"><span class="legend-dot" style="background:var(--positive)"></span> #tag</div>
+    <div class="legend-item"><span class="legend-dot" style="background:var(--feel-tint)"></span> 既是双链也是 tag</div>
+    <div class="legend-item" style="margin-left:18px;"><span style="display:inline-block;width:18px;height:2px;background:var(--lcd-dim);margin-right:6px;vertical-align:middle;"></span> 共现（同一条备忘录里出现）</div>
     <label style="margin-left:auto;font-size:11px;color:var(--text-dim);display:inline-flex;align-items:center;gap:6px;">
       模式
       <select id="network-mode" onchange="loadNetwork()" style="font-size:11px;padding:2px 6px;background:var(--surface);border:1px solid var(--border);color:var(--text);">
@@ -4066,9 +4067,9 @@ async function loadNetwork() {
   ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
   var W = canvas.offsetWidth, H = canvas.offsetHeight;
 
-  ctx.fillStyle = '#0A1120';
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--lcd').trim() || '#CFE7DB';
   ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = '#5E7896';
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--lcd-text').trim() || '#2F4F4F';
   ctx.font = "14px 'Share Tech Mono', monospace";
   ctx.textAlign = 'center';
   ctx.fillText('LOADING MEMORY NET…', W / 2, H / 2);
@@ -4091,7 +4092,7 @@ async function loadNetwork() {
     var _n = (networkData.nodes || []).length, _e = (networkData.edges || networkData.links || []).length;
     setNetTerminal(mode === 'fernweh' ? ('FERNWEH · ' + _n + ' 颗星 · ' + _e + ' 条星座线') : ('ONLINE · ' + _n + ' nodes / ' + _e + ' links · mode=' + mode));
   } catch (e) {
-    ctx.fillStyle = '#5E7896';
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--negative').trim() || '#A8431F';
     ctx.textAlign = 'center';
     ctx.fillText('LOAD FAILED: ' + e.message, W / 2, H / 2 + 24);
     setNetTerminal('ERROR · ' + e.message);
@@ -4347,8 +4348,8 @@ function animateConceptNetwork(canvas, ctx, W, H, data) {
     var nodes    = allNodes.filter(function (n) { return visible.has(n.id); });
     var visEdges = allEdges.filter(function (e) { return visible.has(e.source) && visible.has(e.target); });
 
-    // ── 静态背景：米色底 + 工程网格 ──
-    ctx.fillStyle = '#0A1120';
+    // ── 白昼 LCD 底 + 工程网格；Fernweh 自己保留午夜蓝。 ──
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--lcd').trim() || '#CFE7DB';
     ctx.fillRect(0, 0, W, H);
 
     // 细格
@@ -4687,8 +4688,8 @@ function startFernweh(canvas, ctx, W, H, data) {
 function drawBucketNetwork(ctx, W, H, data) {
   var nodes = data.nodes || [], edges = data.edges || [];
   if (!nodes.length) {
-    ctx.fillStyle = '#0A1120'; ctx.fillRect(0,0,W,H);
-    ctx.fillStyle = '#5E7896';
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--lcd').trim() || '#CFE7DB'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--lcd-text').trim() || '#2F4F4F';
     ctx.fillText('没有备忘录', W/2, H/2);
     return;
   }
@@ -4719,29 +4720,29 @@ function drawBucketNetwork(ctx, W, H, data) {
     });
     nodes.forEach(function(n){var p=positions[n.id]; p.x+=(cx-p.x)*0.01; p.y+=(cy-p.y)*0.01;});
   }
-  ctx.fillStyle='#0A1120'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--lcd').trim() || '#CFE7DB'; ctx.fillRect(0,0,W,H);
   edges.forEach(function(e){
     var pa=positions[e.source], pb=positions[e.target]; if(!pa||!pb) return;
     var w=e.weight||0.5;
     ctx.beginPath(); ctx.moveTo(pa.x,pa.y); ctx.lineTo(pb.x,pb.y);
-    ctx.strokeStyle='rgba(120,150,200,'+(w*0.35)+')'; ctx.lineWidth=Math.max(0.5,w*2);
+    ctx.strokeStyle='rgba(110,148,134,'+(w*0.35)+')'; ctx.lineWidth=Math.max(0.5,w*2);
     ctx.stroke();
   });
-  var colors = { dynamic:'#8FB3E8', permanent:'#C0A468', feel:'#C99BB0', archived:'#5E7896' };
+  var colors = { dynamic:'#D99A2B', permanent:'#7A8B3A', feel:'#D9A8A0', archived:'#6E9486' };
   nodes.forEach(function(n){
     var p=positions[n.id];
     var r=Math.max(4, Math.min(14, (n.score||0)*0.8));
-    var color = colors[n.type] || '#8FB3E8';
+    var color = colors[n.type] || '#D99A2B';
     // anchor 节点：朱砂外圈 (#10)
     if (n.anchor) {
       ctx.beginPath(); ctx.arc(p.x,p.y,r+6,0,Math.PI*2);
-      ctx.strokeStyle='#E8ECF4'; ctx.lineWidth=2; ctx.stroke();
+      ctx.strokeStyle='#45391F'; ctx.lineWidth=2; ctx.stroke();
     }
     ctx.beginPath(); ctx.arc(p.x,p.y,r+4,0,Math.PI*2); ctx.fillStyle=color+'15'; ctx.fill();
     ctx.beginPath(); ctx.arc(p.x,p.y,r,0,Math.PI*2); ctx.fillStyle=n.resolved?color+'70':color; ctx.fill();
-    if (n.pinned) { ctx.strokeStyle='#C0A468'; ctx.lineWidth=2; ctx.stroke(); }
+    if (n.pinned) { ctx.strokeStyle='#7A8B3A'; ctx.lineWidth=2; ctx.stroke(); }
     var name=(n.anchor?'⚓ ':'')+(n.name||n.id); if (name.length>12) name=name.slice(0,12)+'…';
-    ctx.fillStyle=n.anchor?'#E8ECF4':'#9BA6BE';
+    ctx.fillStyle=n.anchor?'#45391F':'#6E9486';
     ctx.font=n.anchor?"bold 11px 'Share Tech Mono',monospace":"11px 'Share Tech Mono',monospace";
     ctx.textAlign='center';
     ctx.fillText(name, p.x, p.y+r+14);
@@ -4965,10 +4966,10 @@ async function runBreathDebug() {
     }
 
     var barColors = {
-      topic: '#8FB3E8',
-      emotion: '#C99BB0',
-      time: '#C0A468',
-      importance: '#7BA694',
+      topic: '#D99A2B',
+      emotion: '#D9A8A0',
+      time: '#B9862F',
+      importance: '#7A8B3A',
     };
 
     results.innerHTML = data.results.map(function(r, i) {
