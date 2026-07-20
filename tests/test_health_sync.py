@@ -7,7 +7,7 @@ from web import health_data
 def test_health_daily_summary_accepts_only_the_small_daily_schema():
     day = _clean_day({
         "date": "2026-07-18",
-        "sleep": {"duration_hours": 7.5},
+        "sleep": {"duration_hours": 7.5, "bedtime": "2026-07-17T23:40:00+08:00", "score": 87, "score_source": "garden_estimate"},
         "activity": {"steps": 4567},
         "heart": {"resting_bpm": 58, "hrv_ms": 42},
         "cycle": {"flow": "light", "cycle_start": True},
@@ -16,6 +16,7 @@ def test_health_daily_summary_accepts_only_the_small_daily_schema():
     assert day["date"] == "2026-07-18"
     assert day["activity"]["steps"] == 4567
     assert day["cycle"]["flow"] == "light"
+    assert day["sleep"] == {"duration_hours": 7.5, "bedtime": "2026-07-17T23:40:00+08:00", "score": 87.0, "score_source": "garden_estimate"}
 
 
 @pytest.mark.parametrize("payload", [
@@ -23,6 +24,8 @@ def test_health_daily_summary_accepts_only_the_small_daily_schema():
     {"date": "2026-07-18", "heart": {"resting_bpm": 4}},
     {"date": "2026-07-18", "cycle": {"flow": "unknown"}},
     {"date": "2026-07-18", "workouts": [{}]},
+    {"date": "2026-07-18", "sleep": {"bedtime": "after lunch"}},
+    {"date": "2026-07-18", "sleep": {"score_source": "apple"}},
 ])
 def test_health_daily_summary_rejects_invalid_or_implausible_data(payload):
     with pytest.raises(ValueError):
