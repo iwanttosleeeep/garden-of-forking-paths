@@ -1061,28 +1061,35 @@
   #list-view .bucket-row:nth-child(3n) { border-left-color: var(--section-rose) !important; }
   #list-view .bucket-row.faded { border-left-color: var(--border-strong) !important; }
 
-  #tools-view .config-section,
-  #health-view .config-section {
-    background: var(--section-sea-wash);
-    box-shadow: 8px 8px 22px rgba(70,105,91,.16), -7px -7px 16px rgba(255,255,255,.62), inset 0 1px 0 rgba(255,255,255,.64);
+  /* 每条路径的内容框沿用导航入口的颜色；Toolbox 留作中性工作台。 */
+  #plan-view,
+  #letters-view,
+  #health-view,
+  #anchors-view {
+    --text: #FFFDF5;
+    --text-dim: rgba(255,253,245,.78);
+    --text-light: rgba(255,253,245,.66);
+    --border: rgba(255,253,245,.44);
   }
-  #tools-view .config-section h3,
-  #health-view .config-section h3 { color: var(--lcd-text); }
+  #plan-view .config-section { background: #8A9A3B; }
+  #letters-view .config-section { background: #D96C2C; }
+  #health-view .config-section { background: #7B3F1E; }
+  #anchors-view .config-section { background: #8A8065; }
+  #plan-view .config-section,
+  #letters-view .config-section,
+  #health-view .config-section,
+  #anchors-view .config-section {
+    box-shadow: 8px 8px 22px rgba(69,57,31,.22), -7px -7px 16px rgba(255,255,255,.38), inset 0 1px 0 rgba(255,255,255,.24);
+  }
   #tools-view .tool-card { background: rgba(255,255,255,.38); }
 
+  #journal-view .config-section { background: #D9A8A0; }
+  #chats-view .config-section { background: #B8860B; }
   #journal-view .config-section,
   #chats-view .config-section {
-    background: var(--section-rose-wash);
-    box-shadow: 8px 8px 22px rgba(132,83,76,.16), -7px -7px 16px rgba(255,255,255,.62), inset 0 1px 0 rgba(255,255,255,.65);
+    box-shadow: 8px 8px 22px rgba(69,57,31,.18), -7px -7px 16px rgba(255,255,255,.48), inset 0 1px 0 rgba(255,255,255,.38);
   }
-  #journal-view .config-section h3,
-  #chats-view .config-section h3 { color: #8F5D58; }
   #chats-view #chat-history-list > * { background: rgba(255,255,255,.34); }
-
-  #letters-view .config-section,
-  #plan-view .config-section { background: #F4EACF; }
-  #letters-view .config-section h3,
-  #plan-view .config-section h3 { color: #9B6D1E; }
 
   /* ============ 详情面板操作按钮组：宽松排版，字文绝不溢出 ============ */
   .detail-actions {
