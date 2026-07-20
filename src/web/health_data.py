@@ -120,6 +120,17 @@ def _clean_day(item: Any) -> dict[str, Any]:
         clean = {key: _number(source.get(key), key, *bounds) for key, bounds in fields.items() if source.get(key) is not None}
         if clean:
             result[section] = clean
+    sleep = item.get("sleep")
+    if isinstance(sleep, dict) and sleep.get("bedtime") is not None:
+        try:
+            bedtime = datetime.fromisoformat(str(sleep["bedtime"]).replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise ValueError("sleep.bedtime 必须是 ISO 8601 时间") from exc
+        result.setdefault("sleep", {})["bedtime"] = bedtime.isoformat()
+    if isinstance(sleep, dict) and sleep.get("score_source") is not None:
+        if sleep["score_source"] != "garden_estimate":
+            raise ValueError("sleep.score_source 无效")
+        result.setdefault("sleep", {})["score_source"] = "garden_estimate"
     cycle = item.get("cycle")
     if cycle is not None:
         if not isinstance(cycle, dict):
