@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400;1,500&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#E6DCC3; color:#45391F; font-family:'Share Tech Mono',monospace; -webkit-font-smoothing:antialiased; }
+  a { color:#45391F; text-decoration:none; }
+  a:hover { color:#D99A2B; }
+  @keyframes gfpFade { from { opacity:0; } to { opacity:1; } }
+  @keyframes gfpRise { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+</style>
+</head>
+<body>
+<div id="gfp-outer" style="height:100vh; overflow:hidden; display:flex; align-items:center; justify-content:center;">
+<div id="gfp-map" style="position:relative; width:1440px; height:900px; flex:none; transform:scale(var(--gfp-scale, 1)); transform-origin:center center;">
+  <svg viewBox="0 0 1440 900" style="position:absolute; inset:0; width:100%; height:100%; display:block;" aria-hidden="true">
+    <!-- paper + chart frame -->
+    <rect x="8" y="8" width="1424" height="884" fill="#EDE3CB"></rect>
+    <rect x="30" y="30" width="1380" height="840" fill="none" stroke="#8A7550" stroke-width="2.5"></rect>
+    <rect x="38" y="38" width="1364" height="824" fill="none" stroke="#8A7550" stroke-width="0.8"></rect>
+    <!-- sea -->
+    <rect x="44" y="44" width="1352" height="812" fill="#CBDCD3"></rect>
+    <!-- water contour wisps -->
+    <g fill="none" stroke="#B7CCC1" stroke-width="1.1" style="animation:gfpFade 1s ease .2s both;">
+      <path d="M 60 200 C 160 170, 260 190, 340 160 C 430 128, 520 140, 600 110"></path>
+      <path d="M 60 260 C 170 235, 250 258, 330 232"></path>
+      <path d="M 1180 100 C 1250 120, 1310 110, 1390 130"></path>
+      <path d="M 1240 760 C 1300 740, 1350 758, 1396 745"></path>
+      <path d="M 70 600 C 120 580, 160 596, 210 578"></path>
+      <path d="M 480 850 C 560 830, 640 848, 720 830 C 810 810, 890 828, 960 812"></path>
+      <path d="M 560 210 C 600 195, 640 205, 680 190"></path>
+    </g>
+    <g>
+      <g style="opacity:0.55; animation:gfpFade 1s ease .1s both;">
+        <path d="M 360 44 V 856 M 720 44 V 856 M 1080 44 V 856 M 44 225 H 1396 M 44 450 H 1396 M 44 675 H 1396" stroke="#9FB5A9" stroke-width="0.8" fill="none"></path>
+        <g font-family="Share Tech Mono, monospace" font-size="10" fill="#7A6C4C">
+          <text x="360" y="26" text-anchor="middle">71°40'</text><text x="720" y="26" text-anchor="middle">71°20'</text><text x="1080" y="26" text-anchor="middle">71°00'</text>
+          <text x="360" y="886" text-anchor="middle">71°40'</text><text x="720" y="886" text-anchor="middle">71°20'</text><text x="1080" y="886" text-anchor="middle">71°00'</text>
+          <text x="24" y="229" text-anchor="middle" transform="rotate(-90 24 229)">44°30'</text><text x="24" y="454" text-anchor="middle" transform="rotate(-90 24 454)">44°20'</text><text x="24" y="679" text-anchor="middle" transform="rotate(-90 24 679)">44°10'</text>
+          <text x="1416" y="229" text-anchor="middle" transform="rotate(90 1416 229)">44°30'</text><text x="1416" y="454" text-anchor="middle" transform="rotate(90 1416 454)">44°20'</text><text x="1416" y="679" text-anchor="middle" transform="rotate(90 1416 679)">44°10'</text>
+        </g>
+      </g>
+    </g>
+  </svg>
+  <img src="/static/islands-user.png" alt="" style="position:absolute; left:50px; top:88px; width:1340px; height:725px; filter:drop-shadow(0 0 7px #AFC6BA) drop-shadow(0 0 2px #AFC6BA); animation:gfpFade .9s ease .4s both; pointer-events:none;">
+  <svg viewBox="0 0 1440 900" style="position:absolute; inset:0; width:100%; height:100%; display:block;" aria-hidden="true">
+    <!-- shoal crosses -->
+    <g stroke="#7A8F84" stroke-width="1.3" style="animation:gfpFade .9s ease .6s both;">
+      <path d="M 1000 690 l 8 8 m 0 -8 l -8 8 M 1032 705 l 8 8 m 0 -8 l -8 8 M 988 710 l 8 8 m 0 -8 l -8 8"></path>
+      <path d="M 1320 660 l 8 8 m 0 -8 l -8 8 M 1350 678 l 8 8 m 0 -8 l -8 8"></path>
+    </g>
+    <!-- sea labels -->
+    <g font-family="Share Tech Mono, monospace" fill="#6E8378" style="animation:gfpFade 1s ease .7s both;">
+      <text x="150" y="105" font-size="15" letter-spacing="5">BLACK BEACON SOUND</text>
+      <text x="560" y="800" font-size="11" letter-spacing="3" transform="rotate(-8 560 800)">COLD-WATER CHANNEL</text>
+      <text x="1180" y="780" font-size="12" letter-spacing="4">LAND'S END</text>
+      <text x="965" y="738" font-size="10" letter-spacing="2">RICKETY SHOALS</text>
+      <text x="70" y="368" font-size="10" letter-spacing="2">PUFFIN ISLETS</text>
+      <text x="180" y="490" font-size="10" letter-spacing="2" fill="#8A7550">HONESTY ROCK</text>
+      <text x="968" y="330" font-size="9" letter-spacing="1.5" text-anchor="middle" transform="rotate(-58 968 330)">STONE COVE</text>
+    </g>
+    <!-- island names -->
+    <g font-family="Share Tech Mono, monospace" fill="#8A7550" style="animation:gfpFade 1s ease .7s both;">
+      <text x="1120" y="295" font-size="12" letter-spacing="2.5" text-anchor="middle">NEW PENZANCE</text>
+      <text x="1120" y="312" font-size="12" letter-spacing="2.5" text-anchor="middle">ISLAND</text>
+      <text x="1120" y="330" font-size="8.5" letter-spacing="0.5" fill="#A09373" text-anchor="middle">SQUARE MILES 32,200 · EST. 1783</text>
+      <text x="415" y="455" font-size="10" letter-spacing="1.5" text-anchor="middle">STOCKHAUSEN</text>
+      <text x="415" y="470" font-size="10" letter-spacing="1.5" text-anchor="middle">ISLAND</text>
+      <text x="810" y="800" font-size="11" letter-spacing="2" text-anchor="middle">FIDELITY ISLAND</text>
+    </g>
+    <!-- forking trails: trunks -->
+    <g fill="none" stroke="#5F5236" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="2 9" style="animation:gfpFade .7s ease .8s both;">
+      <path d="M 720 302 C 720 292, 720 282, 720 268"></path>
+      <path d="M 938 468 C 958 472, 976 476, 992 480"></path>
+      <path d="M 502 492 C 486 500, 472 508, 458 518"></path>
+    </g>
+    <g fill="#5F5236" style="animation:gfpFade .5s ease 1s both;">
+      <circle cx="720" cy="268" r="4"></circle>
+      <circle cx="992" cy="480" r="4"></circle>
+      <circle cx="458" cy="518" r="4"></circle>
+    </g>
+    <!-- branches, one colour per sector -->
+    <g fill="none" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="2 9" style="animation:gfpFade .9s ease 1.1s both;">
+      <path d="M 720 268 C 790 250, 880 245, 962 250" stroke="#E8A33D"></path>
+      <path d="M 720 268 C 840 220, 980 190, 1058 175" stroke="#D96C2C"></path>
+      <path d="M 720 268 C 560 220, 300 240, 138 290" stroke="#8A9A3B"></path>
+      <path d="M 992 480 C 1070 465, 1150 445, 1212 430" stroke="#D9A8A0"></path>
+      <path d="M 992 480 C 1018 494, 1040 508, 1055 518" stroke="#B8860B"></path>
+      <path d="M 992 480 C 950 545, 880 620, 825 668" stroke="#7B3F1E"></path>
+      <path d="M 458 518 C 420 512, 385 506, 362 502" stroke="#7FCDBB"></path>
+      <path d="M 458 518 C 435 552, 418 585, 406 604" stroke="#8A8065"></path>
+      <path d="M 458 518 C 440 590, 405 670, 378 718" stroke="#A8B0A0"></path>
+    </g>
+    <g>
+      <g style="animation:gfpFade .8s ease 1.3s both;" stroke="#5F5236" fill="none">
+        <circle cx="145" cy="770" r="46" stroke-width="1.3"></circle>
+        <circle cx="145" cy="770" r="38" stroke-width="0.7" stroke-dasharray="1.5 4.4"></circle>
+        <circle cx="145" cy="770" r="26" stroke-width="0.7"></circle>
+        <path d="M 145 728 L 152 770 L 145 812 L 138 770 Z" fill="#D96C2C" stroke="none"></path>
+        <path d="M 103 770 L 145 763 L 187 770 L 145 777 Z" fill="#EFE0BE" stroke="#5F5236" stroke-width="0.8"></path>
+        <path d="M 116 741 L 174 799 M 174 741 L 116 799" stroke-width="0.7"></path>
+      </g>
+      <g font-family="Cormorant Garamond, serif" font-style="italic" font-size="14" fill="#5F5236" style="animation:gfpFade .8s ease 1.3s both;">
+        <text x="145" y="714" text-anchor="middle">N</text><text x="145" y="838" text-anchor="middle">S</text>
+        <text x="200" y="774" text-anchor="middle">E</text><text x="90" y="774" text-anchor="middle">W</text>
+      </g>
+    </g>
+    <!-- scale bar -->
+    <g style="animation:gfpFade .8s ease 1.3s both;">
+      <text x="1215" y="800" font-family="Share Tech Mono, monospace" font-size="10" fill="#5F5236" letter-spacing="1">SCALE 1:24000</text>
+      <rect x="1215" y="808" width="40" height="6" fill="#45391F"></rect>
+      <rect x="1255" y="808" width="40" height="6" fill="none" stroke="#45391F" stroke-width="1"></rect>
+      <rect x="1295" y="808" width="40" height="6" fill="#45391F"></rect>
+      <text x="1215" y="830" font-family="Share Tech Mono, monospace" font-size="9" fill="#7A6C4C">0</text>
+      <text x="1275" y="830" font-family="Share Tech Mono, monospace" font-size="9" fill="#7A6C4C" text-anchor="middle">500</text>
+      <text x="1335" y="830" font-family="Share Tech Mono, monospace" font-size="9" fill="#7A6C4C" text-anchor="end">1000 PACES</text>
+    </g>
+    <text x="52" y="850" font-family="Share Tech Mono, monospace" font-size="9" fill="#A09373" letter-spacing="1" style="animation:gfpFade .8s ease 1.3s both;">SOUNDINGS IN FATHOMS · SURVEYED 2026 · CHART № 127.0.0.1</text>
+  </svg>
+  <!-- cartouche -->
+  <div style="position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:410px; text-align:center;">
+    <div style="animation:gfpRise .8s cubic-bezier(.2,.7,.3,1) .25s both; background:#F4EDDA; border-radius:6px; padding:26px 30px 24px; box-shadow:6px 8px 18px rgba(60,72,60,0.25), inset 0 1px 0 rgba(255,255,255,0.55); border:1px solid #C9B78D;">
+      <div style="border:1px solid #C9B78D; border-radius:3px; padding:20px 18px 18px; box-shadow:inset 0 0 0 3px #F4EDDA, inset 0 0 0 4px #C9B78D;">
+        <h1 style="margin:0; font-family:'Cormorant Garamond',serif; font-weight:600; font-size:33px; line-height:1.18; color:#45391F; letter-spacing:2px;">The Garden of<br>Forking Paths</h1>
+        <div style="margin:14px auto 0; width:56px; height:1px; background:#C9B78D;"></div>
+        <p style="margin:13px 0 0; font-family:'Cormorant Garamond',serif; font-style:italic; font-size:15px; line-height:1.55; color:#7A6C4C; white-space:nowrap;">"Time forks perpetually toward innumerable futures."</p>
+        <p style="margin:4px 0 0; font-size:10px; color:#A09373; letter-spacing:2px;">— JORGE LUIS BORGES</p>
+      </div>
+      <a href="/garden" style="display:inline-flex; align-items:center; gap:8px; margin-top:16px; padding:11px 26px; border-radius:4px; background:linear-gradient(150deg,#E8B95C,#D99A2B); color:#FFFDF5; font-size:12px; letter-spacing:2px; box-shadow:3px 4px 10px rgba(60,72,60,0.28), inset 0 1px 0 rgba(255,255,255,0.35); text-shadow:0 1px 1px rgba(120,90,20,0.35);" style-hover="transform:translateY(-2px); color:#FFFDF5;">ENTER THE GARDEN →</a>
+    </div>
+  </div>
+  <!-- landmarks -->
+  <a href="/garden#list" style="position:absolute; left:68%; top:28%; transform:translate(-50%,-50%);"><div style="display:flex; flex-direction:column-reverse; align-items:center; gap:5px; animation:gfpRise .6s ease 1.2s both;" style-hover="transform:translateY(-3px);"><div style="width:36px; height:36px; border-radius:50%; background:#E8A33D; color:#FBF6E7; display:flex; align-items:center; justify-content:center; font-family:'Cormorant Garamond',serif; font-weight:600; font-size:18px; border:2px solid #FBF6E7; box-shadow:2px 3px 7px rgba(60,72,60,0.3);">M</div><div style="text-align:center;"><div style="font-size:12px; letter-spacing:2px;">MEMOS</div><div style="font-family:'Cormorant Garamond',serif; font-style:italic; font-size:11.5px; color:#7A6C4C;">Camp of Notes</div></div></div></a>
+  <a href="/garden#letters" style="position:absolute; left:73.8%; top:19.1%; transform:translate(-50%,-50%);"><div style="display:flex; flex-direction:column-reverse; align-items:center; gap:5px; animation:gfpRise .6s ease 1.25s both;" style-hover="transform:translateY(-3px);"><div style="width:36px; height:36px; border-radius:50%; background:#D96C2C; color:#FBF6E7; display:flex; align-items:center; justify-content:center; font-family:'Cormorant Garamond',serif; font-weight:600; font-size:18px; border:2px solid #FBF6E7; box-shadow:2px 3px 7px rgba(60,72,60,0.3);">L</div><div style="text-align:center;"><div style="font-size:12px; letter-spacing:2px;">LETTERS</div><div style="font-family:'Cormorant Garamond',serif; font-style:italic; font-size:11.5px; color:#7A6C4C;">Wellfleet Post</div></div></div></a>
+  <a href="/garden#plan" style="position:absolute; left:8.5%; top:34%; transform:translate(-50%,-50%);"><div style="display:flex; flex-direction:column; align-items:center; gap:5px; animation:gfpRise .6s ease 1.3s both;" style-hover="transform:translateY(-3px);"><div style="width:36px; height:36px; border-radius:50%; background:#8A9A3B; color:#FBF6E7; display:flex; align-items:center; justify-content:center; font-family:'Cormorant Garamond',serif; font-weight:600; font-size:18px; border:2px solid #FBF6E7; box-shadow:2px 3px 7px rgba(60,72,60,0.3);">P</div><div style="text-align:center;"><div style="font-size:12px; letter-spacing:2px;">PLANS</div><div style="font-family:'Cormorant Garamond',serif; font-style:italic; font-size:11.5px; color:#7A6C4C;">Expedition HQ</div></div></div></a>
+  <a href="/garden#journal" style="position:absolute; left:85.4%; top:47.6%; transform:translate(-50%,-50%);"><div style="display:flex; flex-direction:column; align-items:center; gap:5px; animation:gfpRise .6s ease 1.35s both;" style-hover="transform:translateY(-3px);"><div style="width:36px; height:36px; border-radius:50%; background:#D9A8A0; color:#FBF6E7; display:flex; align-items:center; justify-content:center; font-family:'Cormorant Garamond',serif; font-weight:600; font-size:18px; border:2px solid #FBF6E7; box-shadow:2px 3px 7px rgba(60,72,60,0.3);">J</div><div style="text-align:center;"><div style="font-size:12px; letter-spacing:2px;">JOURNAL</div><div style="font-family:'Cormorant Garamond',serif; font-style:italic; font-size:11.5px; color:#7A6C4C;">Summer's End</div></div></div></a>
+  <a href="/garden#chats" style="position:absolute; left:74.2%; top:58.3%; transform:translate(-50%,-50%);"><div style="display:flex; flex-direction:column; align-items:center; gap:5px; animation:gfpRise .6s ease 1.4s both;" style-hover="transform:translateY(-3px);"><div style="width:36px; height:36px; border-radius:50%; background:#B8860B; color:#FBF6E7; display:flex; align-items:center; justify-content:center; font-family:'Cormorant Garamond',serif; font-weight:600; font-size:18px; border:2px solid #FBF6E7; box-shadow:2px 3px 7px rgba(60,72,60,0.3);">C</div><div style="text-align:center;"><div style="font-size:12px; letter-spacing:2px;">CHATS</div><div style="font-family:'Cormorant Garamond',serif; font-style:italic; font-size:11.5px; color:#7A6C4C;">Radio Relay</div></div></div></a>
+  <a href="/garden#health" style="position:absolute; left:56.4%; top:76.1%; transform:translate(-50%,-50%);"><div style="display:flex; flex-direction:column-reverse; align-items:center; gap:5px; animation:gfpRise .6s ease 1.45s both;" style-hover="transform:translateY(-3px);"><div style="width:36px; height:36px; border-radius:50%; background:#7B3F1E; color:#FBF6E7; display:flex; align-items:center; justify-content:center; font-family:'Cormorant Garamond',serif; font-weight:600; font-size:18px; border:2px solid #FBF6E7; box-shadow:2px 3px 7px rgba(60,72,60,0.3);">H</div><div style="text-align:center;"><div style="font-size:12px; letter-spacing:2px;">HEALTH</div><div style="font-family:'Cormorant Garamond',serif; font-style:italic; font-size:11.5px; color:#7A6C4C;">First-Aid Station</div></div></div></a>
+  <a href="/garden#network" style="position:absolute; left:26%; top:82%; transform:translate(-50%,-50%);"><div style="display:flex; flex-direction:column; align-items:center; gap:5px; animation:gfpRise .6s ease 1.5s both;" style-hover="transform:translateY(-3px);"><div style="width:36px; height:36px; border-radius:50%; background:#A8B0A0; color:#FBF6E7; display:flex; align-items:center; justify-content:center; font-family:'Cormorant Garamond',serif; font-weight:600; font-size:18px; border:2px solid #FBF6E7; box-shadow:2px 3px 7px rgba(60,72,60,0.3);">N</div><div style="text-align:center;"><div style="font-size:12px; letter-spacing:2px;">NETWORK</div><div style="font-family:'Cormorant Garamond',serif; font-style:italic; font-size:11.5px; color:#7A6C4C;">Memory Web</div></div></div></a>
+  <a href="/garden#breath" style="position:absolute; left:24%; top:55.6%; transform:translate(-50%,-50%);"><div style="display:flex; flex-direction:column; align-items:center; gap:5px; animation:gfpRise .6s ease 1.55s both;" style-hover="transform:translateY(-3px);"><div style="width:36px; height:36px; border-radius:50%; background:#7FCDBB; color:#45391F; display:flex; align-items:center; justify-content:center; font-family:'Cormorant Garamond',serif; font-weight:600; font-size:18px; border:2px solid #FBF6E7; box-shadow:2px 3px 7px rgba(60,72,60,0.3);">B</div><div style="text-align:center;"><div style="font-size:12px; letter-spacing:2px;">BREATH</div><div style="font-family:'Cormorant Garamond',serif; font-style:italic; font-size:11.5px; color:#7A6C4C;">Tidal Inlet</div></div></div></a>
+  <a href="/garden#anchors" style="position:absolute; left:27.8%; top:68.9%; transform:translate(-50%,-50%);"><div style="display:flex; flex-direction:column; align-items:center; gap:5px; animation:gfpRise .6s ease 1.6s both;" style-hover="transform:translateY(-3px);"><div style="width:36px; height:36px; border-radius:50%; background:#8A8065; color:#FBF6E7; display:flex; align-items:center; justify-content:center; font-family:'Cormorant Garamond',serif; font-weight:600; font-size:18px; border:2px solid #FBF6E7; box-shadow:2px 3px 7px rgba(60,72,60,0.3);">A</div><div style="text-align:center;"><div style="font-size:12px; letter-spacing:2px;">ANCHORS</div><div style="font-family:'Cormorant Garamond',serif; font-style:italic; font-size:11.5px; color:#7A6C4C;">Mooring Point</div></div></div></a>
+</div>
+</div>
+<script>
+  (function () {
+    const outer = document.getElementById('gfp-outer');
+    const map = document.getElementById('gfp-map');
+    function resizeMap() {
+      const scale = Math.min(outer.clientWidth * 0.97 / 1440, outer.clientHeight * 0.96 / 900, 1.05);
+      map.style.setProperty('--gfp-scale', scale);
+    }
+    resizeMap();
+    window.addEventListener('resize', resizeMap);
+  }());
+</script>
+</body>
+</html>

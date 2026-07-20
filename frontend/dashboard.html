@@ -1940,6 +1940,7 @@
   <div class="tab" data-tab="health"><span>健康</span><span class="tab-en">Health</span></div>
   <div class="tab" data-tab="anchors"><span>锚点</span><span class="tab-en">Anchors</span></div>
   <div class="tab-row-break" aria-hidden="true"></div>
+  <div class="tab-spacer"></div>
   <div class="tab" data-tab="logs"><span>日志</span><span class="tab-en">Logs</span></div>
   <div class="tab" data-tab="tools"><span>工具箱</span><span class="tab-en">Toolbox</span></div>
   <div class="tab" data-tab="settings"><span>设置</span><span class="tab-en">Settings</span></div>
@@ -1949,7 +1950,6 @@
        v3_runtime 接入后，取消下一行注释即可恢复入口。
   <div class="tab" data-tab="v3-debug"><span>2.4.0 Debug</span><span class="tab-en">Replay</span></div>
   -->
-  <div class="tab-spacer"></div>
 </div>
 
 <!-- embed-warn-banner: 向量化未配置时始终可见，配置后自动消失 -->
@@ -7483,11 +7483,10 @@ pollHeartbeat();
 pollCriticalErrors();
 _errorAlertTimer = setInterval(pollCriticalErrors, 60000);
 maybeShowOnboarding();
-// 支持 #letters 锚点直达（老书签从 /letters → / #letters 时自动切换）
-if (location.hash === '#letters') {
-  const t = document.querySelector('.tab[data-tab="letters"]');
-  if (t) t.click();
-}
+// 地图入口与旧书签都可用 #tab 名称直接打开相应页面。
+const initialTab = location.hash.slice(1);
+const initialTabButton = document.querySelector('.tab[data-tab="' + initialTab + '"]');
+if (initialTabButton) initialTabButton.click();
 
 // ── 给作者反馈 ──────────────────────────────────────────────
 </script>
