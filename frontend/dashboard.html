@@ -847,24 +847,47 @@
     box-shadow: 4px 4px 11px var(--shadow-dark-subtle), -4px -4px 9px var(--shadow-light),
                 0 0 0 2px var(--accent-glow), inset 0 0 14px rgba(175,195,230,0.10);
   }
-  .tab.active .tab-en { color: var(--accent); }
-  /* 区域色只在当前标签与它的主面板出现：颜色是导航，不是装饰噪音。 */
-  .tab[data-tab="tools"].active,
-  .tab[data-tab="health"].active {
-    color: var(--section-sea);
-    box-shadow: 4px 4px 11px var(--shadow-dark-subtle), -4px -4px 9px var(--shadow-light),
-                0 0 0 2px rgba(110,148,134,.22), inset 0 0 14px rgba(110,148,134,.10);
-  }
-  .tab[data-tab="tools"].active .tab-en,
-  .tab[data-tab="health"].active .tab-en { color: var(--section-sea); }
+  /* 首页入口本身就是一张色彩地图：无需点开，也能一眼辨认每一条路径。 */
+  .tab[data-tab="list"]    { background: #E8A33D; color: #45391F; }
+  .tab[data-tab="letters"] { background: #D96C2C; color: #FFFDF5; }
+  .tab[data-tab="plan"]    { background: #8A9A3B; color: #FFFDF5; }
+  .tab[data-tab="journal"] { background: #D9A8A0; color: #45391F; }
+  .tab[data-tab="chats"]   { background: #B8860B; color: #45391F; }
+  .tab[data-tab="health"]  { background: #7B3F1E; color: #FFFDF5; }
+  .tab[data-tab="network"] { background: #A8B0A0; color: #45391F; }
+  .tab[data-tab="breath"]  { background: #7FCDBB; color: #45391F; }
+  .tab[data-tab="anchors"] { background: #8A8065; color: #FFFDF5; }
+  .tab[data-tab="list"] .tab-en,
+  .tab[data-tab="letters"] .tab-en,
+  .tab[data-tab="plan"] .tab-en,
+  .tab[data-tab="journal"] .tab-en,
+  .tab[data-tab="chats"] .tab-en,
+  .tab[data-tab="health"] .tab-en,
+  .tab[data-tab="network"] .tab-en,
+  .tab[data-tab="breath"] .tab-en,
+  .tab[data-tab="anchors"] .tab-en { color: currentColor; opacity: .72; }
+  .tab[data-tab="list"].active,
+  .tab[data-tab="letters"].active,
+  .tab[data-tab="plan"].active,
   .tab[data-tab="journal"].active,
-  .tab[data-tab="chats"].active {
-    color: #B77D76;
+  .tab[data-tab="chats"].active,
+  .tab[data-tab="health"].active,
+  .tab[data-tab="network"].active,
+  .tab[data-tab="breath"].active,
+  .tab[data-tab="anchors"].active {
+    color: inherit;
     box-shadow: 4px 4px 11px var(--shadow-dark-subtle), -4px -4px 9px var(--shadow-light),
-                0 0 0 2px rgba(217,168,160,.28), inset 0 0 14px rgba(217,168,160,.12);
+                0 0 0 2px rgba(69,57,31,.56), inset 0 0 14px rgba(255,255,255,.16);
   }
+  .tab[data-tab="list"].active .tab-en,
+  .tab[data-tab="letters"].active .tab-en,
+  .tab[data-tab="plan"].active .tab-en,
   .tab[data-tab="journal"].active .tab-en,
-  .tab[data-tab="chats"].active .tab-en { color: #B77D76; }
+  .tab[data-tab="chats"].active .tab-en,
+  .tab[data-tab="health"].active .tab-en,
+  .tab[data-tab="network"].active .tab-en,
+  .tab[data-tab="breath"].active .tab-en,
+  .tab[data-tab="anchors"].active .tab-en { color: currentColor; }
   .tab:active { transform: translateY(1px); box-shadow: inset 3px 3px 7px var(--shadow-dark-subtle), inset -2px -2px 6px var(--shadow-light); }
   .tab-spacer { box-shadow: none; background: transparent; }
 
@@ -1840,7 +1863,6 @@
   <div class="tab active" data-tab="list"><span>备忘录</span><span class="tab-en">Memos</span></div>
   <div class="tab" data-tab="breath"><span>Breath 模拟</span><span class="tab-en">Breath Trace</span></div>
   <div class="tab" data-tab="network"><span>记忆网络</span><span class="tab-en">Network</span></div>
-  <div class="tab" data-tab="tools"><span>工具箱</span><span class="tab-en">Toolbox</span></div>
   <div class="tab" data-tab="plan"><span>计划</span><span class="tab-en">Plans</span></div>
   <div class="tab" data-tab="letters"><span>信</span><span class="tab-en">Letters</span></div>
   <div class="tab" data-tab="journal"><span>日记</span><span class="tab-en">Journal</span></div>
@@ -1848,6 +1870,7 @@
   <div class="tab" data-tab="health"><span>健康</span><span class="tab-en">Health</span></div>
   <div class="tab" data-tab="anchors"><span>锚点</span><span class="tab-en">Anchors</span></div>
   <div class="tab" data-tab="logs"><span>日志</span><span class="tab-en">Logs</span></div>
+  <div class="tab" data-tab="tools"><span>工具箱</span><span class="tab-en">Toolbox</span></div>
   <div class="tab" data-tab="settings"><span>设置</span><span class="tab-en">Settings</span></div>
   <!-- v3-debug tab 暂时隐藏：后端 /api/v3/debug/* 路由已就位（只读、不写数据），
        但 v3_runtime 尚未接入（src/ombrebrain/ 架构核心未挂载到 server.py），
