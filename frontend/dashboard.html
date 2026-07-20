@@ -1062,15 +1062,6 @@
   #list-view .bucket-row.faded { border-left-color: var(--border-strong) !important; }
 
   /* 每条路径的内容框沿用导航入口的颜色；Toolbox 留作中性工作台。 */
-  #plan-view,
-  #letters-view,
-  #health-view,
-  #anchors-view {
-    --text: #FFFDF5;
-    --text-dim: rgba(255,253,245,.78);
-    --text-light: rgba(255,253,245,.66);
-    --border: rgba(255,253,245,.44);
-  }
   #plan-view .config-section { background: #8A9A3B; }
   #letters-view .config-section { background: #D96C2C; }
   #health-view .config-section { background: #7B3F1E; }
@@ -1081,6 +1072,55 @@
   #anchors-view .config-section {
     box-shadow: 8px 8px 22px rgba(69,57,31,.22), -7px -7px 16px rgba(255,255,255,.38), inset 0 1px 0 rgba(255,255,255,.24);
   }
+  /* 这三种中亮度底色用深墨水比白字更清楚；Health 的深棕底保留浅字。 */
+  #plan-view .config-section,
+  #letters-view .config-section {
+    color: #241E12;
+    --text: #241E12;
+    --text-dim: rgba(36,30,18,.78);
+    --text-light: rgba(36,30,18,.64);
+    --border: rgba(36,30,18,.44);
+  }
+  #anchors-view .config-section {
+    color: #1C170E;
+    --text: #1C170E;
+    --text-dim: rgba(28,23,14,.78);
+    --text-light: rgba(28,23,14,.64);
+    --border: rgba(28,23,14,.44);
+  }
+  #health-view .config-section {
+    color: #FFFDF5;
+    --text: #FFFDF5;
+    --text-dim: rgba(255,253,245,.82);
+    --text-light: rgba(255,253,245,.68);
+    --border: rgba(255,253,245,.46);
+  }
+  /* 有浅色底的控件和条目一律恢复深色墨水，不能继承外框的浅色文字。 */
+  #plan-view .plan-card,
+  #letters-view #letters-list article,
+  #health-view #health-days article,
+  #anchors-view #anchors-list > div {
+    color: #45391F;
+    --text: #45391F;
+    --text-dim: #7A6C4C;
+    --text-light: #A09373;
+    --border: #C9B78D;
+  }
+  #plan-view .config-section .btn-secondary,
+  #letters-view .config-section .btn-secondary,
+  #health-view .config-section > button:not(.btn-primary),
+  #anchors-view .config-section > button:not(.btn-primary),
+  #letters-view .date-pill,
+  #letters-view #letter-date-label {
+    color: #45391F !important;
+  }
+  #letters-view input,
+  #letters-view select,
+  #letters-view textarea,
+  #letters-view option {
+    color: #45391F !important;
+  }
+  #plan-view #plan-board h4 { color: var(--text) !important; }
   #tools-view .tool-card { background: rgba(255,255,255,.38); }
 
   #journal-view .config-section { background: #D9A8A0; }
@@ -1090,6 +1130,13 @@
     box-shadow: 8px 8px 22px rgba(69,57,31,.18), -7px -7px 16px rgba(255,255,255,.48), inset 0 1px 0 rgba(255,255,255,.38);
   }
   #chats-view #chat-history-list > * { background: rgba(255,255,255,.34); }
+  #chats-view .config-section {
+    color: #241E12;
+    --text: #241E12;
+    --text-dim: rgba(36,30,18,.78);
+    --text-light: rgba(36,30,18,.64);
+    --border: rgba(36,30,18,.44);
+  }
 
   /* ============ 详情面板操作按钮组：宽松排版，字文绝不溢出 ============ */
   .detail-actions {
