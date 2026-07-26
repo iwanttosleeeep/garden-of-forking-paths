@@ -19,10 +19,10 @@
 ## 门
 
 - `/` — 地图。逆时针旋转90度的UK Map,点击岛上的建筑进入各功能区
-- `/garden` — 完整的 Dashboard(午夜蓝掌机;白昼的月升王国配色在图纸上等着)
+- `/garden` — 完整的 Dashboard(星空由午夜蓝掌机;白昼的月升王国配色在图纸上等着)
 - `/mcp` · `/mcp-extra` — AI Connector 的入口,OAuth 把门
 
-正门:`moonrisekingdom.sehnsucht.uk`。门牌是一部电影里两个孩子给无名海湾起名的那个动作——**命名本身**。
+正门:`moonrisekingdom.sehnsucht.uk`。
 
 ## 怎么运转
 
