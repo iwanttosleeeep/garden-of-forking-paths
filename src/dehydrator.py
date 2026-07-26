@@ -696,7 +696,7 @@ class Dehydrator:
             valence, arousal = self._clamp_va(metadata)
             # 图标语义与 pulse 一致：📌 只给钉住/保护的核心桶，其余按类型区分，
             # 普通动态桶用 💭。此前无条件用 📌 会让 breath 浮现里每条都像「核心准则」，
-            # 与 docs/CLAUDE_PROMPT.md「带 📌 的是我钉的核心准则」的约定冲突。
+            # 与 docs/GARDEN_PROMPT.md「带 📌 的是宪法条款」的约定冲突。
             _btype = metadata.get("type")
             if metadata.get("pinned") or metadata.get("protected"):
                 _icon = "📌"

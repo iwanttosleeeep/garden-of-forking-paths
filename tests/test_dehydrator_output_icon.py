@@ -1,7 +1,7 @@
 """dehydrator._format_output 图标语义回归测试。
 
 历史 bug：无条件用 `📌 记忆桶:` 作前缀，导致 breath 浮现里每条普通动态记忆
-都顶着 📌，与 docs/CLAUDE_PROMPT.md「带 📌 的是我钉的核心准则」的约定冲突
+都顶着 📌，与 docs/GARDEN_PROMPT.md「带 📌 的是宪法条款」的约定冲突
 （pulse 用的是正确的 💭/📌 分级）。现在图标按 pinned/type 区分，与 pulse 一致。
 """
 import pytest

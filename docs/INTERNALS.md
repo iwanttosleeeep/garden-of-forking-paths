@@ -1,6 +1,6 @@
 # Ombre Brain — 内部开发文档 / INTERNALS
 
-> **第一人称原则（全局）**：Ombre Brain 的使用者是**模型自己**，不是用户。所有提示词、docstring、注释、前端说明文字必须用第一人称（"我的记忆"/"我记得"/"我感受到"），禁止"用户的记忆""帮用户记住""为用户存储"等第三人称表述。本规则覆盖 server.py 工具 docstring、CLAUDE_PROMPT.md、dashboard 文案、ENV_VARS.md 描述。改任何一段面向模型的文字前先回头看这条。
+> **第一人称原则（全局）**：Ombre Brain 的使用者是**模型自己**，不是用户。所有提示词、docstring、注释、前端说明文字必须用第一人称（"我的记忆"/"我记得"/"我感受到"），禁止"用户的记忆""帮用户记住""为用户存储"等第三人称表述。本规则覆盖 server.py 工具 docstring、GARDEN_PROMPT.md、dashboard 文案、ENV_VARS.md 描述。改任何一段面向模型的文字前先回头看这条。
 >
 > 本文档面向开发者和维护者。合并自原 INTERNALS.md（系统怎么运作）+ BEHAVIOR_SPEC.md（行为应该符合什么规格）。
 >
@@ -233,7 +233,7 @@ hold / grow（Claude 决策）
 
 (数据流约束：`touch()` 只在**检索命中**时调用，**浮现模式不调用**——这是为了不让 `breath()` 自动浮现重置衰减计时器，否则高活跃桶会永远霸占浮现位。)
 
-### 2.2 对话启动序列（CLAUDE_PROMPT.md 规定的 Claude 端行为）
+### 2.2 对话启动序列（GARDEN_PROMPT.md 规定的 Claude 端行为）
 
 ```
 1. breath()                — 必须。浮现未解决记忆
