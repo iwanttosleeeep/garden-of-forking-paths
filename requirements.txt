@@ -16,6 +16,9 @@ openai>=1.0.0
 pyyaml>=6.0
 types-PyYAML>=6.0
 
+# 安全解析用户上传 EPUB 中的 XML
+defusedxml>=0.7.1
+
 # Markdown frontmatter 解析（桶文件读写）
 python-frontmatter>=1.1.0
 

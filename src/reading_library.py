@@ -15,7 +15,10 @@ import zipfile
 from datetime import datetime, timezone
 from html.parser import HTMLParser
 from urllib.parse import unquote
-from xml.etree import ElementTree
+from xml.etree.ElementTree import Element, ParseError
+
+from defusedxml.ElementTree import fromstring as safe_xml_fromstring
+from defusedxml.common import DefusedXmlException
 
 
 MAX_BOOK_BYTES = 30 * 1024 * 1024
@@ -89,7 +92,7 @@ def _local_name(tag: str) -> str:
     return tag.rsplit("}", 1)[-1]
 
 
-def _xml_text(root: ElementTree.Element, name: str) -> str:
+def _xml_text(root: Element, name: str) -> str:
     for item in root.iter():
         if _local_name(item.tag) == name and item.text:
             return item.text.strip()
@@ -123,15 +126,15 @@ def _extract_epub(data: bytes) -> tuple[str, str, list[tuple[str, str]]]:
         if not container_name:
             raise ReadingLibraryError("EPUB 缺少 container.xml")
         try:
-            container = ElementTree.fromstring(archive.read(container_name))
+            container = safe_xml_fromstring(archive.read(container_name))
             rootfile = next(
                 str(item.attrib.get("full-path", ""))
                 for item in container.iter()
                 if _local_name(item.tag) == "rootfile"
             )
             opf_name = names[_safe_zip_member(rootfile)]
-            opf = ElementTree.fromstring(archive.read(opf_name))
-        except (ElementTree.ParseError, KeyError, StopIteration) as exc:
+            opf = safe_xml_fromstring(archive.read(opf_name))
+        except (ParseError, DefusedXmlException, KeyError, StopIteration) as exc:
             raise ReadingLibraryError("EPUB 目录结构无法解析") from exc
 
         title = _xml_text(opf, "title")

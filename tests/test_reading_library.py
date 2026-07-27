@@ -35,6 +35,21 @@ def _epub() -> bytes:
     return buffer.getvalue()
 
 
+def _epub_with_unsafe_container_xml() -> bytes:
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("mimetype", "application/epub+zip")
+        archive.writestr(
+            "META-INF/container.xml",
+            """<?xml version="1.0"?>
+            <!DOCTYPE container [<!ENTITY unsafe SYSTEM "file:///etc/passwd">]>
+            <container xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+              <rootfiles><rootfile full-path="&unsafe;"/></rootfiles>
+            </container>""",
+        )
+    return buffer.getvalue()
+
+
 def test_text_book_keeps_progress_and_shared_annotations(tmp_path):
     library = ReadingLibrary(str(tmp_path))
     text = "# One\n\nFirst idea.\n\n# Two\n\nSecond idea."
@@ -78,6 +93,13 @@ def test_epub_uses_spine_order_and_metadata(tmp_path):
     chunk = library.get_chunk(book["id"], 0)
     assert chunk["title"] == "Arrival"
     assert "The tide came in." in chunk["text"]
+
+
+def test_epub_rejects_external_xml_entities(tmp_path):
+    library = ReadingLibrary(str(tmp_path))
+
+    with pytest.raises(ReadingLibraryError, match="EPUB 目录结构无法解析"):
+        library.import_book("unsafe.epub", _epub_with_unsafe_container_xml())
 
 
 def test_rejects_unsupported_or_oversized_positions(tmp_path):
