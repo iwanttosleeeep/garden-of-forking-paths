@@ -145,6 +145,9 @@ def test_manifest_exposes_exactly_the_documented_16_tools(mcp_client):
     assert {tool["name"] for tool in tools} == EXPECTED_TOOLS
     assert all(tool.get("description") for tool in tools)
     assert all(tool.get("inputSchema", {}).get("type") == "object" for tool in tools)
+    descriptions = {tool["name"]: tool["description"] for tool in tools}
+    assert "PRIMARY MEMORY RECALL TOOL" in descriptions["breath"]
+    assert "PRIMARY MEMORY REVIEW TOOL" in descriptions["dream"]
 
 
 def test_hold_writes_a_memory_and_returns_bucket_id(mcp_client):
