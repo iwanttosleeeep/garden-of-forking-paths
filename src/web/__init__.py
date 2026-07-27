@@ -29,6 +29,7 @@ from . import journal
 from . import health_data
 from . import chat_history
 from . import reading
+from . import radio
 from . import github
 from . import embedding
 from . import ollama_local
@@ -52,6 +53,7 @@ _WEB_MODULES = (
     ("web.health_data", health_data.register),
     ("web.chat_history", chat_history.register),
     ("web.reading", reading.register),
+    ("web.radio", radio.register),
     ("web.github", github.register),
     ("web.embedding", embedding.register),
     ("web.ollama_local", ollama_local.register),

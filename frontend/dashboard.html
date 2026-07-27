@@ -855,6 +855,7 @@
   .tab[data-tab="journal"] { background: #D9A8A0; color: #45391F; }
   .tab[data-tab="chats"]   { background: #B8860B; color: #45391F; }
   .tab[data-tab="reading"] { background: #6E9486; color: #FFFDF5; }
+  .tab[data-tab="radio"]   { background: #2F4F4F; color: #FFFDF5; }
   .tab[data-tab="health"]  { background: #7B3F1E; color: #FFFDF5; }
   .tab[data-tab="network"] { background: #A8B0A0; color: #45391F; }
   .tab[data-tab="breath"]  { background: #7FCDBB; color: #45391F; }
@@ -865,6 +866,7 @@
   .tab[data-tab="journal"] .tab-en,
   .tab[data-tab="chats"] .tab-en,
   .tab[data-tab="reading"] .tab-en,
+  .tab[data-tab="radio"] .tab-en,
   .tab[data-tab="health"] .tab-en,
   .tab[data-tab="network"] .tab-en,
   .tab[data-tab="breath"] .tab-en,
@@ -875,6 +877,7 @@
   .tab[data-tab="journal"].active,
   .tab[data-tab="chats"].active,
   .tab[data-tab="reading"].active,
+  .tab[data-tab="radio"].active,
   .tab[data-tab="health"].active,
   .tab[data-tab="network"].active,
   .tab[data-tab="breath"].active,
@@ -883,12 +886,14 @@
     box-shadow: 4px 4px 11px var(--shadow-dark-subtle), -4px -4px 9px var(--shadow-light),
                 0 0 0 2px rgba(69,57,31,.56), inset 0 0 14px rgba(255,255,255,.16);
   }
+  .tab[data-tab="radio"].active { color:#FFFDF5; }
   .tab[data-tab="list"].active .tab-en,
   .tab[data-tab="letters"].active .tab-en,
   .tab[data-tab="plan"].active .tab-en,
   .tab[data-tab="journal"].active .tab-en,
   .tab[data-tab="chats"].active .tab-en,
   .tab[data-tab="reading"].active .tab-en,
+  .tab[data-tab="radio"].active .tab-en,
   .tab[data-tab="health"].active .tab-en,
   .tab[data-tab="network"].active .tab-en,
   .tab[data-tab="breath"].active .tab-en,
@@ -1146,6 +1151,7 @@
   #journal-view .config-section { background: #D9A8A0; }
   #chats-view .config-section { background: #B8860B; }
   #reading-view .config-section { background: #6E9486; }
+  #radio-view .config-section { background:#2F4F4F; color:#FFFDF5; --text:#FFFDF5; --text-dim:rgba(255,253,245,.78); --text-light:rgba(255,253,245,.62); --border:rgba(255,253,245,.36); }
   #journal-view .config-section,
   #chats-view .config-section {
     box-shadow: 8px 8px 22px rgba(69,57,31,.18), -7px -7px 16px rgba(255,255,255,.48), inset 0 1px 0 rgba(255,255,255,.38);
@@ -1158,6 +1164,23 @@
     --border: rgba(31,47,42,.38);
     box-shadow: 8px 8px 22px rgba(69,57,31,.18), -7px -7px 16px rgba(255,255,255,.45), inset 0 1px 0 rgba(255,255,255,.32);
   }
+  .radio-deck { display:grid; grid-template-columns:minmax(240px,320px) minmax(0,1fr); gap:14px; margin-top:15px; }
+  .radio-panel { min-width:0; padding:16px; border:1px solid rgba(255,253,245,.28); border-radius:10px; background:rgba(244,237,218,.12); }
+  .radio-panel h4 { margin:0 0 9px; font:600 14px/1.3 'Share Tech Mono',monospace; letter-spacing:.08em; color:#FFFDF5; }
+  .radio-panel p { margin:6px 0; font-size:11px; line-height:1.65; color:rgba(255,253,245,.76); }
+  .radio-controls { display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+  .radio-controls input, .radio-controls select { min-height:34px; color:#45391F !important; background:#F4EDDA !important; }
+  .radio-controls button { min-height:32px; padding:0 11px; font-size:10px; }
+  .radio-controls button:not(.btn-primary) { color:#45391F !important; background:#F4EDDA !important; }
+  .radio-status { min-height:18px; margin-top:9px; font-size:10px; line-height:1.6; color:rgba(255,253,245,.78); }
+  .radio-display { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:10px; margin-top:13px; }
+  .radio-card { min-width:0; padding:12px 13px; border-radius:8px; background:#F4EDDA; color:#45391F; border:1px solid #C9B78D; }
+  .radio-card h5 { margin:0 0 5px; font-size:13px; line-height:1.4; color:#45391F; }
+  .radio-card p { margin:4px 0; font-size:10px; line-height:1.6; color:#7A6C4C; overflow-wrap:anywhere; }
+  .radio-card button { margin-top:7px; height:28px; padding:0 9px; font-size:9px; color:#2F4F4F; background:#CFE7DB; }
+  .radio-raw { grid-column:1/-1; max-height:420px; overflow:auto; margin:0; padding:14px; border-radius:8px; background:#F4EDDA; color:#45391F; white-space:pre-wrap; overflow-wrap:anywhere; font:11px/1.65 'Share Tech Mono',monospace; }
+  .radio-login-links { display:flex; gap:7px; flex-wrap:wrap; margin-top:8px; }
+  .radio-login-links a { display:inline-flex; align-items:center; min-height:30px; padding:0 10px; border-radius:5px; background:#CFE7DB; color:#2F4F4F; font-size:10px; }
   .reading-shell { display:grid; grid-template-columns:minmax(220px,280px) minmax(0,1fr); gap:16px; margin-top:16px; }
   .reading-books, .reading-page { background:rgba(255,255,255,.44); border:1px solid rgba(31,47,42,.28); border-radius:10px; padding:14px; }
   .reading-book-card { width:100%; text-align:left; padding:12px; margin-bottom:8px; border-radius:8px; background:#F4EDDA; color:#45391F; border:1px solid #C9B78D; }
@@ -1194,6 +1217,7 @@
     .reading-shell { grid-template-columns:1fr; }
     #reading-text { max-height:none; min-height:280px; padding:18px; }
     .weread-skill-card { grid-template-columns:1fr; }
+    .radio-deck { grid-template-columns:1fr; }
   }
   #chats-view #chat-history-list > * { background: rgba(255,255,255,.34); }
   #chats-view .config-section {
@@ -1988,6 +2012,7 @@
   <div class="tab" data-tab="journal"><span>日记</span><span class="tab-en">Journal</span></div>
   <div class="tab" data-tab="chats"><span>聊天记录</span><span class="tab-en">Chat History</span></div>
   <div class="tab" data-tab="reading"><span>共读</span><span class="tab-en">Reading</span></div>
+  <div class="tab" data-tab="radio"><span>电台</span><span class="tab-en">Radio</span></div>
   <div class="tab" data-tab="health"><span>健康</span><span class="tab-en">Health</span></div>
   <div class="tab" data-tab="anchors"><span>锚点</span><span class="tab-en">Anchors</span></div>
   <div class="tab-row-break" aria-hidden="true"></div>
@@ -2351,6 +2376,65 @@
           <div id="weread-display" class="weread-display" aria-live="polite"></div>
         </div>
       </section>
+    </div>
+  </div>
+</div>
+
+<div class="content" id="radio-view" style="display:none">
+  <div style="max-width:1120px;margin:0 auto;">
+    <div class="config-section">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:9px;letter-spacing:.18em;color:#CFE7DB;margin-bottom:5px;">GARDEN WIRELESS · NETEASE MUSIC</div>
+          <h3 style="margin:0 0 5px;color:#FFFDF5;">电台 / Radio</h3>
+          <p style="font-size:12px;color:rgba(255,253,245,.78);line-height:1.7;margin:0;max-width:720px;">一间只陈列音乐资料的广播室：读取歌单、寻找推荐、创建歌单。没有播放器，也不会把 Memos、日记或聊天内容发送给网易云。</p>
+        </div>
+        <button onclick="loadRadioStatus()" title="刷新连接状态" style="height:32px;padding:0 11px;color:#2F4F4F;background:#CFE7DB;"><i data-lucide="refresh-cw"></i> 刷新</button>
+      </div>
+      <div class="radio-deck">
+        <aside class="radio-panel">
+          <h4>01 · SIGNAL / 接入</h4>
+          <div id="radio-status" class="radio-status">正在检查官方 CLI 与登录状态…</div>
+          <details style="margin-top:12px;">
+            <summary style="cursor:pointer;font-size:11px;color:#CFE7DB;">设置 App ID 与 Private Key</summary>
+            <div class="radio-controls" style="margin-top:10px;align-items:stretch;flex-direction:column;">
+              <input id="radio-app-id" placeholder="网易云开放平台 App ID" autocomplete="off" spellcheck="false" style="width:100%;box-sizing:border-box;">
+              <textarea id="radio-private-key" placeholder="Private Key（保存后不会回显）" autocomplete="new-password" spellcheck="false" style="width:100%;box-sizing:border-box;min-height:86px;resize:vertical;color:#45391F !important;background:#F4EDDA !important;"></textarea>
+              <button class="btn-primary" onclick="saveRadioConfig()">保存凭证</button>
+            </div>
+          </details>
+          <div style="height:1px;background:rgba(255,253,245,.2);margin:14px 0;"></div>
+          <p>第一次使用需扫码授权网易云账号。登录链接由官方 CLI 生成；扫码后点“检查登录”。</p>
+          <div class="radio-controls">
+            <button onclick="startRadioLogin()">开始扫码登录</button>
+            <button onclick="loadRadioStatus()">检查登录</button>
+          </div>
+          <div id="radio-login-links" class="radio-login-links"></div>
+        </aside>
+        <section class="radio-panel">
+          <h4>02 · PROGRAMME / 节目单</h4>
+          <div class="radio-controls">
+            <button onclick="radioAction('playlists',{scope:'created'})">我创建的</button>
+            <button onclick="radioAction('playlists',{scope:'collected'})">我收藏的</button>
+            <button onclick="radioAction('recommend',{mode:'daily'})">每日推荐</button>
+            <button onclick="radioAction('recommend',{mode:'fm'})">私人 FM</button>
+            <button onclick="radioAction('recommend',{mode:'radar'})">雷达歌单</button>
+          </div>
+          <div class="radio-controls" style="margin-top:11px;">
+            <input id="radio-search" placeholder="歌曲、艺人、专辑或一种心情" style="flex:1;min-width:210px;" onkeydown="if(event.key==='Enter')searchRadio()">
+            <select id="radio-search-kind"><option value="all">综合</option><option value="song">歌曲</option><option value="album">专辑</option><option value="playlist">歌单</option></select>
+            <button class="btn-primary" onclick="searchRadio()">搜索 / 推荐</button>
+          </div>
+          <div style="height:1px;background:rgba(255,253,245,.2);margin:14px 0;"></div>
+          <h4>03 · PRESS A RECORD / 创建歌单</h4>
+          <div class="radio-controls">
+            <input id="radio-playlist-name" placeholder="新歌单名称" style="flex:1;min-width:210px;">
+            <button onclick="createRadioPlaylist()">创建</button>
+          </div>
+          <div id="radio-message" class="radio-status" aria-live="polite"></div>
+          <div id="radio-display" class="radio-display" aria-live="polite"><div class="radio-card"><h5>OFF AIR</h5><p>连接后，从上方选择一档节目。</p></div></div>
+        </section>
+      </div>
     </div>
   </div>
 </div>
@@ -3946,6 +4030,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.getElementById('journal-view').style.display = target === 'journal' ? '' : 'none';
     document.getElementById('chats-view').style.display = target === 'chats' ? '' : 'none';
     document.getElementById('reading-view').style.display = target === 'reading' ? '' : 'none';
+    document.getElementById('radio-view').style.display = target === 'radio' ? '' : 'none';
     document.getElementById('health-view').style.display = target === 'health' ? '' : 'none';
     document.getElementById('anchors-view').style.display = target === 'anchors' ? '' : 'none';
     if (target !== 'network' && _netRAF) { cancelAnimationFrame(_netRAF); _netRAF = null; }
@@ -3978,6 +4063,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     if (target === 'journal') loadJournalView();
     if (target === 'chats') loadChatHistory();
     if (target === 'reading') { loadReadingLibrary(); loadWeReadConfig(); }
+    if (target === 'radio') loadRadioStatus();
     if (target === 'health') loadHealthView();
     if (target === 'anchors') loadAnchorsView();
   });
@@ -6351,7 +6437,7 @@ window.addEventListener('DOMContentLoaded', function() {
     refreshAnchorCounter();
     setInterval(refreshAnchorCounter, 30000);
   }
-  loadOwnerBadge();            // 多人共用时顶部显示记忆归属徽标（单人隐藏）
+  if (typeof loadOwnerBadge === 'function') loadOwnerBadge();
 });
 
 // 更新/换机后发现一条记忆都没有 → 顶部红色横幅，引导从 GitHub 恢复。
@@ -7189,6 +7275,149 @@ async function loadWeReadView(forcedView, bookId) {
   } catch (e) {
     if (display) display.innerHTML = '<div class="weread-item" style="grid-column:1/-1;color:#A8431F;">读取失败：' + esc(e.message) + '</div>';
   }
+}
+
+// Radio is a bounded NetEase Music data surface; there is deliberately no player.
+function radioUrls(value, found) {
+  found = found || [];
+  if (typeof value === 'string' && /^https:\/\//i.test(value) && !found.includes(value)) found.push(value);
+  else if (Array.isArray(value)) value.forEach(item => radioUrls(item, found));
+  else if (value && typeof value === 'object') Object.values(value).forEach(item => radioUrls(item, found));
+  return found.slice(0, 6);
+}
+
+function radioRows(value, found, depth) {
+  found = found || []; depth = depth || 0;
+  if (depth > 6 || found.length >= 80) return found;
+  if (Array.isArray(value)) {
+    value.forEach(item => {
+      if (item && typeof item === 'object' && !Array.isArray(item)) found.push(item);
+      else radioRows(item, found, depth + 1);
+    });
+  } else if (value && typeof value === 'object') {
+    Object.values(value).forEach(item => radioRows(item, found, depth + 1));
+  }
+  return found.slice(0, 80);
+}
+
+function radioTitle(item) {
+  return item.name || item.title || item.songName || item.playlistName || item.albumName || 'Untitled transmission';
+}
+
+function radioId(item) {
+  return item.encryptedId || item.encrypted_id || item.playlistId || item.songId || item.originalId || item.id || '';
+}
+
+function radioMeta(item) {
+  const parts = [];
+  const artists = item.artists || item.artist || item.author || item.creator;
+  if (Array.isArray(artists)) parts.push(artists.map(row => typeof row === 'string' ? row : (row.name || row.artistName || '')).filter(Boolean).join(' / '));
+  else if (typeof artists === 'string') parts.push(artists);
+  else if (artists && typeof artists === 'object') parts.push(artists.nickname || artists.name || '');
+  if (item.album && typeof item.album === 'object') parts.push(item.album.name || item.album.title || '');
+  if (item.trackCount != null) parts.push(String(item.trackCount) + ' tracks');
+  if (item.playCount != null) parts.push('plays ' + String(item.playCount));
+  return parts.filter(Boolean).join(' · ');
+}
+
+function renderRadioData(payload) {
+  const display = document.getElementById('radio-display');
+  if (!display) return;
+  const rows = radioRows(payload);
+  if (!rows.length) {
+    display.innerHTML = '<pre class="radio-raw">' + esc(JSON.stringify(payload, null, 2)) + '</pre>';
+    return;
+  }
+  display.innerHTML = rows.map(item => {
+    const id = String(radioId(item) || '');
+    const playlistLike = Boolean(item.playlistId || item.trackCount != null || item.coverImgUrl || item.playlistName);
+    return '<article class="radio-card"><h5>' + esc(radioTitle(item)) + '</h5>'
+      + '<p>' + esc(radioMeta(item) || (id ? 'ID ' + id : '网易云音乐')) + '</p>'
+      + (item.reason ? '<p>' + esc(item.reason) + '</p>' : '')
+      + (playlistLike && id ? '<button data-radio-id="' + esc(id) + '" onclick="openRadioPlaylist(this.dataset.radioId)">查看曲目</button>' : '')
+      + '</article>';
+  }).join('');
+}
+
+async function loadRadioStatus() {
+  const status = document.getElementById('radio-status');
+  if (!status) return;
+  status.textContent = '正在校准无线电频率…';
+  try {
+    const data = await authFetch('/api/radio/status').then(readJsonSafe);
+    if (!data.ok) throw new Error(data.error || '状态读取失败');
+    const credential = data.configured ? ('凭证 ' + (data.app_id_masked || '已保存')) : '尚未保存凭证';
+    const login = data.logged_in ? '网易云账号已登录' : ('未登录 · ' + (data.login_message || '请扫码授权'));
+    status.textContent = credential + ' · ' + login + ' · official ncm-cli ' + (data.cli_version || '');
+  } catch (e) { status.textContent = 'Radio 状态读取失败：' + e.message; }
+}
+
+async function saveRadioConfig() {
+  const status = document.getElementById('radio-status');
+  const app = (document.getElementById('radio-app-id').value || '').trim();
+  const key = (document.getElementById('radio-private-key').value || '').trim();
+  if (!app || !key) { status.textContent = '请同时填写 App ID 与 Private Key。'; return; }
+  status.textContent = '正在交给网易云官方 CLI 加密保存…';
+  try {
+    const data = await authFetch('/api/radio/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({app_id:app, private_key:key})}).then(readJsonSafe);
+    if (!data.ok) throw new Error(data.error || '保存失败');
+    document.getElementById('radio-app-id').value = '';
+    document.getElementById('radio-private-key').value = '';
+    await loadRadioStatus();
+    status.textContent += '；下一步点击“开始扫码登录”。';
+  } catch (e) { status.textContent = '凭证保存失败：' + e.message; }
+}
+
+async function startRadioLogin() {
+  const status = document.getElementById('radio-status');
+  const links = document.getElementById('radio-login-links');
+  status.textContent = '正在向官方 CLI 请求扫码链接…';
+  links.innerHTML = '';
+  try {
+    const response = await authFetch('/api/radio/login', {method:'POST'}).then(readJsonSafe);
+    if (!response.ok) throw new Error(response.error || '登录启动失败');
+    const urls = radioUrls(response.data);
+    links.innerHTML = urls.map((url, index) => '<a href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">打开登录链接 ' + (index + 1) + ' ↗</a>').join('');
+    status.textContent = urls.length ? '请打开链接并按网易云提示扫码；完成后点“检查登录”。' : '登录已启动；请查看官方返回信息并在扫码后检查登录。';
+    if (!urls.length) renderRadioData(response.data);
+  } catch (e) { status.textContent = '扫码登录启动失败：' + e.message; }
+}
+
+async function radioAction(action, extra) {
+  const message = document.getElementById('radio-message');
+  const display = document.getElementById('radio-display');
+  message.textContent = '正在接收 ' + action + '…';
+  display.innerHTML = '<div class="radio-card"><h5>TUNING…</h5><p>正在读取网易云音乐。</p></div>';
+  try {
+    const response = await authFetch('/api/radio', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(Object.assign({action:action}, extra || {}))}).then(readJsonSafe);
+    if (!response.ok) throw new Error(response.error || '读取失败');
+    renderRadioData(response.data || {});
+    message.textContent = '接收完成。音乐资料不会写入 Memos。';
+    return response.data;
+  } catch (e) {
+    display.innerHTML = '<div class="radio-card"><h5>NO SIGNAL</h5><p>' + esc(e.message) + '</p></div>';
+    message.textContent = '操作失败：' + e.message;
+    return null;
+  }
+}
+
+function searchRadio() {
+  const query = (document.getElementById('radio-search').value || '').trim();
+  if (!query) { document.getElementById('radio-message').textContent = '请先写下歌曲、艺人或想听的氛围。'; return; }
+  radioAction('search', {query:query, kind:document.getElementById('radio-search-kind').value});
+}
+
+function openRadioPlaylist(playlistId) {
+  if (playlistId) radioAction('playlist', {playlist_id:playlistId});
+}
+
+function createRadioPlaylist() {
+  const name = (document.getElementById('radio-playlist-name').value || '').trim();
+  if (!name) { document.getElementById('radio-message').textContent = '请先填写歌单名称。'; return; }
+  if (!confirm('在你的网易云账号中创建歌单「' + name + '」吗？')) return;
+  radioAction('create_playlist', {name:name}).then(data => {
+    if (data) document.getElementById('radio-playlist-name').value = '';
+  });
 }
 
 // Health is a deliberately separate private surface: no memo indexing or AI context.

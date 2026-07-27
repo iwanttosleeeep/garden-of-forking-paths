@@ -13,9 +13,21 @@
 # 推荐用 deploy/docker-compose.yml（开发）或 deploy/docker-compose.user.yml（用户）启动。
 # ============================================================
 
+FROM node:22-bookworm-slim AS radio-runtime
+
+# Radio uses NetEase's official CLI as a bounded data bridge.  The exact
+# version is pinned so a rebuild cannot silently change command semantics.
+RUN npm install --global --omit=dev @music163/ncm-cli@0.1.6 \
+    && npm cache clean --force
+
 FROM python:3.12-slim
 
 WORKDIR /app
+
+COPY --from=radio-runtime /usr/local/bin/node /usr/local/bin/node
+COPY --from=radio-runtime /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -s /usr/local/lib/node_modules/@music163/ncm-cli/dist/index.js /usr/local/bin/ncm-cli \
+    && chmod +x /usr/local/lib/node_modules/@music163/ncm-cli/dist/index.js
 
 # 用镜像自带的 python 直接从 GitHub Releases 下载（带重试），不装 curl、不跑
 # apt-get update —— 从根上避开 Debian 镜像源间歇性 502 导致的构建失败（用户反馈 #3）。

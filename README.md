@@ -18,11 +18,13 @@
 
 **共同阅读(Reading)** 是两个人共用页边的书房。把合法拥有的 EPUB、TXT 或 Markdown 放进私有书架,花园按章节切成可读的片段;人和机各自留下真实进度、划线与笔记。DeepSeek 可以为当前片段画一张简短导读地图,`read_book` 只在明确共读时打开一段,从不把原书混进 Memos。读完后,双方留下的页边可以导出为 Markdown,也可以在确认后把真正改变了什么的那一句交给 `hold`。腾讯官方微信读书 Skill 也已并入同一个 `read_book`:在 Reading 页面保存并验证 `wrk-` API Key 后,网页与 Connector 都可按需读取书架、进度、划线、个人想法和阅读统计;它不复制整本商业书正文,也不把微信读书数据写入 Memos。
 
+**电台(Radio)** 是没有扬声器的无线电室。Garden 通过网易云音乐官方 `@music163/ncm-cli` 读取你创建或收藏的歌单、每日推荐、私人 FM 与雷达歌单,也可以搜索并在明确确认后创建歌单、加入曲目。开放平台 App ID 与 Private Key 在 Radio 页面交给官方 CLI 加密保存,扫码登录态留在私人数据卷;`radio` Connector 只传当前音乐关键词或歌单名,不读取、更不会发送 Memos、日记或聊天记录。
+
 ## 门
 
 - `/` — 地图。逆时针旋转90度的UK Map,点击岛上的建筑进入各功能区
 - `/garden` — 完整的 Dashboard(星空由午夜蓝掌机;白昼的月升王国配色在图纸上等着)
-- `/mcp` · `/mcp-extra` — AI Connector 的入口,OAuth 把门
+- `/mcp` — 单一 AI Connector 入口,OAuth 把门
 
 正门:`moonrisekingdom.sehnsucht.uk`。
 

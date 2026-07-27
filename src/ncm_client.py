@@ -1,0 +1,201 @@
+"""Bounded bridge to NetEase's official ``@music163/ncm-cli`` package.
+
+Only the music-reading and playlist-management commands used by Garden are
+exposed here.  No shell is involved and callers cannot provide arbitrary CLI
+arguments.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import os
+import re
+from typing import Any, Awaitable, Callable
+
+
+NCM_CLI_VERSION = "0.1.6"
+MAX_OUTPUT_BYTES = 2 * 1024 * 1024
+MAX_TEXT_LENGTH = 300
+_ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+
+
+class NCMClientError(ValueError):
+    """A safe, user-facing NetEase Music bridge error."""
+
+
+Runner = Callable[[list[str], float], Awaitable[Any]]
+
+
+def _bounded_text(value: object, label: str, *, limit: int = MAX_TEXT_LENGTH) -> str:
+    text = str(value or "").strip()
+    if not text:
+        raise NCMClientError(f"请填写{label}")
+    if len(text) > limit:
+        raise NCMClientError(f"{label}过长")
+    if any(ord(char) < 32 and char not in "\n\r\t" for char in text):
+        raise NCMClientError(f"{label}包含无效字符")
+    return text
+
+
+def _json_from_text(value: str) -> Any:
+    clean = _ANSI_RE.sub("", value or "").strip()
+    if not clean:
+        return {}
+    try:
+        return json.loads(clean)
+    except ValueError:
+        pass
+    # Some CLI versions print a short informational line before JSON.
+    for line in reversed(clean.splitlines()):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            return json.loads(line)
+        except ValueError:
+            continue
+    return {"text": clean}
+
+
+async def run_cli(args: list[str], timeout: float = 40.0) -> Any:
+    """Run one allowlisted CLI invocation without a shell."""
+    executable = os.environ.get("OMBRE_NCM_CLI", "ncm-cli").strip() or "ncm-cli"
+    try:
+        process = await asyncio.create_subprocess_exec(
+            executable,
+            "--output",
+            "json",
+            *args,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+    except FileNotFoundError as exc:
+        raise NCMClientError("Radio 组件尚未安装；请重新构建 Garden 镜像") from exc
+    try:
+        stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout)
+    except asyncio.TimeoutError as exc:
+        process.kill()
+        await process.communicate()
+        raise NCMClientError("网易云音乐响应超时，请稍后再试") from exc
+    if len(stdout) + len(stderr) > MAX_OUTPUT_BYTES:
+        raise NCMClientError("网易云音乐返回的数据过大，请缩小范围")
+    output = stdout.decode("utf-8", errors="replace").strip()
+    errors = stderr.decode("utf-8", errors="replace").strip()
+    payload = _json_from_text(output or errors)
+    if process.returncode != 0:
+        message = payload.get("message") if isinstance(payload, dict) else ""
+        raise NCMClientError(str(message or errors or output or "网易云音乐命令执行失败")[:500])
+    if isinstance(payload, dict) and payload.get("success") is False:
+        raise NCMClientError(str(payload.get("message") or "网易云音乐操作失败")[:500])
+    return payload
+
+
+class NCMClient:
+    """Semantic, allowlisted facade used by both Radio UI and MCP tool."""
+
+    def __init__(self, runner: Runner | None = None):
+        self._runner = runner or run_cli
+
+    async def _call(self, args: list[str], timeout: float = 40.0) -> Any:
+        return await self._runner(args, timeout)
+
+    async def configure(self, app_id: object, private_key: object) -> dict[str, Any]:
+        app = _bounded_text(app_id, "App ID", limit=128)
+        secret = _bounded_text(private_key, "Private Key", limit=8192)
+        await self._call(["config", "set", "appId", app], 15.0)
+        await self._call(["config", "set", "privateKey", secret], 15.0)
+        return {"configured": True, "app_id_masked": f"{app[:3]}…{app[-3:]}" if len(app) > 7 else "***"}
+
+    async def status(self, *, configured: bool = False) -> dict[str, Any]:
+        try:
+            version = await self._call(["--version"], 8.0)
+        except NCMClientError:
+            version = {"text": NCM_CLI_VERSION}
+        logged_in = False
+        login_message = "尚未登录"
+        try:
+            checked = await self._call(["login", "--check"], 15.0)
+            logged_in = bool(
+                isinstance(checked, dict)
+                and (checked.get("success") is True or checked.get("loggedIn") is True)
+            )
+            if isinstance(checked, dict):
+                login_message = str(checked.get("message") or ("已登录" if logged_in else login_message))
+        except NCMClientError as exc:
+            login_message = str(exc)
+        return {
+            "configured": bool(configured),
+            "logged_in": logged_in,
+            "login_message": login_message,
+            "cli_version": NCM_CLI_VERSION,
+            "cli": version,
+        }
+
+    async def start_login(self) -> Any:
+        return await self._call(["login", "--background"], 25.0)
+
+    @staticmethod
+    def _intent(text: str) -> list[str]:
+        return ["--userInput", text[:MAX_TEXT_LENGTH]]
+
+    async def playlists(self, scope: str = "created") -> Any:
+        wanted = str(scope or "created").strip().lower()
+        if wanted not in {"created", "collected", "radar"}:
+            raise NCMClientError("scope 必须是 created / collected / radar")
+        labels = {"created": "读取我创建的歌单", "collected": "读取我收藏的歌单", "radar": "读取雷达歌单"}
+        return await self._call(["playlist", wanted, *self._intent(labels[wanted])])
+
+    async def playlist_tracks(self, playlist_id: object) -> Any:
+        value = _bounded_text(playlist_id, "playlist_id", limit=128)
+        return await self._call(
+            ["playlist", "tracks", "--playlistId", value, *self._intent("读取指定歌单曲目")]
+        )
+
+    async def search(self, query: object, kind: str = "all") -> Any:
+        keyword = _bounded_text(query, "搜索关键词")
+        wanted = str(kind or "all").strip().lower()
+        if wanted not in {"all", "song", "album", "playlist"}:
+            raise NCMClientError("kind 必须是 all / song / album / playlist")
+        return await self._call(
+            ["search", wanted, "--keyword", keyword, *self._intent(f"搜索音乐：{keyword}")]
+        )
+
+    async def recommend(self, query: object = "", mode: str = "daily") -> Any:
+        keyword = str(query or "").strip()
+        if keyword:
+            return await self.search(keyword, "playlist")
+        wanted = str(mode or "daily").strip().lower()
+        if wanted not in {"daily", "fm", "radar"}:
+            raise NCMClientError("mode 必须是 daily / fm / radar")
+        if wanted == "radar":
+            return await self.playlists("radar")
+        labels = {"daily": "读取我的每日推荐", "fm": "读取我的私人漫游推荐"}
+        return await self._call(["recommend", wanted, *self._intent(labels[wanted])])
+
+    async def create_playlist(self, name: object) -> Any:
+        title = _bounded_text(name, "歌单名称", limit=80)
+        return await self._call(
+            ["playlist", "create", "--playlistName", title, *self._intent(f"创建歌单：{title}")]
+        )
+
+    async def add_tracks(self, playlist_id: object, song_ids: object) -> Any:
+        playlist = _bounded_text(playlist_id, "playlist_id", limit=128)
+        if isinstance(song_ids, (list, tuple, set)):
+            songs = ",".join(str(item).strip() for item in song_ids if str(item).strip())
+        else:
+            songs = str(song_ids or "").strip()
+        songs = _bounded_text(songs, "song_ids", limit=2000)
+        if not re.fullmatch(r"[A-Za-z0-9,_-]+", songs):
+            raise NCMClientError("song_ids 只能包含歌曲 ID，并用逗号分隔")
+        return await self._call(
+            [
+                "playlist",
+                "add",
+                "--playlistId",
+                playlist,
+                "--songIds",
+                songs,
+                *self._intent("把指定歌曲加入歌单"),
+            ]
+        )

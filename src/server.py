@@ -8,8 +8,8 @@ DecayEngine / EmbeddingEngine，把它们注入 tools._runtime 与
 web._shared，然后以 @mcp.tool() 注册薄封装（真正的实现在 src/tools/<工具>/ 下面）。
 
 关键行为：
-- 启动后暴露 17 个 MCP 工具：breath/hold/grow/trace/anchor/release/
-  pulse/plan/letter_write/letter_read/dream/I/echo/recall/check_up/read_journals/read_book。
+- 启动后暴露 18 个 MCP 工具：breath/hold/grow/trace/anchor/release/
+  pulse/plan/letter_write/letter_read/dream/I/echo/recall/check_up/read_journals/read_book/radio。
 - Dashboard / HTTP 路由全部已拆分到 src/web/<域>.py（每个模块 register(mcp)），
   本文件仅在启动时调用 web.register_all(mcp) 装配；共享依赖见 web/_shared.py
 - 仍保留在本文件：进程启动、引擎初始化、GitHub 后台同步循环、Webhook 推送、
@@ -20,7 +20,7 @@ web._shared，然后以 @mcp.tool() 注册薄封装（真正的实现在 src/too
 - 不写 HTTP 路由处理（全在 web/* 下）；不写 LLM prompt（dehydrator 负责）
 - 不直接读写桶文件（bucket_manager 负责）
 
-对外暴露：mcp/mcp_extra 两个实例 + 17 个 @mcp*.tool() 函数；HTTP 路由在 src/web/*
+对外暴露：mcp/mcp_extra 两个实例 + 18 个 @mcp*.tool() 函数；HTTP 路由在 src/web/*
 ========================================
 """
 
@@ -62,6 +62,7 @@ from tools import dream as _t_dream
 from tools import i as _t_i
 from tools import journal as _t_journal
 from tools import reading as _t_reading
+from tools import radio as _t_radio
 
 # --- Load config & init logging / 加载配置 & 初始化日志 ---
 config = load_config()
@@ -299,7 +300,7 @@ _gh_auto_interval: int = int(_gh_cfg.get("auto_interval_minutes") or 0)
 # iter 2.2：合并回单连接器 /mcp（claude.ai 5 工具上限已解除）。
 # 历史上（iter 2.1）曾拆成主 mcp(/mcp) + 副 mcp_extra(/mcp-extra) 两个实例。
 # 现在只对外暴露主实例 mcp 的一条 /mcp 路由；mcp_extra 仅作工具分组容器保留
-# （7 个 @mcp_extra.tool() 注册不动），启动入口处把它的工具回灌进 mcp 统一暴露。
+# （13 个 @mcp_extra.tool() 注册不动），启动入口处把它的工具回灌进 mcp 统一暴露。
 # 两个实例共享同一进程、同一 runtime、同一 bucket_mgr；HTTP custom_route（dashboard、API）
 # 全部挂在 mcp 主实例上。
 mcp = FastMCP(
@@ -888,6 +889,46 @@ async def read_book(
     )
 
 
+@mcp_extra.tool()
+async def radio(
+    action: str = "playlists",
+    scope: Optional[str] = "created",
+    playlist_id: Optional[str] = "",
+    query: Optional[str] = "",
+    kind: Optional[str] = "all",
+    mode: Optional[str] = "daily",
+    name: Optional[str] = "",
+    song_ids: Optional[str] = "",
+    confirm: Optional[bool] = False,
+) -> str:
+    """RADIO / NETEASE MUSIC PLAYLIST TOOL — use this exact tool for 网易云音乐、云音乐、Radio、歌单、每日推荐、私人 FM、找歌或音乐推荐。action=playlists reads created/collected/radar playlists via scope; playlist reads tracks for playlist_id; search finds song/album/playlist/all via query and kind; recommend returns daily/fm/radar suggestions or searches playlists when query is supplied; create_playlist creates a named playlist; add_tracks adds comma-separated encrypted song_ids to playlist_id. Account-changing actions require confirm=true. It never plays audio, never reads Garden Memos/journals/chats, and sends only the current music query or playlist name to NetEase."""
+    return await _with_notice(
+        _t_radio.dispatch(
+            action,
+            scope=scope or "created",
+            playlist_id=playlist_id or "",
+            query=query or "",
+            kind=kind or "all",
+            mode=mode or "daily",
+            name=name or "",
+            song_ids=song_ids or "",
+            confirm=bool(confirm),
+        ),
+        op="radio",
+        args={
+            "action": action,
+            "scope": scope,
+            "playlist_id": playlist_id,
+            "query": query,
+            "kind": kind,
+            "mode": mode,
+            "name_len": len(name or ""),
+            "song_count": len([item for item in (song_ids or "").split(",") if item.strip()]),
+            "confirm": confirm,
+        },
+    )
+
+
 # ============================================================
 # OAuth 2.0 — MCP Remote Auth —— 已拆分到 web/oauth.py（路由在其 register 内注册）。
 # 这里仅把启动期 MCP 鉴权中间件要用的 _is_valid_mcp_token import 回来。
@@ -905,7 +946,7 @@ if __name__ == "__main__":
     # 当初（iter 2.1）为客户端的少量工具加载限制拆成 /mcp + /mcp-extra；
     # 现在统一从一条 /mcp 暴露完整 manifest，客户端仍可自行懒加载其中的子集，
     # 同时消除「第二个连接器」在 Claude.ai 侧的 OAuth/连接器校验疑难。
-    # mcp_extra 仅作历史工具分组容器保留（7 个 @mcp_extra.tool() 注册不动），
+    # mcp_extra 仅作历史工具分组容器保留（13 个 @mcp_extra.tool() 注册不动），
     # 这里把它的工具回灌进 mcp，让 stdio / sse / streamable-http 三种 transport 一致。
     # 依赖 FastMCP._tool_manager 私有结构；若未来版本变化，降级为仅暴露主集 5 工具。
     from server_app import (
@@ -951,7 +992,7 @@ if __name__ == "__main__":
             lifecycle=_runtime_lifecycle,
         )
         if transport == "streamable-http":
-            logger.info("MCP 单连接器 /mcp：17 个工具统一对外暴露")
+            logger.info("MCP 单连接器 /mcp：18 个工具统一对外暴露")
         logger.info("CORS middleware enabled for remote transport / 已启用 CORS 中间件")
         logger.info(
             "MCP request body limit: %s",
@@ -969,7 +1010,7 @@ if __name__ == "__main__":
             logger.warning(
                 "=" * 60 + "\n"
                 "⚠️  MCP 认证已关闭 (mcp_require_auth: false)：/mcp 无需任何令牌即可直连，\n"
-                "    17 个工具全部对外开放——任何能访问本端口的人都能读写你的私有资料。\n"
+                "    18 个工具全部对外开放——任何能访问本端口的人都能读写你的私有资料。\n"
                 "    本服务监听 0.0.0.0，若端口暴露到局域网/公网，请务必用反代鉴权、防火墙\n"
                 "    或仅绑定 127.0.0.1 保护；仅在可信内网/本机自有前端场景才建议关闭鉴权。\n"
                 + "=" * 60
@@ -997,5 +1038,5 @@ if __name__ == "__main__":
         )
         uvicorn.run(_app, host=_BIND_HOST, port=OMBRE_PORT)
     else:
-        # stdio：工具已在启动入口处统一回灌进 mcp（17 个全暴露），这里直接跑。
+        # stdio：工具已在启动入口处统一回灌进 mcp（18 个全暴露），这里直接跑。
         mcp.run(transport=transport)

@@ -63,6 +63,23 @@ fi
 
 echo "[entrypoint] config ready at '$CONFIG'."
 
+# Keep the official NetEase CLI's encrypted credentials, device identity and
+# QR-login session in Garden's existing private data volume.  The image runs
+# as root, so these are the two locations used by ncm-cli's os.homedir().
+RADIO_STATE_DIR="${OMBRE_BUCKETS_DIR:-/app/buckets}/.radio"
+mkdir -p "$RADIO_STATE_DIR/ncm-cli" /root/.config
+chmod 700 "$RADIO_STATE_DIR" "$RADIO_STATE_DIR/ncm-cli" 2>/dev/null || true
+if [ ! -e /root/.config/ncm-cli ] && [ ! -L /root/.config/ncm-cli ]; then
+    ln -s "$RADIO_STATE_DIR/ncm-cli" /root/.config/ncm-cli
+fi
+if [ ! -e "$RADIO_STATE_DIR/device.json" ]; then
+    : > "$RADIO_STATE_DIR/device.json"
+    chmod 600 "$RADIO_STATE_DIR/device.json" 2>/dev/null || true
+fi
+if [ ! -e /root/.netease_mcp_device.json ] && [ ! -L /root/.netease_mcp_device.json ]; then
+    ln -s "$RADIO_STATE_DIR/device.json" /root/.netease_mcp_device.json
+fi
+
 # ============================================================
 # The Garden of Forking Paths:代码只住在镜像里,/app 直跑。
 # 更新的唯一路径是 git + rebuild;持久卷 buckets/ 只放数据(记忆+配置)。
