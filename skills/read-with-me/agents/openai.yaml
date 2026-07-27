@@ -1,0 +1,4 @@
+interface:
+  display_name: "Read With Me"
+  short_description: "Share a book, progress, highlights, and notes with Garden"
+  default_prompt: "Use $read-with-me to continue reading a Garden book with me."
