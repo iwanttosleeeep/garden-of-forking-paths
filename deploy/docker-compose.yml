@@ -5,7 +5,7 @@
 #   docker compose -f deploy/docker-compose.yml up -d --build
 #
 # 敏感 key 通过 deploy/.env 或环境变量传入（不要写进此文件）：
-#   OMBRE_COMPRESS_API_KEY / OMBRE_EMBED_API_KEY / OMBRE_DASHBOARD_PASSWORD
+#   OMBRE_COMPRESS_API_KEY / OMBRE_EMBED_API_KEY / OMBRE_DASHBOARD_PASSWORD / WEREAD_API_KEY
 #
 # 存储约定（与 docker-compose.user.yml 一致，不再有 VPS 专属特殊路径）：
 #   - 记忆库 + 配置都落在数据卷 ./buckets（容器内 /app/buckets）。
@@ -37,6 +37,7 @@ services:
       - OMBRE_EMBED_BASE_URL=${OMBRE_EMBED_BASE_URL:-}
       - OMBRE_EMBED_MODEL=${OMBRE_EMBED_MODEL:-}
       - OMBRE_DASHBOARD_PASSWORD=${OMBRE_DASHBOARD_PASSWORD}
+      - WEREAD_API_KEY=${WEREAD_API_KEY:-}
       # 传入容器用于持久化诊断；真正的宿主机挂载由下面 volumes 决定。
       - OMBRE_HOST_VAULT_DIR=${OMBRE_HOST_VAULT_DIR:-}
     volumes:

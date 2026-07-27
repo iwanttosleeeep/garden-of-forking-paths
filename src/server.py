@@ -851,8 +851,12 @@ async def read_book(
     quote: Optional[str] = "",
     note: Optional[str] = "",
     kind: Optional[str] = "note",
+    query: Optional[str] = "",
+    limit: Optional[int] = 20,
+    period: Optional[str] = "monthly",
+    cursor: Optional[int] = 0,
 ) -> str:
-    """SHARED BOOK READING TOOL — use this when the user asks to read a book together, continue reading, compare human/AI progress, share a highlight or reading note, or discuss a finished book. action=library lists the private Garden bookshelf; open reads exactly one chunk and advances AI progress; progress reads or updates AI position; note saves an explicitly requested AI highlight/question/insight; review returns cached DeepSeek maps and shared margins without the whole book text; finish marks AI complete. Never copies book text into Memos."""
+    """SHARED BOOK READING + WECHAT READING / WEREAD TOOL. Garden actions: library lists the private bookshelf; open reads one chunk; progress reads/updates AI position; note saves an explicitly requested AI margin; review returns cached maps/margins; finish marks AI complete. WeRead actions: weread_shelf lists the user's shelf; weread_notebooks lists books with personal notes; weread_notes reads personal highlights and thoughts for book_id; weread_progress reads progress for book_id; weread_stats reads weekly/monthly/annually/overall statistics via period; weread_search finds an electronic book via query. Use limit 1-50 and cursor for notebook/thought pagination. WeRead requires a key configured in Garden → Reading. Never copies commercial book text or WeRead data into Memos."""
     return await _with_notice(
         _t_reading.dispatch(
             action,
@@ -862,6 +866,10 @@ async def read_book(
             quote=quote or "",
             note=note or "",
             kind=kind or "note",
+            query=query or "",
+            limit=limit if limit is not None else 20,
+            period=period or "monthly",
+            cursor=cursor if cursor is not None else 0,
         ),
         op="read_book",
         args={
@@ -872,6 +880,10 @@ async def read_book(
             "quote_len": len(quote or ""),
             "note_len": len(note or ""),
             "kind": kind,
+            "query": query,
+            "limit": limit,
+            "period": period,
+            "cursor": cursor,
         },
     )
 

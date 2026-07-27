@@ -203,6 +203,9 @@ def load_config(config_path: Optional[str] = None) -> dict:
             "circuit_base_seconds": 30,
             "circuit_max_seconds": 600,
         },
+        "weread": {
+            "api_key": "",
+        },
     }
 
     # --- Load user config from YAML file ---
@@ -256,6 +259,10 @@ def load_config(config_path: Optional[str] = None) -> dict:
     _apply_env_override(config, "OMBRE_EMBED_MODEL", "embedding", "model")
     _apply_env_override(config, "OMBRE_EMBED_FORMAT", "embedding", "api_format")
     _apply_env_float_override(config, "OMBRE_EMBED_TIMEOUT_SECONDS", "embedding", "timeout_seconds")
+
+    # Tencent WeRead Agent API. The environment variable, when present, wins
+    # over the persistent Dashboard configuration.
+    _apply_env_override(config, "WEREAD_API_KEY", "weread", "api_key")
 
     # Obsidian / Git / manual Markdown edits cache poll interval.
     _apply_env_float_override(

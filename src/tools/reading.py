@@ -2,9 +2,20 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 
 from reading_library import ReadingLibrary, ReadingLibraryError
+from weread_client import (
+    WeReadError,
+    gateway_call,
+    normalize_notebooks,
+    normalize_notes,
+    normalize_progress,
+    normalize_search,
+    normalize_shelf,
+    normalize_stats,
+)
 
 from . import _runtime as rt
 
@@ -21,6 +32,17 @@ def _progress_line(book: dict) -> str:
     return f"人类 {int(human.get('chunk') or 0) + 1}/{count} · 机 {int(ai.get('chunk') or 0) + 1}/{count}"
 
 
+def _limit(value: int) -> int:
+    try:
+        return max(1, min(50, int(value)))
+    except (TypeError, ValueError, OverflowError):
+        return 20
+
+
+def _weread_json(payload: dict) -> str:
+    return "=== WeRead / 微信读书 ===\n" + json.dumps(payload, ensure_ascii=False, indent=2)
+
+
 async def dispatch(
     action: str,
     *,
@@ -30,11 +52,58 @@ async def dispatch(
     quote: str = "",
     note: str = "",
     kind: str = "note",
+    query: str = "",
+    limit: int = 20,
+    period: str = "monthly",
+    cursor: int = 0,
 ) -> str:
     """Execute one bounded reading action without touching Garden Memos."""
     library = _library()
     action = str(action or "library").strip().lower()
     try:
+        if action == "weread_shelf":
+            data = await gateway_call(rt.config, "/shelf/sync")
+            return _weread_json(normalize_shelf(data, _limit(limit)))
+        if action == "weread_notebooks":
+            params = {"count": _limit(limit)}
+            if int(cursor or 0) > 0:
+                params["lastSort"] = int(cursor)
+            data = await gateway_call(rt.config, "/user/notebooks", **params)
+            return _weread_json(normalize_notebooks(data, _limit(limit)))
+        if action == "weread_notes":
+            if not book_id:
+                return "需要 book_id；先用 action=weread_notebooks 选择一本书。"
+            count = _limit(limit)
+            highlights, thoughts = await asyncio.gather(
+                gateway_call(rt.config, "/book/bookmarklist", bookId=book_id),
+                gateway_call(
+                    rt.config,
+                    "/review/list/mine",
+                    bookid=book_id,
+                    synckey=max(0, int(cursor or 0)),
+                    count=count,
+                ),
+            )
+            return _weread_json(normalize_notes(highlights, thoughts, count))
+        if action == "weread_progress":
+            if not book_id:
+                return "需要 book_id；先用 action=weread_shelf 选择一本电子书。"
+            data = await gateway_call(rt.config, "/book/getprogress", bookId=book_id)
+            return _weread_json(normalize_progress(data))
+        if action == "weread_stats":
+            mode = str(period or "monthly").strip().lower()
+            if mode not in {"weekly", "monthly", "annually", "overall"}:
+                return "period 必须是 weekly / monthly / annually / overall。"
+            data = await gateway_call(rt.config, "/readdata/detail", mode=mode)
+            return _weread_json(normalize_stats(data, mode))
+        if action == "weread_search":
+            keyword = str(query or "").strip()
+            if not keyword:
+                return "需要 query 作为微信读书搜索关键词。"
+            data = await gateway_call(
+                rt.config, "/store/search", keyword=keyword, scope=10, count=_limit(limit)
+            )
+            return _weread_json(normalize_search(data, _limit(limit)))
         if action == "library":
             books = library.list_books()
             if not books:
@@ -83,6 +152,10 @@ async def dispatch(
             last = max(0, int(book.get("chunk_count") or 1) - 1)
             book = library.update_progress(book_id, "ai", last, 1.0)
             return f"机已读完《{book['title']}》。{_progress_line(book)}"
-        return "未知 action。可用：library / open / progress / note / review / finish。"
-    except (ReadingLibraryError, TypeError, ValueError) as exc:
+        return (
+            "未知 action。可用：library / open / progress / note / review / finish / "
+            "weread_shelf / weread_notebooks / weread_notes / weread_progress / "
+            "weread_stats / weread_search。"
+        )
+    except (ReadingLibraryError, WeReadError, TypeError, ValueError) as exc:
         return f"Reading 操作失败：{exc}"
