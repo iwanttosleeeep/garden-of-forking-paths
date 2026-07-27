@@ -103,7 +103,7 @@ class PublicToolDesignContract:
             # These are deliberately bounded readers of private user-owned
             # sources. They remain public MCP tools so Claude Connectors can
             # call them, but never perform discovery or automatic retrieval.
-            explicit_private_readers=frozenset({"recall", "check_up", "read_journals"}),
+            explicit_private_readers=frozenset({"recall", "check_up", "read_journals", "read_book"}),
             compatibility_public_names={
                 "release": "anchor",
                 "letter_write": "letter",

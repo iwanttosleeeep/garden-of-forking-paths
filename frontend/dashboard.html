@@ -854,6 +854,7 @@
   .tab[data-tab="plan"]    { background: #8A9A3B; color: #FFFDF5; }
   .tab[data-tab="journal"] { background: #D9A8A0; color: #45391F; }
   .tab[data-tab="chats"]   { background: #B8860B; color: #45391F; }
+  .tab[data-tab="reading"] { background: #6E9486; color: #FFFDF5; }
   .tab[data-tab="health"]  { background: #7B3F1E; color: #FFFDF5; }
   .tab[data-tab="network"] { background: #A8B0A0; color: #45391F; }
   .tab[data-tab="breath"]  { background: #7FCDBB; color: #45391F; }
@@ -863,6 +864,7 @@
   .tab[data-tab="plan"] .tab-en,
   .tab[data-tab="journal"] .tab-en,
   .tab[data-tab="chats"] .tab-en,
+  .tab[data-tab="reading"] .tab-en,
   .tab[data-tab="health"] .tab-en,
   .tab[data-tab="network"] .tab-en,
   .tab[data-tab="breath"] .tab-en,
@@ -872,6 +874,7 @@
   .tab[data-tab="plan"].active,
   .tab[data-tab="journal"].active,
   .tab[data-tab="chats"].active,
+  .tab[data-tab="reading"].active,
   .tab[data-tab="health"].active,
   .tab[data-tab="network"].active,
   .tab[data-tab="breath"].active,
@@ -885,6 +888,7 @@
   .tab[data-tab="plan"].active .tab-en,
   .tab[data-tab="journal"].active .tab-en,
   .tab[data-tab="chats"].active .tab-en,
+  .tab[data-tab="reading"].active .tab-en,
   .tab[data-tab="health"].active .tab-en,
   .tab[data-tab="network"].active .tab-en,
   .tab[data-tab="breath"].active .tab-en,
@@ -1141,9 +1145,31 @@
 
   #journal-view .config-section { background: #D9A8A0; }
   #chats-view .config-section { background: #B8860B; }
+  #reading-view .config-section { background: #6E9486; }
   #journal-view .config-section,
   #chats-view .config-section {
     box-shadow: 8px 8px 22px rgba(69,57,31,.18), -7px -7px 16px rgba(255,255,255,.48), inset 0 1px 0 rgba(255,255,255,.38);
+  }
+  #reading-view .config-section {
+    color: #1F2F2A;
+    --text: #1F2F2A;
+    --text-dim: rgba(31,47,42,.78);
+    --text-light: rgba(31,47,42,.62);
+    --border: rgba(31,47,42,.38);
+    box-shadow: 8px 8px 22px rgba(69,57,31,.18), -7px -7px 16px rgba(255,255,255,.45), inset 0 1px 0 rgba(255,255,255,.32);
+  }
+  .reading-shell { display:grid; grid-template-columns:minmax(220px,280px) minmax(0,1fr); gap:16px; margin-top:16px; }
+  .reading-books, .reading-page { background:rgba(255,255,255,.44); border:1px solid rgba(31,47,42,.28); border-radius:10px; padding:14px; }
+  .reading-book-card { width:100%; text-align:left; padding:12px; margin-bottom:8px; border-radius:8px; background:#F4EDDA; color:#45391F; border:1px solid #C9B78D; }
+  .reading-book-card.active { box-shadow:0 0 0 2px #45391F; transform:none; }
+  .reading-progress { height:7px; border-radius:999px; overflow:hidden; background:rgba(31,47,42,.16); }
+  .reading-progress > span { display:block; height:100%; border-radius:inherit; }
+  #reading-text { min-height:360px; max-height:62vh; overflow:auto; padding:22px 24px; background:#F4EDDA; color:#45391F; border-radius:8px; border:1px solid #C9B78D; font-family:'Noto Serif SC','Cormorant Garamond',serif; font-size:16px; line-height:1.95; white-space:pre-wrap; user-select:text; }
+  .reading-note { padding:11px 12px; border-radius:7px; background:#F4EDDA; color:#45391F; border-left:4px solid #D9A8A0; }
+  .reading-note.ai { border-left-color:#6E9486; }
+  @media (max-width: 780px) {
+    .reading-shell { grid-template-columns:1fr; }
+    #reading-text { max-height:none; min-height:280px; padding:18px; }
   }
   #chats-view #chat-history-list > * { background: rgba(255,255,255,.34); }
   #chats-view .config-section {
@@ -1937,6 +1963,7 @@
   <div class="tab" data-tab="letters"><span>信</span><span class="tab-en">Letters</span></div>
   <div class="tab" data-tab="journal"><span>日记</span><span class="tab-en">Journal</span></div>
   <div class="tab" data-tab="chats"><span>聊天记录</span><span class="tab-en">Chat History</span></div>
+  <div class="tab" data-tab="reading"><span>共读</span><span class="tab-en">Reading</span></div>
   <div class="tab" data-tab="health"><span>健康</span><span class="tab-en">Health</span></div>
   <div class="tab" data-tab="anchors"><span>锚点</span><span class="tab-en">Anchors</span></div>
   <div class="tab-row-break" aria-hidden="true"></div>
@@ -2222,6 +2249,60 @@
 </div>
 
 <div class="content" id="chats-view" style="display:none"><div style="max-width:920px;margin:0 auto;"><div class="config-section"><h3>Chat History</h3><p style="font-size:12px;color:var(--text-dim);line-height:1.7;">私有 Markdown 图书馆。正文不会进入 Memos、搜索或 AI 上下文；只有 <code>recall</code> 可明确读取指定文件。</p><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:13px 14px;border:1px dashed var(--border);background:var(--surface-solid);"><input type="file" id="chat-history-file" accept="text/markdown,.md" style="font-size:12px;max-width:330px;"><button onclick="uploadChatHistory()" class="btn-primary" style="font-size:12px;padding:0 13px;height:32px;">上传 .md</button><button onclick="loadChatHistory()" style="font-size:12px;padding:0 12px;height:32px;">刷新图书馆</button></div><div id="chat-history-msg" style="min-height:18px;margin-top:9px;font-size:12px;color:var(--text-dim);"></div><div id="chat-history-list" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(285px,1fr));gap:14px;margin-top:16px;"></div></div></div></div>
+
+<div class="content" id="reading-view" style="display:none">
+  <div style="max-width:1180px;margin:0 auto;">
+    <div class="config-section">
+      <h3>共同阅读 / Reading Together</h3>
+      <p style="font-size:12px;color:var(--text-dim);line-height:1.7;margin:4px 0 14px;">上传你合法拥有的 EPUB、TXT 或 Markdown。原书、进度和笔记独立保存，不进入 Memos；机只有实际打开某段后才会推进自己的进度。</p>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px;border:1px dashed var(--border);border-radius:8px;background:rgba(255,255,255,.28);">
+        <input type="file" id="reading-file" accept=".epub,.txt,.md,application/epub+zip,text/plain,text/markdown" style="font-size:12px;max-width:310px;">
+        <input id="reading-upload-title" placeholder="书名（可选）" style="max-width:190px;">
+        <input id="reading-upload-author" placeholder="作者（可选）" style="max-width:160px;">
+        <button class="btn-primary" onclick="uploadReadingBook()" style="height:32px;padding:0 14px;font-size:12px;">导入书籍</button>
+        <button onclick="loadReadingLibrary()" style="height:32px;padding:0 12px;font-size:12px;">刷新</button>
+      </div>
+      <div id="reading-message" style="min-height:18px;margin-top:8px;font-size:12px;color:var(--text-dim);"></div>
+      <div class="reading-shell">
+        <aside class="reading-books">
+          <div style="font-size:11px;letter-spacing:.12em;margin-bottom:10px;">PRIVATE BOOKSHELF</div>
+          <div id="reading-book-list"><div style="font-size:12px;color:var(--text-dim);">加载中…</div></div>
+        </aside>
+        <section class="reading-page">
+          <div id="reading-empty" style="min-height:430px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--text-dim);line-height:1.8;">从左侧选择一本书。<br>Claude 可通过 <code>read_book</code> 和你读取同一个片段。</div>
+          <div id="reading-reader" style="display:none;">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+              <div><h3 id="reading-book-title" style="margin:0 0 3px;"></h3><div id="reading-book-meta" style="font-size:11px;color:var(--text-dim);"></div></div>
+              <div style="display:flex;gap:7px;flex-wrap:wrap;"><a id="reading-export" class="btn-secondary" style="height:30px;display:inline-flex;align-items:center;padding:0 10px;font-size:11px;">导出笔记</a><button onclick="deleteReadingBook()" style="height:30px;padding:0 10px;font-size:11px;color:var(--negative);">删除整本书</button></div>
+            </div>
+            <div id="reading-progress-panel" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:13px;"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:9px 0;">
+              <button id="reading-prev" onclick="navigateReading(-1)" style="height:32px;padding:0 12px;">← 上一段</button>
+              <div style="text-align:center;"><div id="reading-section-title" style="font-weight:700;"></div><div id="reading-position" style="font-size:10px;color:var(--text-dim);margin-top:2px;"></div></div>
+              <button id="reading-next" onclick="navigateReading(1)" style="height:32px;padding:0 12px;">下一段 →</button>
+            </div>
+            <div id="reading-text"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+              <button class="btn-primary" onclick="completeReadingChunk()" style="height:32px;padding:0 13px;font-size:12px;">这一段读完了</button>
+              <button onclick="analyzeReadingChunk()" style="height:32px;padding:0 13px;font-size:12px;">DeepSeek 整理本段</button>
+            </div>
+            <div id="reading-analysis" style="margin-top:13px;"></div>
+            <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+              <div style="font-size:11px;letter-spacing:.1em;margin-bottom:8px;">SHARED MARGINS</div>
+              <p style="font-size:11px;color:var(--text-dim);margin:0 0 8px;">可先在正文中选中文字；没有选中文字时也可以只写笔记。</p>
+              <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:flex-start;">
+                <select id="reading-note-kind"><option value="highlight">划线</option><option value="note">笔记</option><option value="question">问题</option><option value="insight">想法</option></select>
+                <textarea id="reading-note-text" placeholder="写下你的想法…" style="flex:1;min-width:220px;min-height:62px;resize:vertical;"></textarea>
+                <button onclick="saveReadingAnnotation()" class="btn-primary" style="height:32px;padding:0 13px;font-size:12px;">保存</button>
+              </div>
+              <div id="reading-annotations" style="display:flex;flex-direction:column;gap:8px;margin-top:12px;"></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="content" id="health-view" style="display:none">
   <div style="max-width:920px;margin:0 auto;">
@@ -3813,6 +3894,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.getElementById('letters-view').style.display = target === 'letters' ? '' : 'none';
     document.getElementById('journal-view').style.display = target === 'journal' ? '' : 'none';
     document.getElementById('chats-view').style.display = target === 'chats' ? '' : 'none';
+    document.getElementById('reading-view').style.display = target === 'reading' ? '' : 'none';
     document.getElementById('health-view').style.display = target === 'health' ? '' : 'none';
     document.getElementById('anchors-view').style.display = target === 'anchors' ? '' : 'none';
     if (target !== 'network' && _netRAF) { cancelAnimationFrame(_netRAF); _netRAF = null; }
@@ -3844,6 +3926,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     if (target === 'letters') loadLetters();
     if (target === 'journal') loadJournalView();
     if (target === 'chats') loadChatHistory();
+    if (target === 'reading') loadReadingLibrary();
     if (target === 'health') loadHealthView();
     if (target === 'anchors') loadAnchorsView();
   });
@@ -6711,6 +6794,210 @@ async function deleteChatHistory(name) {
     const data = await authFetch('/api/chat-history/' + encodeURIComponent(name), {method:'DELETE'}).then(readJsonSafe);
     if (!data.ok) throw new Error(data.error || '删除失败');
     loadChatHistory();
+  } catch (e) { alert('删除失败：' + e.message); }
+}
+
+// Reading is a private shared margin: source books never enter Memos or ordinary search.
+let readingBooks = [];
+let readingBookId = '';
+let readingChunkId = 0;
+let readingChunkData = null;
+
+function readingPercent(progress, count) {
+  progress = progress || {};
+  return Math.max(0, Math.min(100, ((Number(progress.chunk || 0) + Number(progress.offset || 0)) / Math.max(1, Number(count || 1))) * 100));
+}
+
+function renderReadingBooks() {
+  const list = document.getElementById('reading-book-list');
+  if (!list) return;
+  if (!readingBooks.length) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--text-dim);line-height:1.7;">书架还是空的。导入一本书后，你和机的进度会在这里并排出现。</div>';
+    return;
+  }
+  list.innerHTML = readingBooks.map(book => {
+    const human = (book.progress || {}).human || {}, ai = (book.progress || {}).ai || {};
+    return '<button class="reading-book-card' + (book.id === readingBookId ? ' active' : '') + '" onclick="openReadingBook(\'' + book.id + '\')">'
+      + '<div style="font-weight:700;font-size:14px;line-height:1.35;">' + esc(book.title) + '</div>'
+      + '<div style="font-size:10px;color:#7A6C4C;margin:4px 0 9px;">' + esc(book.author || '作者未知') + ' · ' + esc(String(book.chunk_count)) + ' 段</div>'
+      + '<div style="font-size:9px;color:#7A6C4C;margin-bottom:3px;">YOU ' + readingPercent(human, book.chunk_count).toFixed(0) + '%</div><div class="reading-progress"><span style="width:' + readingPercent(human, book.chunk_count) + '%;background:#D9A8A0;"></span></div>'
+      + '<div style="font-size:9px;color:#7A6C4C;margin:7px 0 3px;">AI ' + readingPercent(ai, book.chunk_count).toFixed(0) + '%</div><div class="reading-progress"><span style="width:' + readingPercent(ai, book.chunk_count) + '%;background:#6E9486;"></span></div>'
+      + '</button>';
+  }).join('');
+}
+
+async function loadReadingLibrary() {
+  const msg = document.getElementById('reading-message');
+  try {
+    const data = await authFetch('/api/reading').then(readJsonSafe);
+    if (!data.ok) throw new Error(data.error || '读取书架失败');
+    readingBooks = data.books || [];
+    if (readingBookId && !readingBooks.some(book => book.id === readingBookId)) readingBookId = '';
+    renderReadingBooks();
+    if (msg) msg.textContent = readingBooks.length ? readingBooks.length + ' 本私有书籍。原文件不会进入 Memos。' : '';
+  } catch (e) {
+    if (msg) msg.textContent = '书架加载失败：' + e.message;
+  }
+}
+
+async function uploadReadingBook() {
+  const input = document.getElementById('reading-file');
+  const file = input && input.files && input.files[0];
+  const msg = document.getElementById('reading-message');
+  if (!file) { alert('请选择 EPUB、TXT 或 Markdown 文件'); return; }
+  const form = new FormData();
+  form.append('file', file);
+  form.append('title', document.getElementById('reading-upload-title').value || '');
+  form.append('author', document.getElementById('reading-upload-author').value || '');
+  if (msg) msg.textContent = '正在按章节和段落建立阅读片段…';
+  try {
+    const data = await fetch(BASE + '/api/reading', {method:'POST', body:form, credentials:'same-origin'}).then(readJsonSafe);
+    if (!data.ok) throw new Error(data.error || '导入失败');
+    input.value = '';
+    document.getElementById('reading-upload-title').value = '';
+    document.getElementById('reading-upload-author').value = '';
+    await loadReadingLibrary();
+    await openReadingBook(data.book.id);
+    if (msg) msg.textContent = data.book.duplicate ? '这本书已经在书架中，已直接打开。' : '导入完成：' + data.book.chunk_count + ' 个阅读片段。';
+  } catch (e) {
+    if (msg) msg.textContent = '导入失败：' + e.message;
+  }
+}
+
+async function openReadingBook(bookId, chunkId) {
+  const book = readingBooks.find(item => item.id === bookId);
+  if (!book) return;
+  readingBookId = bookId;
+  if (chunkId == null) chunkId = Number((((book.progress || {}).human || {}).chunk) || 0);
+  renderReadingBooks();
+  await loadReadingChunk(Number(chunkId));
+}
+
+function renderReadingAnalysis(analysis) {
+  const el = document.getElementById('reading-analysis');
+  if (!el) return;
+  if (!analysis) { el.innerHTML = ''; return; }
+  const themes = (analysis.themes || []).map(item => '<span style="padding:3px 7px;border:1px solid var(--border);border-radius:999px;font-size:10px;">' + esc(item) + '</span>').join(' ');
+  const questions = (analysis.questions || []).map(item => '<li style="margin:5px 0;">' + esc(item) + '</li>').join('');
+  el.innerHTML = '<div style="padding:13px 15px;background:rgba(255,255,255,.33);border-radius:8px;border:1px solid var(--border);"><div style="font-size:10px;letter-spacing:.1em;margin-bottom:7px;">DEEPSEEK READING MAP</div><div style="font-size:13px;line-height:1.7;">' + esc(analysis.summary || '') + '</div>' + (themes ? '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:9px;">' + themes + '</div>' : '') + (questions ? '<ul style="font-size:12px;line-height:1.55;margin:10px 0 0;padding-left:19px;">' + questions + '</ul>' : '') + '</div>';
+}
+
+function renderReadingAnnotations(items) {
+  const el = document.getElementById('reading-annotations');
+  if (!el) return;
+  el.innerHTML = (items || []).length ? items.map(item => '<div class="reading-note ' + (item.author === 'ai' ? 'ai' : '') + '">'
+    + '<div style="display:flex;justify-content:space-between;gap:8px;font-size:9px;letter-spacing:.08em;color:#7A6C4C;margin-bottom:5px;"><span>' + (item.author === 'ai' ? 'AI' : 'YOU') + ' · ' + esc(item.kind || 'note').toUpperCase() + '</span><button onclick="deleteReadingAnnotation(\'' + item.id + '\')" style="font-size:10px;color:var(--negative);border:0;background:transparent;box-shadow:none;padding:0;">删除</button></div>'
+    + (item.quote ? '<div style="font-family:serif;font-style:italic;line-height:1.55;margin-bottom:6px;">“' + esc(item.quote) + '”</div>' : '')
+    + (item.note ? '<div style="font-size:12px;line-height:1.6;">' + esc(item.note) + '</div>' : '') + '</div>').join('') : '<div style="font-size:11px;color:var(--text-dim);">这一段的页边还很安静。</div>';
+}
+
+function renderReadingProgress(book) {
+  const panel = document.getElementById('reading-progress-panel');
+  const progress = book.progress || {}, count = book.chunk_count || 1;
+  panel.innerHTML = [['YOU', progress.human || {}, '#D9A8A0'], ['AI', progress.ai || {}, '#2F4F4F']].map(row => {
+    const pct = readingPercent(row[1], count);
+    return '<div><div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:4px;"><span>' + row[0] + '</span><span>' + pct.toFixed(0) + '% · ' + (Number(row[1].chunk || 0) + 1) + '/' + count + '</span></div><div class="reading-progress"><span style="width:' + pct + '%;background:' + row[2] + ';"></span></div></div>';
+  }).join('');
+}
+
+async function loadReadingChunk(chunkId) {
+  try {
+    const data = await authFetch('/api/reading/' + encodeURIComponent(readingBookId) + '/chunks/' + Number(chunkId)).then(readJsonSafe);
+    if (!data.ok) throw new Error(data.error || '读取片段失败');
+    readingChunkData = data.chunk;
+    readingChunkId = Number(data.chunk.id);
+    const book = data.chunk.book;
+    document.getElementById('reading-empty').style.display = 'none';
+    document.getElementById('reading-reader').style.display = '';
+    document.getElementById('reading-book-title').textContent = book.title;
+    document.getElementById('reading-book-meta').textContent = (book.author || '作者未知') + ' · ' + book.format.toUpperCase() + ' · ' + book.chunk_count + ' 段';
+    document.getElementById('reading-section-title').textContent = data.chunk.title;
+    document.getElementById('reading-position').textContent = 'CHUNK ' + (readingChunkId + 1) + ' / ' + book.chunk_count;
+    document.getElementById('reading-text').textContent = data.chunk.text;
+    document.getElementById('reading-prev').disabled = data.chunk.previous == null;
+    document.getElementById('reading-next').disabled = data.chunk.next == null;
+    document.getElementById('reading-export').href = BASE + '/api/reading/' + encodeURIComponent(readingBookId) + '/export';
+    renderReadingProgress(book);
+    renderReadingAnalysis(data.chunk.analysis);
+    renderReadingAnnotations(data.chunk.annotations || []);
+  } catch (e) { alert('读取失败：' + e.message); }
+}
+
+async function saveHumanReadingProgress(chunkId, offset) {
+  const data = await authFetch('/api/reading/' + encodeURIComponent(readingBookId) + '/progress', {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({chunk:chunkId, offset:offset})}).then(readJsonSafe);
+  if (!data.ok) throw new Error(data.error || '进度保存失败');
+  const index = readingBooks.findIndex(item => item.id === readingBookId);
+  if (index >= 0) readingBooks[index] = data.book;
+  renderReadingBooks();
+  renderReadingProgress(data.book);
+  return data.book;
+}
+
+async function navigateReading(delta) {
+  if (!readingChunkData) return;
+  const target = delta < 0 ? readingChunkData.previous : readingChunkData.next;
+  if (target == null) return;
+  try {
+    if (delta > 0) await saveHumanReadingProgress(readingChunkId, 1.0);
+    await saveHumanReadingProgress(Number(target), 0.0);
+    await loadReadingChunk(Number(target));
+  } catch (e) { alert(e.message); }
+}
+
+async function completeReadingChunk() {
+  if (!readingChunkData) return;
+  try {
+    await saveHumanReadingProgress(readingChunkId, 1.0);
+    if (readingChunkData.next != null) await navigateReading(1);
+  } catch (e) { alert(e.message); }
+}
+
+async function analyzeReadingChunk() {
+  if (!readingChunkData) return;
+  const msg = document.getElementById('reading-message');
+  if (msg) msg.textContent = 'DeepSeek 正在整理这一段…';
+  try {
+    const data = await authFetch('/api/reading/' + encodeURIComponent(readingBookId) + '/chunks/' + readingChunkId + '/analyze', {method:'POST'}).then(readJsonSafe);
+    if (!data.ok) throw new Error(data.error || '导读失败');
+    renderReadingAnalysis(data.analysis);
+    if (msg) msg.textContent = '本段导读已缓存。';
+  } catch (e) { if (msg) msg.textContent = '导读失败：' + e.message; }
+}
+
+async function saveReadingAnnotation() {
+  if (!readingChunkData) return;
+  const textEl = document.getElementById('reading-text');
+  const selection = window.getSelection();
+  let quote = '';
+  if (selection && selection.anchorNode && textEl.contains(selection.anchorNode)) quote = selection.toString().trim();
+  const noteEl = document.getElementById('reading-note-text');
+  try {
+    const data = await authFetch('/api/reading/' + encodeURIComponent(readingBookId) + '/annotations', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({chunk:readingChunkId, quote:quote, note:noteEl.value, kind:document.getElementById('reading-note-kind').value})}).then(readJsonSafe);
+    if (!data.ok) throw new Error(data.error || '保存失败');
+    noteEl.value = '';
+    await loadReadingChunk(readingChunkId);
+  } catch (e) { alert('笔记保存失败：' + e.message); }
+}
+
+async function deleteReadingAnnotation(annotationId) {
+  if (!confirm('删除这条共同阅读笔记吗？')) return;
+  try {
+    const data = await authFetch('/api/reading/' + encodeURIComponent(readingBookId) + '/annotations/' + encodeURIComponent(annotationId), {method:'DELETE'}).then(readJsonSafe);
+    if (!data.ok) throw new Error(data.error || '删除失败');
+    await loadReadingChunk(readingChunkId);
+  } catch (e) { alert('删除失败：' + e.message); }
+}
+
+async function deleteReadingBook() {
+  const book = readingBooks.find(item => item.id === readingBookId);
+  if (!book || !confirm('永久删除《' + book.title + '》、阅读进度和全部共同笔记吗？')) return;
+  try {
+    const data = await authFetch('/api/reading/' + encodeURIComponent(readingBookId), {method:'DELETE'}).then(readJsonSafe);
+    if (!data.ok) throw new Error(data.error || '删除失败');
+    readingBookId = ''; readingChunkData = null;
+    document.getElementById('reading-reader').style.display = 'none';
+    document.getElementById('reading-empty').style.display = 'flex';
+    await loadReadingLibrary();
   } catch (e) { alert('删除失败：' + e.message); }
 }
 
