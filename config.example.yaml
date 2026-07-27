@@ -116,6 +116,13 @@ embedding:
 weread:
   api_key: ""
 
+# --- Garden Radio / 网易云音乐 ---
+# App ID 与 Private Key 不写进本文件；在 Garden → Radio 保存后由网易云官方
+# ncm-cli 加密保存在 buckets/.radio。这里只记录页面连接状态。
+radio:
+  configured: false
+  app_id_masked: ""
+
 # --- Scoring weights / 检索权重参数 ---
 # total = topic(×4) + emotion(×2) + time(×1.5) + importance(×1)
 scoring_weights:
