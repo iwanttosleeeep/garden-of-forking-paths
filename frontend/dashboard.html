@@ -1167,9 +1167,21 @@
   #reading-text { min-height:360px; max-height:62vh; overflow:auto; padding:22px 24px; background:#F4EDDA; color:#45391F; border-radius:8px; border:1px solid #C9B78D; font-family:'Noto Serif SC','Cormorant Garamond',serif; font-size:16px; line-height:1.95; white-space:pre-wrap; user-select:text; }
   .reading-note { padding:11px 12px; border-radius:7px; background:#F4EDDA; color:#45391F; border-left:4px solid #D9A8A0; }
   .reading-note.ai { border-left-color:#6E9486; }
+  .weread-skill-card { display:grid; grid-template-columns:auto minmax(0,1fr); gap:14px; margin-top:16px; padding:16px; border:1px solid rgba(31,47,42,.3); border-radius:10px; background:rgba(244,237,218,.7); color:#45391F; }
+  .weread-skill-mark { width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:#2F4F4F; color:#F4EDDA; font:600 18px/1 'Cormorant Garamond',serif; box-shadow:2px 3px 7px rgba(31,47,42,.22); }
+  .weread-skill-kicker { font-size:9px; letter-spacing:.14em; color:#6E9486; margin-bottom:3px; }
+  .weread-skill-card h4 { margin:0; font-size:16px; color:#45391F; }
+  .weread-skill-card p { margin:7px 0 10px; font-size:11px; line-height:1.7; color:#7A6C4C; }
+  .weread-skill-tags { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:11px; }
+  .weread-skill-tags span { padding:3px 7px; border:1px solid #C9B78D; border-radius:999px; background:#F4EDDA; font-size:9px; color:#45391F; }
+  .weread-skill-actions { display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+  .weread-skill-actions a { min-height:30px; display:inline-flex; align-items:center; padding:0 11px; border:1px solid #2F4F4F; border-radius:5px; background:#2F4F4F; color:#F4EDDA; font-size:10px; letter-spacing:.04em; }
+  .weread-skill-actions a:hover { color:#F4EDDA; transform:translateY(-1px); }
+  .weread-skill-actions code { font-size:10px; color:#2F4F4F; }
   @media (max-width: 780px) {
     .reading-shell { grid-template-columns:1fr; }
     #reading-text { max-height:none; min-height:280px; padding:18px; }
+    .weread-skill-card { grid-template-columns:1fr; }
   }
   #chats-view #chat-history-list > * { background: rgba(255,255,255,.34); }
   #chats-view .config-section {
@@ -2300,6 +2312,19 @@
           </div>
         </section>
       </div>
+      <section class="weread-skill-card" aria-labelledby="weread-skill-title">
+        <div class="weread-skill-mark" aria-hidden="true">W</div>
+        <div>
+          <div class="weread-skill-kicker">TENCENT OFFICIAL AGENT SKILL · v1.0.4 · INCLUDED</div>
+          <h4 id="weread-skill-title">微信读书 / WeRead</h4>
+          <p>官方 Skill 已随 Garden 附带。支持让 AI 读取你的书架、阅读进度、划线、笔记和阅读统计；只取你明确请求的数据，不复制整本书，也不写入 Memos。</p>
+          <div class="weread-skill-tags"><span>书架</span><span>进度</span><span>划线与笔记</span><span>阅读统计</span><span>发现好书</span></div>
+          <div class="weread-skill-actions">
+            <a href="https://weread.qq.com/r/weread-skills" target="_blank" rel="noopener noreferrer">获取 API Key ↗</a>
+            <span style="font-size:10px;color:#7A6C4C;">密钥只放在 AI Agent 的 <code>WEREAD_API_KEY</code> 环境变量中，不填进 Garden 网页。</span>
+          </div>
+        </div>
+      </section>
     </div>
   </div>
 </div>
