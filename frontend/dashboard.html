@@ -1174,10 +1174,22 @@
   .weread-skill-card p { margin:7px 0 10px; font-size:11px; line-height:1.7; color:#7A6C4C; }
   .weread-skill-tags { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:11px; }
   .weread-skill-tags span { padding:3px 7px; border:1px solid #C9B78D; border-radius:999px; background:#F4EDDA; font-size:9px; color:#45391F; }
-  .weread-skill-actions { display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
-  .weread-skill-actions a { min-height:30px; display:inline-flex; align-items:center; padding:0 11px; border:1px solid #2F4F4F; border-radius:5px; background:#2F4F4F; color:#F4EDDA; font-size:10px; letter-spacing:.04em; }
+  .weread-skill-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .weread-skill-actions a { min-height:32px; display:inline-flex; align-items:center; padding:0 11px; border:1px solid #2F4F4F; border-radius:5px; background:#2F4F4F; color:#F4EDDA; font-size:10px; letter-spacing:.04em; }
   .weread-skill-actions a:hover { color:#F4EDDA; transform:translateY(-1px); }
+  .weread-skill-actions input { min-width:250px; flex:1; height:32px; color:#45391F; background:#F4EDDA; border-color:#C9B78D; }
+  .weread-skill-actions button, .weread-view-controls button { height:32px; padding:0 12px; font-size:10px; }
   .weread-skill-actions code { font-size:10px; color:#2F4F4F; }
+  .weread-status { min-height:18px; margin-top:8px; font-size:10px; color:#7A6C4C; }
+  .weread-view-controls { display:none; align-items:center; gap:8px; flex-wrap:wrap; margin-top:13px; padding-top:13px; border-top:1px solid rgba(31,47,42,.22); }
+  .weread-view-controls select, .weread-view-controls input { height:32px; color:#45391F; background:#F4EDDA; border-color:#C9B78D; }
+  .weread-display { display:none; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; margin-top:12px; }
+  .weread-item { min-width:0; padding:12px 13px; border:1px solid rgba(31,47,42,.25); border-radius:7px; background:rgba(255,255,255,.38); color:#45391F; }
+  .weread-item h5 { margin:0 0 4px; font-size:13px; line-height:1.4; color:#45391F; }
+  .weread-item p { margin:4px 0; font-size:10px; line-height:1.65; color:#7A6C4C; }
+  .weread-item button { height:27px; margin-top:7px; padding:0 9px; font-size:9px; color:#2F4F4F; border-color:#6E9486; background:#CFE7DB; }
+  .weread-quote { grid-column:1/-1; border-left:4px solid #D9A8A0; }
+  .weread-quote.thought { border-left-color:#6E9486; }
   @media (max-width: 780px) {
     .reading-shell { grid-template-columns:1fr; }
     #reading-text { max-height:none; min-height:280px; padding:18px; }
@@ -2315,14 +2327,28 @@
       <section class="weread-skill-card" aria-labelledby="weread-skill-title">
         <div class="weread-skill-mark" aria-hidden="true">W</div>
         <div>
-          <div class="weread-skill-kicker">TENCENT OFFICIAL AGENT SKILL · v1.0.4 · INCLUDED</div>
+          <div class="weread-skill-kicker">TENCENT OFFICIAL AGENT SKILL · v1.0.4 · READ_BOOK</div>
           <h4 id="weread-skill-title">微信读书 / WeRead</h4>
-          <p>官方 Skill 已随 Garden 附带。支持让 AI 读取你的书架、阅读进度、划线、笔记和阅读统计；只取你明确请求的数据，不复制整本书，也不写入 Memos。</p>
-          <div class="weread-skill-tags"><span>书架</span><span>进度</span><span>划线与笔记</span><span>阅读统计</span><span>发现好书</span></div>
+          <p>在这里接入 API Key 后，书架、划线、个人想法和阅读统计可以直接陈列在 Reading；Claude Connector 也通过同一个 <code>read_book</code> 按需读取。商业书正文不会被复制，微信读书数据也不会写入 Memos。</p>
+          <div class="weread-skill-tags"><span>书架</span><span>阅读进度</span><span>划线</span><span>个人想法</span><span>阅读统计</span></div>
           <div class="weread-skill-actions">
+            <input type="password" id="weread-api-key" placeholder="粘贴 wrk- 开头的 API Key" autocomplete="new-password" spellcheck="false">
+            <button class="btn-primary" onclick="saveWeReadKey()">保存并验证</button>
+            <button id="weread-clear-key" onclick="clearWeReadKey()" style="display:none;color:#A8431F;border-color:#A8431F;">清除</button>
             <a href="https://weread.qq.com/r/weread-skills" target="_blank" rel="noopener noreferrer">获取 API Key ↗</a>
-            <span style="font-size:10px;color:#7A6C4C;">密钥只放在 AI Agent 的 <code>WEREAD_API_KEY</code> 环境变量中，不填进 Garden 网页。</span>
           </div>
+          <div id="weread-status" class="weread-status">正在检查接入状态…</div>
+          <div id="weread-view-controls" class="weread-view-controls">
+            <select id="weread-view" onchange="toggleWeReadSearch()">
+              <option value="shelf">我的书架</option>
+              <option value="notebooks">划线与笔记</option>
+              <option value="stats">本月阅读统计</option>
+              <option value="search">发现好书</option>
+            </select>
+            <input id="weread-search-query" placeholder="书名或作者" style="display:none;min-width:160px;">
+            <button onclick="loadWeReadView()">陈列</button>
+          </div>
+          <div id="weread-display" class="weread-display" aria-live="polite"></div>
         </div>
       </section>
     </div>
@@ -3951,7 +3977,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     if (target === 'letters') loadLetters();
     if (target === 'journal') loadJournalView();
     if (target === 'chats') loadChatHistory();
-    if (target === 'reading') loadReadingLibrary();
+    if (target === 'reading') { loadReadingLibrary(); loadWeReadConfig(); }
     if (target === 'health') loadHealthView();
     if (target === 'anchors') loadAnchorsView();
   });
@@ -7024,6 +7050,145 @@ async function deleteReadingBook() {
     document.getElementById('reading-empty').style.display = 'flex';
     await loadReadingLibrary();
   } catch (e) { alert('删除失败：' + e.message); }
+}
+
+// WeRead stays inside Reading and inside the existing read_book Connector tool.
+function toggleWeReadSearch() {
+  const view = document.getElementById('weread-view');
+  const query = document.getElementById('weread-search-query');
+  if (view && query) query.style.display = view.value === 'search' ? '' : 'none';
+}
+
+function setWeReadConfigured(configured, source, masked) {
+  const controls = document.getElementById('weread-view-controls');
+  const clear = document.getElementById('weread-clear-key');
+  const input = document.getElementById('weread-api-key');
+  if (controls) controls.style.display = configured ? 'flex' : 'none';
+  if (clear) clear.style.display = configured && source !== 'environment' ? '' : 'none';
+  if (input) {
+    input.value = '';
+    input.disabled = source === 'environment';
+    input.placeholder = configured ? ('已配置 ' + (masked || '***') + '；粘贴新 Key 可替换') : '粘贴 wrk- 开头的 API Key';
+  }
+}
+
+async function loadWeReadConfig() {
+  const status = document.getElementById('weread-status');
+  if (!status) return;
+  status.textContent = '正在检查接入状态…';
+  try {
+    const data = await authFetch('/api/weread/config').then(readJsonSafe);
+    if (!data.ok) throw new Error(data.error || '状态读取失败');
+    setWeReadConfigured(Boolean(data.configured), data.source, data.masked);
+    status.textContent = data.configured
+      ? '已接入 ' + data.masked + (data.source === 'environment' ? '（由部署环境变量管理）' : '（保存在 Garden 持久配置中）')
+      : '尚未接入。粘贴你已有的 API Key，Garden 会先验证再保存；之后不会回显明文。';
+  } catch (e) {
+    setWeReadConfigured(false, '', '');
+    status.textContent = '接入状态读取失败：' + e.message;
+  }
+}
+
+async function saveWeReadKey() {
+  const input = document.getElementById('weread-api-key');
+  const status = document.getElementById('weread-status');
+  const token = (input && input.value || '').trim();
+  if (!token) { if (status) status.textContent = '请先粘贴 API Key。'; return; }
+  if (status) status.textContent = '正在通过官方接口验证，请稍候…';
+  try {
+    const data = await authFetch('/api/weread/config', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({api_key:token})
+    }).then(readJsonSafe);
+    if (!data.ok) throw new Error(data.error || '验证失败');
+    if (input) input.value = '';
+    await loadWeReadConfig();
+    if (status) status.textContent = '验证成功，已接入 ' + data.masked + '；当前可见 ' + Number(data.visible_count || 0) + ' 项书架内容。';
+    await loadWeReadView('shelf');
+  } catch (e) {
+    if (status) status.textContent = '接入失败：' + e.message;
+  }
+}
+
+async function clearWeReadKey() {
+  if (!confirm('从 Garden 持久配置中清除微信读书 API Key 吗？')) return;
+  const status = document.getElementById('weread-status');
+  try {
+    const data = await authFetch('/api/weread/config', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({clear:true})
+    }).then(readJsonSafe);
+    if (!data.ok) throw new Error(data.error || '清除失败');
+    const display = document.getElementById('weread-display');
+    if (display) { display.style.display = 'none'; display.innerHTML = ''; }
+    await loadWeReadConfig();
+  } catch (e) { if (status) status.textContent = '清除失败：' + e.message; }
+}
+
+function wereadSeconds(value) {
+  const seconds = Math.max(0, Number(value || 0));
+  if (seconds < 60) return Math.round(seconds) + ' 秒';
+  const hours = Math.floor(seconds / 3600), minutes = Math.round((seconds % 3600) / 60);
+  return (hours ? hours + ' 小时 ' : '') + minutes + ' 分钟';
+}
+
+function wereadTime(value) {
+  const number = Number(value || 0);
+  if (!number) return '—';
+  const date = new Date(number > 100000000000 ? number : number * 1000);
+  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString();
+}
+
+function renderWeReadData(view, data) {
+  const display = document.getElementById('weread-display');
+  if (!display) return;
+  display.style.display = 'grid';
+  if (view === 'shelf') {
+    const books = (data.books || []).map(book => '<article class="weread-item"><h5>' + esc(book.title || '未命名书籍') + '</h5><p>' + esc(book.author || '作者未知') + (book.category ? ' · ' + esc(book.category) : '') + '</p><button data-book-id="' + esc(book.bookId || '') + '" onclick="loadWeReadBookData(\'progress\',this.dataset.bookId)">查看阅读进度</button></article>');
+    const albums = (data.albums || []).map(album => '<article class="weread-item"><h5>' + esc(album.title || '未命名音频') + '</h5><p>' + esc(album.author || '作者未知') + ' · ' + Number(album.trackCount || 0) + ' 集</p><p>有声书 / 专辑</p></article>');
+    display.innerHTML = '<div class="weread-item" style="grid-column:1/-1;"><h5>我的微信读书书架</h5><p>' + Number(data.visible_count || 0) + ' 项 · 电子书 ' + Number(data.book_count || 0) + ' · 音频 ' + Number(data.album_count || 0) + (data.has_article_collection ? ' · 含文章收藏' : '') + '</p></div>' + books.concat(albums).join('');
+  } else if (view === 'notebooks') {
+    const books = (data.books || []).map(book => '<article class="weread-item"><h5>' + esc(book.title || '未命名书籍') + '</h5><p>' + esc(book.author || '作者未知') + '</p><p>划线 ' + Number(book.highlight_count || 0) + ' · 想法 ' + Number(book.review_count || 0) + ' · 书签 ' + Number(book.bookmark_count || 0) + '</p><button data-book-id="' + esc(book.bookId || '') + '" onclick="loadWeReadBookData(\'notes\',this.dataset.bookId)">陈列划线与想法</button></article>');
+    display.innerHTML = books.join('') || '<div class="weread-item" style="grid-column:1/-1;">还没有可陈列的微信读书笔记。</div>';
+  } else if (view === 'notes') {
+    const heading = '<div class="weread-item" style="grid-column:1/-1;"><h5>《' + esc((data.book || {}).title || '微信读书笔记') + '》</h5><p>' + esc((data.book || {}).author || '') + ' · 划线 ' + (data.highlights || []).length + ' · 个人想法 ' + (data.thoughts || []).length + '</p></div>';
+    const highlights = (data.highlights || []).map(item => '<article class="weread-item weread-quote"><p>' + esc(item.chapter || '划线') + '</p><h5>“' + esc(item.text || '') + '”</h5><p>' + wereadTime(item.created_at) + '</p></article>');
+    const thoughts = (data.thoughts || []).map(item => '<article class="weread-item weread-quote thought"><p>' + esc(item.chapter || '个人想法') + '</p>' + (item.highlight ? '<p>关于：“' + esc(item.highlight) + '”</p>' : '') + '<h5>' + esc(item.content || '') + '</h5><p>' + wereadTime(item.created_at) + '</p></article>');
+    display.innerHTML = heading + highlights.concat(thoughts).join('') + ((!highlights.length && !thoughts.length) ? '<div class="weread-item" style="grid-column:1/-1;">这本书还没有可陈列的划线或个人想法。书签仅计数，官方接口不提供书签正文。</div>' : '');
+  } else if (view === 'progress') {
+    display.innerHTML = '<div class="weread-item" style="grid-column:1/-1;"><h5>阅读进度 ' + (data.progress == null ? '—' : esc(String(data.progress)) + '%') + '</h5><p>当前章节 UID：' + esc(String(data.chapter_uid || '—')) + ' · 累计 ' + wereadSeconds(data.reading_seconds) + '</p><p>最近更新：' + wereadTime(data.updated_at) + '</p></div>';
+  } else if (view === 'stats') {
+    const top = (data.top_reads || []).map(item => '<article class="weread-item"><h5>' + esc(item.title || '未命名书籍') + '</h5><p>' + esc(item.author || '') + '</p><p>' + wereadSeconds(item.reading_seconds) + '</p></article>').join('');
+    display.innerHTML = '<div class="weread-item" style="grid-column:1/-1;"><h5>本月阅读统计</h5><p>累计 ' + wereadSeconds(data.total_reading_seconds) + ' · 阅读 ' + Number(data.read_days || 0) + ' 天</p><p>' + esc(data.preferred_time_text || '') + (data.preferred_category_text ? ' · ' + esc(data.preferred_category_text) : '') + '</p></div>' + top;
+  } else if (view === 'search') {
+    display.innerHTML = (data.results || []).map(book => '<article class="weread-item"><h5>' + esc(book.title || '未命名书籍') + '</h5><p>' + esc(book.author || '作者未知') + (book.category ? ' · ' + esc(book.category) : '') + '</p><p>评分 ' + esc(String(book.rating || '—')) + '</p></article>').join('') || '<div class="weread-item" style="grid-column:1/-1;">没有找到匹配的电子书。</div>';
+  }
+}
+
+async function loadWeReadBookData(view, bookId) {
+  await loadWeReadView(view, bookId);
+}
+
+async function loadWeReadView(forcedView, bookId) {
+  const chooser = document.getElementById('weread-view');
+  const view = forcedView || (chooser && chooser.value) || 'shelf';
+  const display = document.getElementById('weread-display');
+  const status = document.getElementById('weread-status');
+  const params = new URLSearchParams({view:view, limit:'30'});
+  if (bookId) params.set('book_id', bookId);
+  if (view === 'stats') params.set('period', 'monthly');
+  if (view === 'search') {
+    const query = (document.getElementById('weread-search-query').value || '').trim();
+    if (!query) { if (status) status.textContent = '请输入书名或作者。'; return; }
+    params.set('query', query);
+  }
+  if (display) { display.style.display = 'grid'; display.innerHTML = '<div class="weread-item" style="grid-column:1/-1;">正在读取微信读书…</div>'; }
+  try {
+    const response = await authFetch('/api/weread?' + params.toString()).then(readJsonSafe);
+    if (!response.ok) throw new Error(response.error || '读取失败');
+    renderWeReadData(response.view, response.data || {});
+    if (status) status.textContent = '已按需读取；这些内容不会进入 Memos。';
+  } catch (e) {
+    if (display) display.innerHTML = '<div class="weread-item" style="grid-column:1/-1;color:#A8431F;">读取失败：' + esc(e.message) + '</div>';
+  }
 }
 
 // Health is a deliberately separate private surface: no memo indexing or AI context.

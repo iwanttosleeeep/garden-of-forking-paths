@@ -136,3 +136,33 @@ async def test_single_read_book_tool_lists_opens_and_notes(tmp_path, monkeypatch
     assert opened["text"] == "A shared paragraph."
     assert "insight" in saved
     assert library.get_book(book["id"])["progress"]["ai"]["offset"] == 1.0
+
+
+@pytest.mark.asyncio
+async def test_read_book_tool_includes_weread_actions(tmp_path, monkeypatch):
+    monkeypatch.setattr(rt, "config", {"buckets_dir": str(tmp_path), "weread": {"api_key": "wrk-test"}})
+
+    async def fake_gateway(_config, api_name, **_params):
+        if api_name == "/user/notebooks":
+            return {
+                "books": [{
+                    "bookId": "book-1",
+                    "book": {"title": "WeRead Book", "author": "Reader"},
+                    "reviewCount": 1,
+                    "noteCount": 2,
+                    "bookmarkCount": 3,
+                }]
+            }
+        if api_name == "/book/bookmarklist":
+            return {"book": {"bookId": "book-1", "title": "WeRead Book"}, "updated": [{"markText": "A line"}]}
+        if api_name == "/review/list/mine":
+            return {"reviews": [{"review": {"content": "A thought"}}]}
+        raise AssertionError(api_name)
+
+    monkeypatch.setattr(reading_tool, "gateway_call", fake_gateway)
+    notebooks = json.loads((await reading_tool.dispatch("weread_notebooks")).split("\n", 1)[1])
+    notes = json.loads((await reading_tool.dispatch("weread_notes", book_id="book-1")).split("\n", 1)[1])
+
+    assert notebooks["books"][0]["total_note_count"] == 6
+    assert notes["highlights"][0]["text"] == "A line"
+    assert notes["thoughts"][0]["content"] == "A thought"

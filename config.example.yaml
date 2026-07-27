@@ -110,6 +110,12 @@ embedding:
   timeout_seconds: 120             # Embedding request timeout seconds / 向量化请求超时秒数
   # api_key: ""                   # Use OMBRE_EMBED_API_KEY / 使用 OMBRE_EMBED_API_KEY
 
+# --- Tencent WeRead / 微信读书 ---
+# 可直接在 Garden → Reading 中保存并验证；网页不会回显明文。
+# 部署环境也可设置 WEREAD_API_KEY（优先级更高）。
+weread:
+  api_key: ""
+
 # --- Scoring weights / 检索权重参数 ---
 # total = topic(×4) + emotion(×2) + time(×1.5) + importance(×1)
 scoring_weights:

@@ -2,13 +2,30 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
+import os
+
+import yaml
 
 from starlette.requests import Request
 from starlette.responses import JSONResponse, PlainTextResponse, Response
 
 from reading_library import ReadingLibrary, ReadingLibraryError
-from utils import clean_llm_json
+from utils import atomic_write_text, clean_llm_json, config_file_path
+from weread_client import (
+    WEREAD_SKILL_VERSION,
+    WeReadError,
+    gateway_call,
+    key_source,
+    masked_key,
+    normalize_notebooks,
+    normalize_notes,
+    normalize_progress,
+    normalize_search,
+    normalize_shelf,
+    normalize_stats,
+)
 
 from . import _shared as sh
 
@@ -19,6 +36,31 @@ def _library() -> ReadingLibrary:
 
 def _error(exc: Exception, status_code: int = 400) -> JSONResponse:
     return JSONResponse({"ok": False, "error": str(exc)}, status_code=status_code)
+
+
+def _limit(value: object, default: int = 30) -> int:
+    try:
+        return max(1, min(50, int(value)))
+    except (TypeError, ValueError, OverflowError):
+        return default
+
+
+def _persist_weread_key(value: str) -> None:
+    """Persist the secret in Garden's mounted config without returning it to the browser."""
+    path = config_file_path()
+    saved = {}
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as handle:
+            loaded = yaml.safe_load(handle) or {}
+        if not isinstance(loaded, dict):
+            raise WeReadError("Garden 配置文件格式不正确，无法保存微信读书 API Key")
+        saved = loaded
+    saved["weread"] = {"api_key": value}
+    atomic_write_text(
+        path,
+        yaml.safe_dump(saved, allow_unicode=True, default_flow_style=False, sort_keys=False),
+    )
+    sh.config.setdefault("weread", {})["api_key"] = value
 
 
 async def _analyze_chunk(book_id: str, chunk_id: int) -> dict:
@@ -47,6 +89,125 @@ async def _analyze_chunk(book_id: str, chunk_id: int) -> dict:
 
 
 def register(mcp) -> None:
+    @mcp.custom_route("/api/weread/config", methods=["GET"])
+    async def get_weread_config(request: Request) -> Response:
+        err = sh._require_auth(request)
+        if err:
+            return err
+        return JSONResponse({
+            "ok": True,
+            "configured": bool(masked_key(sh.config)),
+            "masked": masked_key(sh.config),
+            "source": key_source(sh.config),
+            "skill_version": WEREAD_SKILL_VERSION,
+        })
+
+    @mcp.custom_route("/api/weread/config", methods=["POST"])
+    async def save_weread_config(request: Request) -> Response:
+        err = sh._require_auth(request)
+        if err:
+            return err
+        try:
+            body = await request.json()
+            if not isinstance(body, dict):
+                raise WeReadError("请求格式不正确")
+            if os.environ.get("WEREAD_API_KEY", "").strip():
+                raise WeReadError(
+                    "当前 API Key 由部署环境变量 WEREAD_API_KEY 管理；请在部署平台修改后重启"
+                )
+            if bool(body.get("clear")):
+                _persist_weread_key("")
+                return JSONResponse({"ok": True, "configured": False, "source": ""})
+            token = str(body.get("api_key") or "").strip()
+            if not token.startswith("wrk-"):
+                raise WeReadError("微信读书 API Key 应以 wrk- 开头")
+            candidate = dict(sh.config)
+            candidate["weread"] = {"api_key": token}
+            shelf = await gateway_call(candidate, "/shelf/sync")
+            _persist_weread_key(token)
+            normalized = normalize_shelf(shelf, 1)
+            return JSONResponse({
+                "ok": True,
+                "configured": True,
+                "masked": masked_key(sh.config),
+                "source": "config",
+                "visible_count": normalized["visible_count"],
+            })
+        except WeReadError as exc:
+            return _error(exc)
+        except Exception:
+            sh.logger.exception("weread config save failed")
+            return _error(Exception("微信读书 API Key 保存失败"), 500)
+
+    @mcp.custom_route("/api/weread", methods=["GET"])
+    async def get_weread_data(request: Request) -> Response:
+        err = sh._require_auth(request)
+        if err:
+            return err
+        try:
+            view = str(request.query_params.get("view") or "shelf").strip().lower()
+            limit = _limit(request.query_params.get("limit"))
+            if view == "shelf":
+                payload = normalize_shelf(
+                    await gateway_call(sh.config, "/shelf/sync"), limit
+                )
+            elif view == "notebooks":
+                params = {"count": limit}
+                cursor = int(request.query_params.get("cursor") or 0)
+                if cursor > 0:
+                    params["lastSort"] = cursor
+                payload = normalize_notebooks(
+                    await gateway_call(sh.config, "/user/notebooks", **params), limit
+                )
+            elif view == "notes":
+                book_id = str(request.query_params.get("book_id") or "").strip()
+                if not book_id:
+                    raise WeReadError("请选择一本有笔记的书")
+                cursor = max(0, int(request.query_params.get("cursor") or 0))
+                highlights, thoughts = await asyncio.gather(
+                    gateway_call(sh.config, "/book/bookmarklist", bookId=book_id),
+                    gateway_call(
+                        sh.config,
+                        "/review/list/mine",
+                        bookid=book_id,
+                        synckey=cursor,
+                        count=limit,
+                    ),
+                )
+                payload = normalize_notes(highlights, thoughts, limit)
+            elif view == "progress":
+                book_id = str(request.query_params.get("book_id") or "").strip()
+                if not book_id:
+                    raise WeReadError("请选择一本电子书")
+                payload = normalize_progress(
+                    await gateway_call(sh.config, "/book/getprogress", bookId=book_id)
+                )
+            elif view == "stats":
+                period = str(request.query_params.get("period") or "monthly").lower()
+                if period not in {"weekly", "monthly", "annually", "overall"}:
+                    raise WeReadError("统计范围不正确")
+                payload = normalize_stats(
+                    await gateway_call(sh.config, "/readdata/detail", mode=period), period
+                )
+            elif view == "search":
+                query = str(request.query_params.get("query") or "").strip()
+                if not query:
+                    raise WeReadError("请输入搜索关键词")
+                payload = normalize_search(
+                    await gateway_call(
+                        sh.config, "/store/search", keyword=query, scope=10, count=limit
+                    ),
+                    limit,
+                )
+            else:
+                raise WeReadError("未知的微信读书陈列方式")
+            return JSONResponse({"ok": True, "view": view, "data": payload})
+        except (WeReadError, TypeError, ValueError) as exc:
+            return _error(exc)
+        except Exception:
+            sh.logger.exception("weread data request failed")
+            return _error(Exception("微信读书数据读取失败"), 502)
+
     @mcp.custom_route("/api/reading", methods=["GET"])
     async def list_books(request: Request) -> Response:
         err = sh._require_auth(request)
