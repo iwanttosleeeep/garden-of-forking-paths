@@ -46,7 +46,19 @@ def _json_from_text(value: str) -> Any:
         return json.loads(clean)
     except ValueError:
         pass
-    # Some CLI versions print a short informational line before JSON.
+    # Some CLI versions print log lines before a pretty-printed JSON object.
+    # Recover that object without depending on a particular log prefix.
+    decoder = json.JSONDecoder()
+    decoded: list[Any] = []
+    for match in re.finditer(r"[\[{]", clean):
+        try:
+            payload, _end = decoder.raw_decode(clean[match.start() :])
+        except ValueError:
+            continue
+        decoded.append(payload)
+    if decoded:
+        return max(decoded, key=lambda item: len(json.dumps(item, ensure_ascii=False)))
+    # Older versions occasionally emit compact JSON on the final line.
     for line in reversed(clean.splitlines()):
         line = line.strip()
         if not line:
@@ -56,6 +68,34 @@ def _json_from_text(value: str) -> Any:
         except ValueError:
             continue
     return {"text": clean}
+
+
+def _is_logged_in(payload: Any) -> bool:
+    """Recognise login responses emitted across official CLI/API versions."""
+    if isinstance(payload, list):
+        return any(_is_logged_in(item) for item in payload)
+    if not isinstance(payload, dict):
+        text = str(payload or "")
+        return ("已登录" in text or "登录成功" in text) and "未登录" not in text
+
+    for key in ("loggedIn", "logged_in", "isLoggedIn", "isLogin", "loginSuccess"):
+        if payload.get(key) is True:
+            return True
+    if payload.get("success") is True:
+        return True
+
+    message = str(payload.get("message") or payload.get("msg") or payload.get("text") or "")
+    if ("已登录" in message or "登录成功" in message) and "未登录" not in message:
+        return True
+
+    for key in ("data", "result", "loginStatus"):
+        if _is_logged_in(payload.get(key)):
+            return True
+    for key in ("account", "profile", "user"):
+        value = payload.get(key)
+        if isinstance(value, dict) and value:
+            return True
+    return False
 
 
 async def run_cli(args: list[str], timeout: float = 40.0) -> Any:
@@ -116,10 +156,7 @@ class NCMClient:
         login_message = "尚未登录"
         try:
             checked = await self._call(["login", "--check"], 15.0)
-            logged_in = bool(
-                isinstance(checked, dict)
-                and (checked.get("success") is True or checked.get("loggedIn") is True)
-            )
+            logged_in = _is_logged_in(checked)
             if isinstance(checked, dict):
                 login_message = str(checked.get("message") or ("已登录" if logged_in else login_message))
         except NCMClientError as exc:

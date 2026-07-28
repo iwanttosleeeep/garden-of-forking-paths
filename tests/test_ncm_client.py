@@ -1,6 +1,6 @@
 import pytest
 
-from ncm_client import NCMClient, NCMClientError
+from ncm_client import NCMClient, NCMClientError, _json_from_text
 
 
 class FakeRunner:
@@ -58,3 +58,23 @@ async def test_radio_client_rejects_unbounded_ids_and_unknown_modes():
         await client.playlists("everything")
     with pytest.raises(NCMClientError):
         await client.recommend(mode="surprise-shell")
+
+
+def test_cli_parser_recovers_pretty_json_after_log_line():
+    payload = _json_from_text(
+        '[info] checking session\n{\n  "success": true,\n  "data": {"isLogin": true}\n}\n'
+    )
+    assert payload["data"]["isLogin"] is True
+
+
+@pytest.mark.asyncio
+async def test_status_recognises_nested_official_login_shape():
+    async def runner(args, _timeout):
+        if args == ["login", "--check"]:
+            return {"code": 200, "data": {"isLogin": True, "account": {"id": "encrypted"}}}
+        return {"text": "0.1.6"}
+
+    status = await NCMClient(runner).status(configured=True)
+
+    assert status["configured"] is True
+    assert status["logged_in"] is True

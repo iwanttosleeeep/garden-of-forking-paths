@@ -7278,6 +7278,8 @@ async function loadWeReadView(forcedView, bookId) {
 }
 
 // Radio is a bounded NetEase Music data surface; there is deliberately no player.
+let radioLoginPollTimer = null;
+
 function radioUrls(value, found) {
   found = found || [];
   if (typeof value === 'string' && /^https:\/\//i.test(value) && !found.includes(value)) found.push(value);
@@ -7339,17 +7341,36 @@ function renderRadioData(payload) {
   }).join('');
 }
 
-async function loadRadioStatus() {
+async function loadRadioStatus(options) {
   const status = document.getElementById('radio-status');
   if (!status) return;
-  status.textContent = '正在校准无线电频率…';
+  const quiet = Boolean(options && options.quiet);
+  if (!quiet) status.textContent = '正在校准无线电频率…';
   try {
     const data = await authFetch('/api/radio/status').then(readJsonSafe);
     if (!data.ok) throw new Error(data.error || '状态读取失败');
     const credential = data.configured ? ('凭证 ' + (data.app_id_masked || '已保存')) : '尚未保存凭证';
     const login = data.logged_in ? '网易云账号已登录' : ('未登录 · ' + (data.login_message || '请扫码授权'));
     status.textContent = credential + ' · ' + login + ' · official ncm-cli ' + (data.cli_version || '');
-  } catch (e) { status.textContent = 'Radio 状态读取失败：' + e.message; }
+    return data;
+  } catch (e) { status.textContent = 'Radio 状态读取失败：' + e.message; return null; }
+}
+
+async function pollRadioLogin(attempt) {
+  const status = document.getElementById('radio-status');
+  const data = await loadRadioStatus({quiet:true});
+  if (data && data.logged_in) {
+    radioLoginPollTimer = null;
+    status.textContent = '凭证 ' + (data.app_id_masked || '已保存') + ' · 网易云账号已登录 · official ncm-cli ' + (data.cli_version || '');
+    return;
+  }
+  if (attempt >= 59) {
+    radioLoginPollTimer = null;
+    status.textContent += ' · 自动检查已结束，可点“检查登录”重试。';
+    return;
+  }
+  if (status && data) status.textContent += ' · 等待扫码确认…';
+  radioLoginPollTimer = setTimeout(() => pollRadioLogin(attempt + 1), 2000);
 }
 
 async function saveRadioConfig() {
@@ -7373,13 +7394,16 @@ async function startRadioLogin() {
   const links = document.getElementById('radio-login-links');
   status.textContent = '正在向官方 CLI 请求扫码链接…';
   links.innerHTML = '';
+  if (radioLoginPollTimer) clearTimeout(radioLoginPollTimer);
+  radioLoginPollTimer = null;
   try {
     const response = await authFetch('/api/radio/login', {method:'POST'}).then(readJsonSafe);
     if (!response.ok) throw new Error(response.error || '登录启动失败');
     const urls = radioUrls(response.data);
     links.innerHTML = urls.map((url, index) => '<a href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">打开登录链接 ' + (index + 1) + ' ↗</a>').join('');
-    status.textContent = urls.length ? '请打开链接并按网易云提示扫码；完成后点“检查登录”。' : '登录已启动；请查看官方返回信息并在扫码后检查登录。';
+    status.textContent = urls.length ? '请打开链接并按网易云提示扫码；完成后会自动确认登录。' : '登录已启动；请查看官方返回信息，扫码后会自动确认登录。';
     if (!urls.length) renderRadioData(response.data);
+    radioLoginPollTimer = setTimeout(() => pollRadioLogin(0), 1500);
   } catch (e) { status.textContent = '扫码登录启动失败：' + e.message; }
 }
 
