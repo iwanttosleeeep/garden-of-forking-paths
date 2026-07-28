@@ -1245,6 +1245,8 @@
     white-space: nowrap !important;
     display: inline-flex !important;
     align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
     gap: 5px !important;
     border-radius: var(--radius-control) !important;
     line-height: 1.2 !important;
@@ -2332,7 +2334,7 @@
             </div>
             <div id="reading-text"></div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
-              <button class="btn-primary" onclick="completeReadingChunk()" style="height:32px;padding:0 13px;font-size:12px;">这一段读完了</button>
+              <button class="btn-primary" onclick="completeReadingChunk()" style="height:32px;padding:0 13px;font-size:12px;">已读完</button>
               <button onclick="analyzeReadingChunk()" style="height:32px;padding:0 13px;font-size:12px;">DeepSeek 整理本段</button>
             </div>
             <div id="reading-analysis" style="margin-top:13px;"></div>
@@ -2354,7 +2356,7 @@
         <div>
           <div class="weread-skill-kicker">TENCENT OFFICIAL AGENT SKILL · v1.0.4 · READ_BOOK</div>
           <h4 id="weread-skill-title">微信读书 / WeRead</h4>
-          <p>在这里接入 API Key 后，书架、划线、个人想法和阅读统计可以直接陈列在 Reading；Claude Connector 也通过同一个 <code>read_book</code> 按需读取。商业书正文不会被复制，微信读书数据也不会写入 Memos。</p>
+          <p>在这里接入 API Key 后，书架、划线、个人想法和阅读统计可以直接陈列在 Reading；Claude Connector可以通过同一个 <code>read_book</code> 按需读取</p>
           <div class="weread-skill-tags"><span>书架</span><span>阅读进度</span><span>划线</span><span>个人想法</span><span>阅读统计</span></div>
           <div class="weread-skill-actions">
             <input type="password" id="weread-api-key" placeholder="粘贴 wrk- 开头的 API Key" autocomplete="new-password" spellcheck="false">
@@ -2387,7 +2389,7 @@
         <div>
           <div style="font-size:9px;letter-spacing:.18em;color:#CFE7DB;margin-bottom:5px;">GARDEN WIRELESS · NETEASE MUSIC</div>
           <h3 style="margin:0 0 5px;color:#FFFDF5;">电台 / Radio</h3>
-          <p style="font-size:12px;color:rgba(255,253,245,.78);line-height:1.7;margin:0;max-width:720px;">一间只陈列音乐资料的广播室：读取歌单、寻找推荐、创建歌单。没有播放器，也不会把 Memos、日记或聊天内容发送给网易云。</p>
+          <p style="font-size:12px;color:rgba(255,253,245,.78);line-height:1.7;margin:0;max-width:720px;">一间只陈列音乐资料的广播室：读取歌单、寻找推荐、创建歌单。</p>
         </div>
         <button onclick="loadRadioStatus()" title="刷新连接状态" style="height:32px;padding:0 11px;color:#2F4F4F;background:#CFE7DB;"><i data-lucide="refresh-cw"></i> 刷新</button>
       </div>
@@ -4415,6 +4417,7 @@ var _netRAF = null;
 var _netListenersAttached = false;
 var _netRotAngle = 0;
 var networkState = {
+  mode: 'concept',       // concept / fernweh / embedding
   focusNode: null,      // 当前聚焦的节点 id，null = 全局视图
   depth: 2,             // 展开深度
   visibleNodes: null,   // 当前渲染的节点 id Set
@@ -4457,10 +4460,13 @@ async function loadNetwork() {
     if (mode === 'fernweh') {
       startFernweh(canvas, ctx, W, H, networkData);
     } else if (mode === 'embedding') {
+      networkState.mode = 'embedding';
       drawBucketNetwork(ctx, W, H, networkData);
     } else {
       initConceptNetwork(canvas, ctx, W, H, networkData);
     }
+    var depthControl = document.getElementById('network-depth-control');
+    if (depthControl) depthControl.style.display = mode === 'embedding' ? 'none' : 'flex';
     var _n = (networkData.nodes || []).length, _e = (networkData.edges || networkData.links || []).length;
     setNetTerminal(mode === 'fernweh' ? ('FERNWEH · ' + _n + ' 颗星 · ' + _e + ' 条星座线') : ('ONLINE · ' + _n + ' nodes / ' + _e + ' links · mode=' + mode));
   } catch (e) {
@@ -4481,6 +4487,7 @@ function setNetTerminal(msg) {
 function initConceptNetwork(canvas, ctx, W, H, data) {
   injectNetworkControls();
   buildAdjacency(data);
+  networkState.mode = 'concept';
 
   var nodes = data.nodes || [];
   var sorted = nodes.slice().sort(function (a, b) { return (b.freq || 1) - (a.freq || 1); });
@@ -4506,11 +4513,15 @@ function initConceptNetwork(canvas, ctx, W, H, data) {
     _netListenersAttached = true;
 
     canvas.addEventListener('click', function (e) {
-      if (!networkData) return;
+      if (!networkData || networkState.mode === 'embedding') return;
       var d = networkData;
-      var sortedAll = (d.nodes || []).slice().sort(function (a, b) { return (b.freq || 1) - (a.freq || 1); });
+      var sortedAll = (d.nodes || []).slice().sort(function (a, b) {
+        return networkState.mode === 'fernweh'
+          ? ((b.importance || 0) - (a.importance || 0)) || ((b.score || 0) - (a.score || 0))
+          : (b.freq || 1) - (a.freq || 1);
+      });
       var rect = canvas.getBoundingClientRect();
-      var hit  = hitTest(e.clientX - rect.left, e.clientY - rect.top, W, H);
+      var hit  = hitTest(e.clientX - rect.left, e.clientY - rect.top, canvas.offsetWidth, canvas.offsetHeight);
       if (hit) {
         if (networkState.focusNode === hit) {
           networkState.focusNode    = null;
@@ -4519,28 +4530,40 @@ function initConceptNetwork(canvas, ctx, W, H, data) {
           networkState.focusNode    = hit;
           networkState.visibleNodes = getNeighbors(hit, networkState.depth, d);
         }
-        networkState.positions   = {};
-        networkState.needsLayout = true;
+        if (networkState.mode === 'concept') {
+          networkState.positions   = {};
+          networkState.needsLayout = true;
+        } else {
+          setNetTerminal(networkState.focusNode
+            ? ('FERNWEH · DEPTH ' + networkState.depth + ' · ' + networkState.visibleNodes.size + ' 颗可见星')
+            : ('FERNWEH · TOP ' + networkState.visibleNodes.size + ' 颗星'));
+        }
       }
     });
 
     var bubble = ensureNetworkBubble();
     canvas.addEventListener('mousemove', function (e) {
-      if (!networkData) return;
+      if (!networkData || networkState.mode === 'embedding') return;
       var d   = networkData;
       var rect = canvas.getBoundingClientRect();
-      var hit  = hitTest(e.clientX - rect.left, e.clientY - rect.top, W, H);
+      var hit  = hitTest(e.clientX - rect.left, e.clientY - rect.top, canvas.offsetWidth, canvas.offsetHeight);
       networkState.hoverNode = hit;
       canvas.style.cursor = hit ? 'pointer' : 'default';
       if (hit) {
         var n = (d.nodes || []).find(function (x) { return x.id === hit; });
         if (n) {
-          var deg     = (d._adj && d._adj[hit] ? d._adj[hit].length : 0);
-          var kindTxt = n.kind === 'tag' ? '#tag' : (n.kind === 'mixed' ? '双链+tag' : '[[双链]]');
-          bubble.innerHTML =
-            '<b>' + esc((n.kind === 'tag' ? '#' : '') + (n.label || n.id)) + '</b>' +
-            (n.anchor ? ' <span style="color:var(--accent)">' + _SV.anchor + ' anchor</span>' : '') +
-            '<br>' + kindTxt + ' · freq ' + (n.freq || 1) + ' · 关联 ' + deg + ' 个';
+          var deg = (d._adj && d._adj[hit] ? d._adj[hit].length : 0);
+          if (networkState.mode === 'fernweh') {
+            bubble.innerHTML = '<b>' + esc(n.name || n.label || n.id) + '</b>' +
+              (n.anchor ? ' <span style="color:var(--accent)">' + _SV.anchor + ' anchor</span>' : '') +
+              '<br>星等 ' + (n.importance || 5) + ' · 关联 ' + deg + ' 颗星';
+          } else {
+            var kindTxt = n.kind === 'tag' ? '#tag' : (n.kind === 'mixed' ? '双链+tag' : '[[双链]]');
+            bubble.innerHTML =
+              '<b>' + esc((n.kind === 'tag' ? '#' : '') + (n.label || n.id)) + '</b>' +
+              (n.anchor ? ' <span style="color:var(--accent)">' + _SV.anchor + ' anchor</span>' : '') +
+              '<br>' + kindTxt + ' · freq ' + (n.freq || 1) + ' · 关联 ' + deg + ' 个';
+          }
           bubble.style.left    = (e.clientX + 16) + 'px';
           bubble.style.top     = (e.clientY + 16) + 'px';
           bubble.style.opacity = '1';
@@ -4605,15 +4628,18 @@ function getNeighbors(startId, depth, data) {
 // –– 碰撞检测（返回被点击的节点 id 或 null） ––
 function hitTest(mx, my, W, H) {
   if (!networkData) return null;
-  // 反向旋转鼠标坐标，对应到未旋转的节点坐标系
-  var cx  = W / 2, cy = H / 2;
-  var cos = Math.cos(-_netRotAngle), sin = Math.sin(-_netRotAngle);
-  var rx  = cx + (mx - cx) * cos - (my - cy) * sin;
-  var ry  = cy + (mx - cx) * sin + (my - cy) * cos;
+  // Concept 会缓慢旋转，Fernweh 保持固定星位。
+  var rx = mx, ry = my;
+  if (networkState.mode === 'concept') {
+    var cx  = W / 2, cy = H / 2;
+    var cos = Math.cos(-_netRotAngle), sin = Math.sin(-_netRotAngle);
+    rx = cx + (mx - cx) * cos - (my - cy) * sin;
+    ry = cy + (mx - cx) * sin + (my - cy) * cos;
+  }
   var nodes = networkData.nodes || [];
   var hit = null;
   nodes.forEach(function (n) {
-    if (!networkState.visibleNodes.has(n.id)) return;
+    if (!networkState.visibleNodes || !networkState.visibleNodes.has(n.id)) return;
     var p = networkState.positions[n.id];
     if (!p) return;
     var r  = Math.max(4, Math.min(14, 2 + Math.sqrt(n.freq || 1) * 2.5)) + 5;
@@ -4907,8 +4933,12 @@ function injectNetworkControls() {
     networkState.depth = v;
     if (networkState.focusNode && networkData) {
       networkState.visibleNodes = getNeighbors(networkState.focusNode, v, networkData);
-      networkState.positions    = {};
-      networkState.needsLayout  = true;
+      if (networkState.mode === 'concept') {
+        networkState.positions    = {};
+        networkState.needsLayout  = true;
+      } else if (networkState.mode === 'fernweh') {
+        setNetTerminal('FERNWEH · DEPTH ' + v + ' · ' + networkState.visibleNodes.size + ' 颗可见星');
+      }
     }
   });
 }
@@ -4941,17 +4971,41 @@ function _fwColor(valence) {
 function startFernweh(canvas, ctx, W, H, data) {
   var nodes = (data.nodes || []).slice();
   var edges = (data.edges || []).filter(function (e) { return (e.weight || 0) >= 0.62; });
+  networkState.mode = 'fernweh';
+  networkState.focusNode = null;
+  networkState.positions = {};
+  networkState.visibleNodes = new Set();
+  injectNetworkControls();
   if (!nodes.length) {
     ctx.fillStyle = '#0A1120'; ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = '#5E7896'; ctx.textAlign = 'center';
     ctx.fillText('这片夜空还没有星星', W / 2, H / 2);
     return;
   }
+  canvas.classList.add('star-active');
+  var termEl = document.getElementById('network-terminal');
+  if (termEl) termEl.classList.add('star-active');
+
+  // 与 Concept 共用焦点/深度状态，但只沿实际绘制的星座线展开。
+  data._adj = {};
+  nodes.forEach(function (n) { data._adj[n.id] = []; });
+  edges.forEach(function (e) {
+    if (data._adj[e.source]) data._adj[e.source].push(e.target);
+    if (data._adj[e.target]) data._adj[e.target].push(e.source);
+  });
+  var brightest = nodes.slice().sort(function (a, b) {
+    return ((b.importance || 0) - (a.importance || 0)) || ((b.score || 0) - (a.score || 0));
+  });
+  networkState.visibleNodes = new Set(brightest.slice(0, 30).map(function (n) { return n.id; }));
+  networkState.needsLayout = false;
+  _netRotAngle = 0;
+
   // —— 布局:确定性散布 + 弹簧松弛(同一片天空,每次抬头都认得) ——
   var pos = {}, pad = 46;
   nodes.forEach(function (n) {
     pos[n.id] = { x: pad + _fwHash(n.id) * (W - pad * 2), y: pad + _fwHash(n.id + '~') * (H - pad * 2) };
   });
+  networkState.positions = pos;
   var relax = Math.min(160, 40 + nodes.length);
   for (var it = 0; it < relax; it++) {
     edges.forEach(function (e) {
@@ -5009,8 +5063,11 @@ function startFernweh(canvas, ctx, W, H, data) {
       ctx.globalAlpha = s.a; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
     });
     ctx.globalAlpha = 1;
+    var visible = networkState.visibleNodes || new Set(nodes.map(function (n) { return n.id; }));
+    var visibleNodes = nodes.filter(function (n) { return visible.has(n.id); });
+    var visibleEdges = edges.filter(function (e) { return visible.has(e.source) && visible.has(e.target); });
     // 星座线
-    edges.forEach(function (e) {
+    visibleEdges.forEach(function (e) {
       var a = pos[e.source], b = pos[e.target]; if (!a || !b) return;
       var w = (e.weight - 0.62) / 0.38;
       ctx.strokeStyle = 'rgba(175,195,230,' + (0.05 + 0.11 * w).toFixed(3) + ')';
@@ -5018,7 +5075,7 @@ function startFernweh(canvas, ctx, W, H, data) {
       ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
     });
     // 星
-    nodes.forEach(function (n) {
+    visibleNodes.forEach(function (n) {
       var p = pos[n.id], c = n._c;
       var tw = n.pinned ? 1 : (1 + 0.09 * Math.sin(t * 1.6 + n._ph));
       var alpha = Math.min(1, n._b * tw);
@@ -5044,13 +5101,19 @@ function startFernweh(canvas, ctx, W, H, data) {
         ctx.lineWidth = 0.7;
         ctx.beginPath(); ctx.arc(p.x, p.y, n._r + 3.5, 0, Math.PI * 2); ctx.stroke();
       }
-      if (labeled.has(n.id)) {
+      if (labeled.has(n.id) || networkState.focusNode === n.id) {
         ctx.fillStyle = 'rgba(155,166,190,0.78)';
         ctx.font = "10px 'Share Tech Mono', monospace";
         ctx.textAlign = 'center';
         ctx.fillText(n.name, p.x, p.y + n._r + 14);
       }
     });
+    ctx.fillStyle = 'rgba(155,166,190,0.58)';
+    ctx.font = "10px 'Share Tech Mono', monospace";
+    ctx.textAlign = 'center';
+    ctx.fillText(networkState.focusNode
+      ? ('DEPTH ' + networkState.depth + ' · ' + visibleNodes.length + ' STARS · 点击焦点返回全局')
+      : ('TOP ' + visibleNodes.length + ' STARS · 点击展开星群'), W / 2, 22);
     _netRAF = requestAnimationFrame(frame);
   }
   _netRAF = requestAnimationFrame(frame);
@@ -6958,7 +7021,7 @@ function renderReadingBooks() {
       + '<div style="font-weight:700;font-size:14px;line-height:1.35;">' + esc(book.title) + '</div>'
       + '<div style="font-size:10px;color:#7A6C4C;margin:4px 0 9px;">' + esc(book.author || '作者未知') + ' · ' + esc(String(book.chunk_count)) + ' 段</div>'
       + '<div style="font-size:9px;color:#7A6C4C;margin-bottom:3px;">YOU ' + readingPercent(human, book.chunk_count).toFixed(0) + '%</div><div class="reading-progress"><span style="width:' + readingPercent(human, book.chunk_count) + '%;background:#D9A8A0;"></span></div>'
-      + '<div style="font-size:9px;color:#7A6C4C;margin:7px 0 3px;">AI ' + readingPercent(ai, book.chunk_count).toFixed(0) + '%</div><div class="reading-progress"><span style="width:' + readingPercent(ai, book.chunk_count) + '%;background:#6E9486;"></span></div>'
+      + '<div style="font-size:9px;color:#7A6C4C;margin:7px 0 3px;">Senn ' + readingPercent(ai, book.chunk_count).toFixed(0) + '%</div><div class="reading-progress"><span style="width:' + readingPercent(ai, book.chunk_count) + '%;background:#6E9486;"></span></div>'
       + '</button>';
   }).join('');
 }
@@ -7023,7 +7086,7 @@ function renderReadingAnnotations(items) {
   const el = document.getElementById('reading-annotations');
   if (!el) return;
   el.innerHTML = (items || []).length ? items.map(item => '<div class="reading-note ' + (item.author === 'ai' ? 'ai' : '') + '">'
-    + '<div style="display:flex;justify-content:space-between;gap:8px;font-size:9px;letter-spacing:.08em;color:#7A6C4C;margin-bottom:5px;"><span>' + (item.author === 'ai' ? 'AI' : 'YOU') + ' · ' + esc(item.kind || 'note').toUpperCase() + '</span><button onclick="deleteReadingAnnotation(\'' + item.id + '\')" style="font-size:10px;color:var(--negative);border:0;background:transparent;box-shadow:none;padding:0;">删除</button></div>'
+    + '<div style="display:flex;justify-content:space-between;gap:8px;font-size:9px;letter-spacing:.08em;color:#7A6C4C;margin-bottom:5px;"><span>' + (item.author === 'ai' ? 'Senn' : 'YOU') + ' · ' + esc(item.kind || 'note').toUpperCase() + '</span><button onclick="deleteReadingAnnotation(\'' + item.id + '\')" style="font-size:10px;color:var(--negative);border:0;background:transparent;box-shadow:none;padding:0;">删除</button></div>'
     + (item.quote ? '<div style="font-family:serif;font-style:italic;line-height:1.55;margin-bottom:6px;">“' + esc(item.quote) + '”</div>' : '')
     + (item.note ? '<div style="font-size:12px;line-height:1.6;">' + esc(item.note) + '</div>' : '') + '</div>').join('') : '<div style="font-size:11px;color:var(--text-dim);">这一段的页边还很安静。</div>';
 }
@@ -7031,7 +7094,7 @@ function renderReadingAnnotations(items) {
 function renderReadingProgress(book) {
   const panel = document.getElementById('reading-progress-panel');
   const progress = book.progress || {}, count = book.chunk_count || 1;
-  panel.innerHTML = [['YOU', progress.human || {}, '#D9A8A0'], ['AI', progress.ai || {}, '#2F4F4F']].map(row => {
+  panel.innerHTML = [['YOU', progress.human || {}, '#D9A8A0'], ['Senn', progress.ai || {}, '#2F4F4F']].map(row => {
     const pct = readingPercent(row[1], count);
     return '<div><div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:4px;"><span>' + row[0] + '</span><span>' + pct.toFixed(0) + '% · ' + (Number(row[1].chunk || 0) + 1) + '/' + count + '</span></div><div class="reading-progress"><span style="width:' + pct + '%;background:' + row[2] + ';"></span></div></div>';
   }).join('');
@@ -7400,7 +7463,7 @@ async function startRadioLogin() {
     const response = await authFetch('/api/radio/login', {method:'POST'}).then(readJsonSafe);
     if (!response.ok) throw new Error(response.error || '登录启动失败');
     const urls = radioUrls(response.data);
-    links.innerHTML = urls.map((url, index) => '<a href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">打开登录链接 ' + (index + 1) + ' ↗</a>').join('');
+    links.innerHTML = urls.map(url => '<a href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">打开登录链接</a>').join('');
     status.textContent = urls.length ? '请打开链接并按网易云提示扫码；完成后会自动确认登录。' : '登录已启动；请查看官方返回信息，扫码后会自动确认登录。';
     if (!urls.length) renderRadioData(response.data);
     radioLoginPollTimer = setTimeout(() => pollRadioLogin(0), 1500);
