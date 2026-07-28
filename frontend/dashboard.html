@@ -1240,16 +1240,23 @@
     min-width: 0 !important;
     width: auto !important;
     height: auto !important;
-    padding: 8px 14px !important;
+    padding: 8px 24px !important;
     font-size: 12px !important;
     white-space: nowrap !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
     text-align: center !important;
-    gap: 5px !important;
+    position: relative !important;
     border-radius: var(--radius-control) !important;
     line-height: 1.2 !important;
+  }
+  .detail-actions button > i[data-lucide],
+  .detail-actions button > svg {
+    position: absolute !important;
+    left: 8px !important;
+    width: 14px !important;
+    height: 14px !important;
   }
 
   /* ============ LCD 点阵屏：网络拓扑图 ============ */
@@ -1869,6 +1876,14 @@
     color: var(--text);
     background: var(--surface);
   }
+  .self-compose > button {
+    align-self: center;
+    height: 28px;
+    min-height: 0;
+    padding: 0 10px;
+    font-size: 10px;
+    line-height: 1;
+  }
   .self-compose-msg {
     grid-column: 1 / -1;
     min-height: 15px;
@@ -2356,7 +2371,7 @@
         <div>
           <div class="weread-skill-kicker">TENCENT OFFICIAL AGENT SKILL · v1.0.4 · READ_BOOK</div>
           <h4 id="weread-skill-title">微信读书 / WeRead</h4>
-          <p>在这里接入 API Key 后，书架、划线、个人想法和阅读统计可以直接陈列在 Reading；Claude Connector可以通过同一个 <code>read_book</code> 按需读取</p>
+          <p>在这里接入 API Key 后，书架、划线、个人想法和阅读统计可以直接陈列在 Reading；Claude Connector可以通过同一个 <code>read_book</code> 按需读取。</p>
           <div class="weread-skill-tags"><span>书架</span><span>阅读进度</span><span>划线</span><span>个人想法</span><span>阅读统计</span></div>
           <div class="weread-skill-actions">
             <input type="password" id="weread-api-key" placeholder="粘贴 wrk- 开头的 API Key" autocomplete="new-password" spellcheck="false">
@@ -4406,9 +4421,7 @@ function closeDetail() {
 }
 
 // ============================================================
-// 记忆网络图改造 patch
-// 替换原来的 loadNetwork() 和 drawConceptNetwork()
-// 新增：深度滑块、点击展开邻居、默认只显示高频节点
+// 记忆网络：深度滑块、点击展开邻居、默认只显示高频节点
 // ============================================================
 
 // –– 全局状态 ––
@@ -4419,13 +4432,11 @@ var _netRotAngle = 0;
 var networkState = {
   mode: 'concept',       // concept / fernweh / embedding
   focusNode: null,      // 当前聚焦的节点 id，null = 全局视图
+  hoverNode: null,
   depth: 2,             // 展开深度
   visibleNodes: null,   // 当前渲染的节点 id Set
   positions: {},        // 节点坐标缓存
-  isDragging: false,
-  dragStart: null,
-  panOffset: { x: 0, y: 0 },
-  scale: 1,
+  needsLayout: false,
 };
 
 // –– 替换 loadNetwork ––
@@ -4496,8 +4507,6 @@ function initConceptNetwork(canvas, ctx, W, H, data) {
   networkState.focusNode    = null;
   networkState.visibleNodes = defaultVisible;
   networkState.positions    = {};
-  networkState.panOffset    = { x: 0, y: 0 };
-  networkState.scale        = 1;
   networkState.needsLayout  = true;
   _netRotAngle              = 0;
 
@@ -4599,10 +4608,10 @@ function ensureNetworkBubble() {
 }
 
 // –– 构建邻接表 ––
-function buildAdjacency(data) {
+function buildAdjacency(data, edges) {
   data._adj = {};
   (data.nodes || []).forEach(function (n) { data._adj[n.id] = []; });
-  (data.edges || []).forEach(function (e) {
+  (edges || data.edges || []).forEach(function (e) {
     if (data._adj[e.source]) data._adj[e.source].push(e.target);
     if (data._adj[e.target]) data._adj[e.target].push(e.source);
   });
@@ -4635,6 +4644,13 @@ function hitTest(mx, my, W, H) {
     var cos = Math.cos(-_netRotAngle), sin = Math.sin(-_netRotAngle);
     rx = cx + (mx - cx) * cos - (my - cy) * sin;
     ry = cy + (mx - cx) * sin + (my - cy) * cos;
+  } else if (networkState.mode === 'fernweh' && networkState.focusNode) {
+    var visible = (networkData.nodes || []).filter(function (n) {
+      return networkState.visibleNodes && networkState.visibleNodes.has(n.id);
+    });
+    var viewport = _fwViewport(W, H, visible, networkState.positions, networkState.focusNode);
+    rx = viewport.cx + (mx - W / 2) / viewport.scale;
+    ry = viewport.cy + (my - H / 2) / viewport.scale;
   }
   var nodes = networkData.nodes || [];
   var hit = null;
@@ -4894,12 +4910,6 @@ function animateConceptNetwork(canvas, ctx, W, H, data) {
   _netRAF = requestAnimationFrame(frame);
 }
 
-// 兼容旧调用点（depth-slider 里的 renderConceptNetwork）
-function renderConceptNetwork(ctx, W, H, data) {
-  networkState.needsLayout = true;
-  // 动画循环正在跑时不需要额外触发；若未运行（embedding 模式切回）则忽略
-}
-
 // –– 注入控制栏 ––
 function injectNetworkControls() {
   if (document.getElementById('network-depth-control')) return;
@@ -4943,12 +4953,6 @@ function injectNetworkControls() {
   });
 }
 
-// drawConceptNetwork 改为调用新函数（兼容原有调用点，如 networkData == 'concept' 情况等）
-function drawConceptNetwork(ctx, W, H, data) {
-  var canvas = document.getElementById('network-canvas');
-  initConceptNetwork(canvas, ctx, W, H, data);
-}
-
 // =====================================================
 // FERNWEH · 星空 — 记忆的天文学
 // 星等=importance · 色温=valence · 亮度=衰减强度(score)
@@ -4968,6 +4972,30 @@ function _fwColor(valence) {
           Math.round(mid[1] + (a[1] - mid[1]) * k),
           Math.round(mid[2] + (a[2] - mid[2]) * k)];
 }
+
+// 聚焦星群时自动取景；深度越大、星群边界越宽，镜头会自然拉远。
+function _fwViewport(W, H, nodes, positions, focusNode) {
+  if (!focusNode || !nodes.length) return { cx: W / 2, cy: H / 2, scale: 1 };
+
+  var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  nodes.forEach(function (n) {
+    var p = positions[n.id];
+    if (!p) return;
+    minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
+    maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
+  });
+  if (!Number.isFinite(minX)) return { cx: W / 2, cy: H / 2, scale: 1 };
+
+  var spanX = Math.max(36, maxX - minX);
+  var spanY = Math.max(36, maxY - minY);
+  var fit = Math.min(Math.max(80, W - 140) / spanX, Math.max(80, H - 110) / spanY);
+  return {
+    cx: (minX + maxX) / 2,
+    cy: (minY + maxY) / 2,
+    scale: Math.max(1, Math.min(2.4, fit)),
+  };
+}
+
 function startFernweh(canvas, ctx, W, H, data) {
   var nodes = (data.nodes || []).slice();
   var edges = (data.edges || []).filter(function (e) { return (e.weight || 0) >= 0.62; });
@@ -4987,12 +5015,7 @@ function startFernweh(canvas, ctx, W, H, data) {
   if (termEl) termEl.classList.add('star-active');
 
   // 与 Concept 共用焦点/深度状态，但只沿实际绘制的星座线展开。
-  data._adj = {};
-  nodes.forEach(function (n) { data._adj[n.id] = []; });
-  edges.forEach(function (e) {
-    if (data._adj[e.source]) data._adj[e.source].push(e.target);
-    if (data._adj[e.target]) data._adj[e.target].push(e.source);
-  });
+  buildAdjacency(data, edges);
   var brightest = nodes.slice().sort(function (a, b) {
     return ((b.importance || 0) - (a.importance || 0)) || ((b.score || 0) - (a.score || 0));
   });
@@ -5066,6 +5089,11 @@ function startFernweh(canvas, ctx, W, H, data) {
     var visible = networkState.visibleNodes || new Set(nodes.map(function (n) { return n.id; }));
     var visibleNodes = nodes.filter(function (n) { return visible.has(n.id); });
     var visibleEdges = edges.filter(function (e) { return visible.has(e.source) && visible.has(e.target); });
+    var viewport = _fwViewport(W, H, visibleNodes, pos, networkState.focusNode);
+    ctx.save();
+    ctx.translate(W / 2, H / 2);
+    ctx.scale(viewport.scale, viewport.scale);
+    ctx.translate(-viewport.cx, -viewport.cy);
     // 星座线
     visibleEdges.forEach(function (e) {
       var a = pos[e.source], b = pos[e.target]; if (!a || !b) return;
@@ -5108,11 +5136,12 @@ function startFernweh(canvas, ctx, W, H, data) {
         ctx.fillText(n.name, p.x, p.y + n._r + 14);
       }
     });
+    ctx.restore();
     ctx.fillStyle = 'rgba(155,166,190,0.58)';
     ctx.font = "10px 'Share Tech Mono', monospace";
     ctx.textAlign = 'center';
     ctx.fillText(networkState.focusNode
-      ? ('DEPTH ' + networkState.depth + ' · ' + visibleNodes.length + ' STARS · 点击焦点返回全局')
+      ? ('DEPTH ' + networkState.depth + ' · ' + visibleNodes.length + ' STARS · ' + viewport.scale.toFixed(1) + '× · 点击焦点返回全局')
       : ('TOP ' + visibleNodes.length + ' STARS · 点击展开星群'), W / 2, 22);
     _netRAF = requestAnimationFrame(frame);
   }
@@ -7868,7 +7897,7 @@ function renderEditForm(bid, meta) {
   const curContent = (meta._content_for_edit || '').replace(/</g, '&lt;');
   return `
     <details style="margin-top:14px;border:1px solid var(--border);border-radius:2px;padding:12px 14px;background:var(--surface-solid);">
-      <summary style="cursor:pointer;font-weight:600;color:var(--accent);display:flex;align-items:center;gap:5px;"><svg class="icon" aria-hidden="true"><use href="#i-edit"></use></svg> 编辑这条记忆</summary>
+      <summary style="cursor:pointer;font-size:11px;font-weight:500;color:var(--accent);display:flex;align-items:center;gap:5px;"><svg class="icon" aria-hidden="true"><use href="#i-edit"></use></svg> 编辑这条记忆</summary>
       <div style="display:grid;grid-template-columns:90px 1fr;gap:10px 12px;align-items:center;margin-top:14px;font-size:13px;">
         <label>名称</label>
         <input id="edit-name" type="text" value="${esc(meta.name || '')}" />
