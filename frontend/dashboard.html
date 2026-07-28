@@ -4648,7 +4648,7 @@ function hitTest(mx, my, W, H) {
     var visible = (networkData.nodes || []).filter(function (n) {
       return networkState.visibleNodes && networkState.visibleNodes.has(n.id);
     });
-    var viewport = _fwViewport(W, H, visible, networkState.positions, networkState.focusNode);
+    var viewport = _fwViewport(W, H, visible, networkState.positions, networkState.focusNode, networkState.depth);
     rx = viewport.cx + (mx - W / 2) / viewport.scale;
     ry = viewport.cy + (my - H / 2) / viewport.scale;
   }
@@ -4973,8 +4973,8 @@ function _fwColor(valence) {
           Math.round(mid[2] + (a[2] - mid[2]) * k)];
 }
 
-// 聚焦星群时自动取景；深度越大、星群边界越宽，镜头会自然拉远。
-function _fwViewport(W, H, nodes, positions, focusNode) {
+// 聚焦星群时以滑块深度控制镜头：近层放大，展开越深越接近全局比例。
+function _fwViewport(W, H, nodes, positions, focusNode, depth) {
   if (!focusNode || !nodes.length) return { cx: W / 2, cy: H / 2, scale: 1 };
 
   var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -4986,13 +4986,11 @@ function _fwViewport(W, H, nodes, positions, focusNode) {
   });
   if (!Number.isFinite(minX)) return { cx: W / 2, cy: H / 2, scale: 1 };
 
-  var spanX = Math.max(36, maxX - minX);
-  var spanY = Math.max(36, maxY - minY);
-  var fit = Math.min(Math.max(80, W - 140) / spanX, Math.max(80, H - 110) / spanY);
+  var normalizedDepth = Math.max(1, Math.min(4, Number(depth) || 2));
   return {
     cx: (minX + maxX) / 2,
     cy: (minY + maxY) / 2,
-    scale: Math.max(1, Math.min(2.4, fit)),
+    scale: 1 + (4 - normalizedDepth) * 0.10,
   };
 }
 
@@ -5089,7 +5087,7 @@ function startFernweh(canvas, ctx, W, H, data) {
     var visible = networkState.visibleNodes || new Set(nodes.map(function (n) { return n.id; }));
     var visibleNodes = nodes.filter(function (n) { return visible.has(n.id); });
     var visibleEdges = edges.filter(function (e) { return visible.has(e.source) && visible.has(e.target); });
-    var viewport = _fwViewport(W, H, visibleNodes, pos, networkState.focusNode);
+    var viewport = _fwViewport(W, H, visibleNodes, pos, networkState.focusNode, networkState.depth);
     ctx.save();
     ctx.translate(W / 2, H / 2);
     ctx.scale(viewport.scale, viewport.scale);

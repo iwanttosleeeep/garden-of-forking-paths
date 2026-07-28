@@ -12,9 +12,11 @@ def test_fernweh_reuses_the_concept_depth_interaction():
     assert "networkState.visibleNodes = getNeighbors(networkState.focusNode, v, networkData);" in DASHBOARD
     assert "var visibleEdges = edges.filter(function (e)" in DASHBOARD
     assert "FERNWEH · DEPTH " in DASHBOARD
-    assert "function _fwViewport(W, H, nodes, positions, focusNode)" in DASHBOARD
+    assert "function _fwViewport(W, H, nodes, positions, focusNode, depth)" in DASHBOARD
     assert "ctx.scale(viewport.scale, viewport.scale);" in DASHBOARD
     assert "(mx - W / 2) / viewport.scale" in DASHBOARD
+    assert "networkState.depth = v;" in DASHBOARD
+    assert "scale: 1 + (4 - normalizedDepth) * 0.10" in DASHBOARD
 
 
 def test_reading_uses_senn_and_the_shorter_copy():
