@@ -242,6 +242,7 @@ class NCMClient:
         )
 
     async def add_tracks(self, playlist_id: object, song_ids: object) -> Any:
+        """Add tracks while translating Garden's ``song_ids`` to the CLI contract."""
         playlist = _bounded_text(playlist_id, "playlist_id", limit=128)
         if isinstance(song_ids, (list, tuple, set)):
             songs = ",".join(str(item).strip() for item in song_ids if str(item).strip())
@@ -256,7 +257,7 @@ class NCMClient:
                 "add",
                 "--playlistId",
                 playlist,
-                "--songIds",
+                "--songIdList",
                 songs,
                 *self._intent("把指定歌曲加入歌单"),
             ]

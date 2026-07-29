@@ -31,7 +31,26 @@ async def test_radio_client_exposes_only_bounded_music_actions():
     assert commands[2][:4] == ["search", "playlist", "--keyword", "quiet evening"]
     assert commands[3][:4] == ["playlist", "create", "--playlistName", "Garden at dusk"]
     assert commands[4][:3] == ["playlist", "add", "--playlistId"]
+    assert commands[4][3:7] == ["playlist-id", "--songIdList", "song-a,song-b", "--userInput"]
+    assert "--songIds" not in commands[4]
     assert all("--userInput" in command for command in commands)
+
+
+@pytest.mark.asyncio
+async def test_add_tracks_normalizes_a_song_id_collection_for_the_cli_contract():
+    runner = FakeRunner()
+
+    await NCMClient(runner).add_tracks("playlist-id", ["song-a", " song-b ", ""])
+
+    command = runner.calls[0][0]
+    assert command[:6] == [
+        "playlist",
+        "add",
+        "--playlistId",
+        "playlist-id",
+        "--songIdList",
+        "song-a,song-b",
+    ]
 
 
 @pytest.mark.asyncio
