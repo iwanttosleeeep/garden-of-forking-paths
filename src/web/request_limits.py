@@ -11,6 +11,19 @@ _Send = Callable[[dict], Awaitable[None]]
 _REJECTION_DRAIN_MULTIPLIER = 2
 
 
+def is_mcp_endpoint_path(path: object) -> bool:
+    """Match only the canonical Streamable HTTP endpoint, with optional slash."""
+
+    return str(path or "").rstrip("/") == "/mcp"
+
+
+def is_sse_endpoint_path(path: object) -> bool:
+    """Match both legs of the legacy SSE transport."""
+
+    normalized = str(path or "").rstrip("/")
+    return normalized == "/sse" or normalized == "/messages"
+
+
 class _RequestBodyTooLarge(Exception):
     def __init__(self, *, request_ended: bool) -> None:
         super().__init__("request body too large")
@@ -20,15 +33,16 @@ class _RequestBodyTooLarge(Exception):
 class MCPRequestBodyLimitMiddleware:
     """Reject oversized MCP requests before JSON-RPC parsing or tool dispatch."""
 
-    def __init__(self, app, *, max_bytes: int) -> None:
+    def __init__(self, app, *, max_bytes: int, path_matcher=is_mcp_endpoint_path) -> None:
         self.app = app
         self.max_bytes = max(0, int(max_bytes))
+        self.path_matcher = path_matcher
 
     async def __call__(self, scope: dict, receive: _Receive, send: _Send) -> None:
         if (
             self.max_bytes <= 0
             or scope.get("type") != "http"
-            or not str(scope.get("path", "")).startswith("/mcp")
+            or not self.path_matcher(scope.get("path"))
             or str(scope.get("method", "GET")).upper() not in {"POST", "PUT", "PATCH"}
         ):
             await self.app(scope, receive, send)

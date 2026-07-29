@@ -5,14 +5,11 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-
-import yaml
-
 from starlette.requests import Request
 from starlette.responses import JSONResponse, PlainTextResponse, Response
 
 from reading_library import ReadingLibrary, ReadingLibraryError
-from utils import atomic_write_text, clean_llm_json, config_file_path
+from utils import atomic_update_config_yaml, clean_llm_json
 from weread_client import (
     WEREAD_SKILL_VERSION,
     WeReadError,
@@ -47,19 +44,10 @@ def _limit(value: object, default: int = 30) -> int:
 
 def _persist_weread_key(value: str) -> None:
     """Persist the secret in Garden's mounted config without returning it to the browser."""
-    path = config_file_path()
-    saved = {}
-    if os.path.exists(path):
-        with open(path, "r", encoding="utf-8") as handle:
-            loaded = yaml.safe_load(handle) or {}
-        if not isinstance(loaded, dict):
-            raise WeReadError("Garden 配置文件格式不正确，无法保存微信读书 API Key")
-        saved = loaded
-    saved["weread"] = {"api_key": value}
-    atomic_write_text(
-        path,
-        yaml.safe_dump(saved, allow_unicode=True, default_flow_style=False, sort_keys=False),
-    )
+    def _mutate(saved: dict) -> None:
+        saved["weread"] = {"api_key": value}
+
+    atomic_update_config_yaml(_mutate)
     sh.config.setdefault("weread", {})["api_key"] = value
 
 

@@ -107,7 +107,7 @@ Ombre-Brain/
 
 每个模块「干什么、边界在哪、依赖谁」：
 
-- **server.py**（约 1000 行）— MCP 服务入口。创建所有组件后调 `tools._runtime.init(...)` 注入依赖；以 `@mcp.tool()` / `@mcp_extra.tool()` 注册 **12 个薄封装**（每个 ≤ 10 行，只转发到 `tools/<名字>/`）；启动入口处把 `mcp_extra` 的 7 个工具回灌进 `mcp`，对外只暴露 **单连接器 `/mcp`**（12 工具全在这一条，详见 §3 抬头）；启动段调 `web.register_all(mcp)` 装配所有 HTTP 路由，并起 `mcp.streamable_http_app()` 一个 uvicorn 进程。**不写业务逻辑，也不再直接定义 HTTP 路由**——后者已全部迁到 `web/`。
+- **server.py**（约 1000 行）— MCP 服务入口。创建所有组件后调 `tools._runtime.init(...)` 注入依赖；18 个薄封装全部以 `@mcp.tool()` 注册到同一个 FastMCP 实例，不复制 SDK 私有 registry；对外只暴露 **单连接器 `/mcp`**。启动段调 `web.register_all(mcp)` 装配所有 HTTP 路由，并起 `mcp.streamable_http_app()` 一个 uvicorn 进程。
 - **tools/**（MCP 工具应用层）— 详见下面「1.x tools/ 包结构」。
 - **web/**（HTTP/Dashboard 路由层）— 详见下面「1.y web/ 包结构」。从旧 server.py 巨石里拆出的 16 个域模块，每个导出 `register(mcp)`；cookie/CSRF/会话鉴权等共享依赖在 `web/_shared.py`（类比 `tools/_runtime.py`）。
 - **bucket_manager.py** — 桶 CRUD + 多维加权搜索 + `touch()` 激活刷新 + `_time_ripple()` 时间涟漪 + 文件搬运（archive/permanent 之间）。
@@ -265,14 +265,12 @@ feel 桶自身：
 
 ---
 
-## 3. MCP 工具规格（共 12 个）
+## 3. MCP 工具规格（共 18 个）
 
-> **单连接器（iter 2.2）**：claude.ai 的 5 工具上限已解除，12 个工具合并回一个连接器 `/mcp`。
-> 历史上（iter 2.1）曾因该上限拆成主 `mcp`（`/mcp`，5 个）+ 副 `mcp_extra`（`/mcp-extra`，7 个）两个 FastMCP 实例。
-> 现在 `mcp_extra` 仅作工具分组容器保留（7 个 `@mcp_extra.tool()` 注册不动），启动入口处统一把它的工具
-> 回灌进 `mcp`，三种 transport（stdio / sse / streamable-http）都只对外暴露一条 `/mcp`。
-> - 高频 5 个 —— `breath` / `hold` / `grow` / `trace` / `dream`
-> - 低频 7 个 —— `anchor` / `release` / `pulse` / `plan` / `letter_write` / `letter_read` / `I`
+> **单连接器**：18 个工具全部直接注册到同一个 `mcp`；stdio / sse / streamable-http 使用同一份 manifest。
+> - 记忆与自我 —— `breath` / `hold` / `grow` / `trace` / `dream` / `anchor` / `release` / `pulse` / `plan` / `letter_write` / `letter_read` / `I`
+> - 显式私人读取 —— `echo` / `read_journals` / `recall` / `check_up` / `read_book`
+> - 音乐协作 —— `radio`
 
 ### 3.1 `breath` — 检索/浮现
 
@@ -384,6 +382,34 @@ feel 桶自身：
 - `content` 非空 → **写入模式**，记一条自我认知；`aspect` 可选维度：`nature`(本质) / `values`(看重的) / `patterns`(规律) / `limits`(局限) / `becoming`(在变成什么) / `uncertainty`(不确定的) / `stance`(立场)。
 - I 条目写入时带 `dont_surface=True`：**不参与普通 `breath` / `dream`**；只在 `SessionStart` 时自动附带最近 3 条。
 
+### 3.12 `echo` — Sterling 日记回响
+
+签名：`echo(query="", days=30, limit=8)`。无 query 时仅返回限定日期内的数量和心情摘要；提供 query 后才展开最多 20 条匹配正文。Journal 记录不进入 Memos 或普通 Breath。
+
+### 3.13 `read_journals` — 显式读取日记
+
+签名：`read_journals(days=7, query="", limit=8)`。与 Journal 的同一边界对接，供 Connector 以更明确的工具名按日期与关键词读取；默认仍只给摘要。
+
+### 3.14 `recall` — 指定 Chat History
+
+签名：`recall(title)`。标题或文件名必须精确匹配；标题重复时要求改用文件名。单次最多返回 30000 字符，不搜索其他文档，也不进入自动上下文。
+
+### 3.15 `check_up` — Health 汇总
+
+签名：`check_up(days=7)`。只读取 `.health` 中最近 1–30 天的已同步每日汇总；Health 数据最多保留 30 天，且不会写入 Memos。
+
+### 3.16 `read_book` — 共读与微信读书
+
+签名以 `action` 分派 Reading library/chunk/progress/note/review/finish 与 `weread_*` 查询。正文、进度、划线与笔记都留在 Reading 边界；商业书正文与微信读书数据不会复制进 Memos。
+
+### 3.17 `radio` — 歌单协作
+
+签名以 `action` 分派歌单列表、曲目、搜索、创建、加歌与留言。只列 Ainsley 明确分享的歌单和 Senn 创建的歌单；写操作要求 `confirm=true`，且只能修改 Senn 所有的歌单。
+
+### 3.18 Connector 传输约束
+
+18 个工具由一个 FastMCP 实例直接注册。Streamable HTTP 使用 stateless JSON 响应；省略或通配 `Accept` 的客户端会被补为 `application/json`，显式只接受 SSE 的请求不会被改写。MCP CORS 预检不要求 Bearer token，实际工具请求仍按配置鉴权。
+
 ---
 
 ## 4. REST API 与 Dashboard
@@ -399,7 +425,7 @@ feel 桶自身：
 | `/dashboard` | GET | 公开（页面），AJAX 走 cookie | Dashboard HTML |
 | `/letters` | GET | 公开 | 301 → `/#letters`（已合并进 dashboard 的「信」分页，老书签兼容） |
 | `/auth/status` | GET | 公开 | 是否已登录 / 是否需要初始化密码 |
-| `/auth/setup` | POST | 公开（仅未配置密码时） | 首次设置密码 |
+| `/auth/setup` | POST | 仅直连 loopback；远程须 `X-Ombre-Setup-Token` | 首次设置密码；公网部署优先预设 `OMBRE_DASHBOARD_PASSWORD` |
 | `/auth/login` | POST | 公开 | 密码登录，颁发 cookie（7 天） |
 | `/auth/logout` | POST | 公开 | 注销 |
 | `/auth/change-password` | POST | 🔒 | 修改密码（环境变量密码模式下禁用） |

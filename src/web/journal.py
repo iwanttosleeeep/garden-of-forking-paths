@@ -17,8 +17,6 @@ from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import httpx
-import yaml
-
 from starlette.requests import Request
 from starlette.responses import Response
 
@@ -172,17 +170,15 @@ def _sync_config() -> dict[str, Any]:
 def _save_sync_config() -> None:
     """Persist non-secret sync configuration; the key itself is stored only as a hash."""
     try:
-        from utils import config_file_path  # type: ignore
+        from utils import atomic_update_config_yaml  # type: ignore
     except ImportError:  # pragma: no cover
-        from ..utils import config_file_path  # type: ignore
-    path = config_file_path()
-    saved: dict[str, Any] = {}
-    if os.path.exists(path):
-        with open(path, "r", encoding="utf-8") as handle:
-            saved = yaml.safe_load(handle) or {}
-    saved["sterling_sync"] = dict(_sync_config())
-    with open(path, "w", encoding="utf-8") as handle:
-        yaml.safe_dump(saved, handle, allow_unicode=True, default_flow_style=False)
+        from ..utils import atomic_update_config_yaml  # type: ignore
+    section = dict(_sync_config())
+
+    def _mutate(saved: dict) -> None:
+        saved["sterling_sync"] = section
+
+    atomic_update_config_yaml(_mutate)
 
 
 def _sync_status() -> dict[str, Any]:

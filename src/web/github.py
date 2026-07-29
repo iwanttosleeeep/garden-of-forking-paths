@@ -16,7 +16,6 @@ _github_sync_loop / _restart_github_auto_task 也读 sh.github_sync_instance，
 import os
 import time
 import zipfile
-import yaml
 
 from starlette.requests import Request
 from starlette.responses import Response
@@ -27,10 +26,10 @@ logger = sh.logger
 
 try:
     from github_sync import GitHubSync  # type: ignore
-    from utils import parse_bool  # type: ignore
+    from utils import atomic_update_config_yaml, parse_bool  # type: ignore
 except ImportError:  # pragma: no cover
     from ..github_sync import GitHubSync  # type: ignore
-    from ..utils import parse_bool  # type: ignore
+    from ..utils import atomic_update_config_yaml, parse_bool  # type: ignore
 
 
 def _pre_import_backup(buckets_dir: str) -> str:
@@ -96,41 +95,44 @@ def register(mcp) -> None:
 
         if not token and not repo:
             # 清空配置
+            cleared = {
+                "repo": "",
+                "branch": branch,
+                "path_prefix": path_prefix,
+                "auto_interval_minutes": 0,
+            }
+            try:
+                atomic_update_config_yaml(
+                    lambda saved: saved.__setitem__("github_sync", dict(cleared))
+                )
+            except Exception as exc:
+                return JSONResponse(
+                    {"ok": False, "error": f"config.yaml 写入失败: {exc}"},
+                    status_code=500,
+                )
+            sh.config["github_sync"] = dict(cleared)
             sh.github_sync_instance = None
             sh.restart_github_auto_task(0)
-            gh_cfg = sh.config.setdefault("github_sync", {})
-            gh_cfg["repo"] = ""
-            gh_cfg["branch"] = branch
-            gh_cfg["path_prefix"] = path_prefix
-            gh_cfg["auto_interval_minutes"] = 0
             return JSONResponse({"ok": True, "message": "已清空 GitHub 同步配置"})
 
         # 持久化到 config.yaml（含 token，config.yaml 是 bind mount 重启不丢）
-        gh_cfg = sh.config.setdefault("github_sync", {})
+        gh_cfg = dict(sh.config.get("github_sync") or {})
         if token:
             gh_cfg["token"] = token
         gh_cfg["repo"] = repo
         gh_cfg["branch"] = branch
         gh_cfg["path_prefix"] = path_prefix
         gh_cfg["auto_interval_minutes"] = auto_interval
-        from utils import config_file_path
-        config_path = config_file_path()
         try:
-            save_config: dict = {}
-            if os.path.exists(config_path):
-                with open(config_path, "r", encoding="utf-8") as f:
-                    save_config = yaml.safe_load(f) or {}
-            sc_gh = save_config.setdefault("github_sync", {})
-            if token:
-                sc_gh["token"] = token
-            sc_gh["repo"] = repo
-            sc_gh["branch"] = branch
-            sc_gh["path_prefix"] = path_prefix
-            sc_gh["auto_interval_minutes"] = auto_interval
-            with open(config_path, "w", encoding="utf-8") as f:
-                yaml.dump(save_config, f, allow_unicode=True, default_flow_style=False)
-        except Exception as e:
-            logger.warning(f"[github] config.yaml 写入失败: {e}")
+            atomic_update_config_yaml(
+                lambda saved: saved.__setitem__("github_sync", dict(gh_cfg))
+            )
+        except Exception as exc:
+            return JSONResponse(
+                {"ok": False, "error": f"config.yaml 写入失败: {exc}"},
+                status_code=500,
+            )
+        sh.config["github_sync"] = gh_cfg
 
         # 重建实例
         _tok = token or sh.config.get("github_sync", {}).get("token") or os.environ.get("OMBRE_GITHUB_TOKEN", "")

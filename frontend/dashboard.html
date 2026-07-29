@@ -5534,7 +5534,7 @@ function _renderEmbMigrateStatus(s) {
     var sample = s.failed_items.slice(0, 3).map(function(it) { return it.bucket_id + ': ' + it.error; }).join('<br>');
     html += '<br><span style="color:var(--negative,#c33)">失败样本（前 3）：<br>' + sample + '</span>';
   }
-  if (s.phase === 'failed' || (s.phase === 'completed' && s.failed_count > 0)) {
+  if (s.phase === 'failed' || s.phase === 'publish_failed' || (s.phase === 'completed' && s.failed_count > 0)) {
     if (s.tail_log && s.tail_log.length) {
       html += '<br><details style="margin-top:6px;"><summary>最近 15 行错误日志（点开复制给 AI 排查，不要发给作者）</summary>'
         + '<pre style="white-space:pre-wrap;font-size:11px;background:#222;color:#eee;padding:8px;border-radius:4px;max-height:240px;overflow:auto;">'
@@ -5552,7 +5552,7 @@ async function pollEmbMigrateStatus() {
     var d = await r.json();
     if (!d || !d.ok) return;
     _renderEmbMigrateStatus(d.status);
-    if (d.status && (d.status.phase === 'completed' || d.status.phase === 'failed') && !d.running) {
+    if (d.status && ['completed', 'failed', 'publish_failed'].includes(d.status.phase) && !d.running) {
       // 停止轮询，刷新一次摘要
       if (_embMigratePollTimer) { clearInterval(_embMigratePollTimer); _embMigratePollTimer = null; }
       refreshEmbInfo();

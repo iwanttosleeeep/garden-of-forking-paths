@@ -2,7 +2,7 @@
 
 ## Decision
 
-Garden accepts a revocable, private iPhone sync key and stores only validated daily HealthKit summaries in `.health/daily_summaries.json`. It does not use GitHub, Sterling, or the memo store for Health data. Cycle data remains visible only on the Health page. No Health MCP tool is exposed and no Health record is automatically placed in LLM context.
+Garden accepts a revocable, private iPhone sync key and stores only validated daily HealthKit summaries in `.health/daily_summaries.json`. It does not use GitHub, Sterling, or the memo store for Health data. Records are retained for at most 30 days. The explicit MCP `check_up(days)` reader can return a user-requested, bounded 1–30 day slice; no Health record is automatically placed in LLM context.
 
 ## Why this is not cognition
 
@@ -22,12 +22,12 @@ Health summaries are not memos and therefore never create memo tombstones. Exist
 
 ## How present thinking remains with the LLM
 
-Health data is intentionally excluded from automatic retrieval. Any future use in a conversation must be a separate, explicit user-controlled action.
+Health data is intentionally excluded from automatic retrieval. Conversation use is a separate, explicit `check_up` action with a hard 30-day bound.
 
 ## Rejected alternatives
 
-Raw heart-rate streams, automatic GitHub backups, syncing through Sterling, and an exposed `health` MCP tool were rejected for privacy, complexity, and accidental-context reasons.
+Raw heart-rate streams, automatic GitHub backups, syncing through Sterling, and unbounded or automatic Health retrieval were rejected for privacy, complexity, and accidental-context reasons.
 
 ## Tests required
 
-Cover bearer-key rejection, schema/range validation, bounded payloads, atomic daily replacement, dashboard authentication, and absence from MCP tool manifests.
+Cover bearer-key rejection, schema/range validation, bounded payloads, atomic daily replacement, 30-day retention, dashboard authentication, explicit `check_up` manifest presence, and absence from automatic retrieval.

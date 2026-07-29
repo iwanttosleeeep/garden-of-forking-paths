@@ -19,7 +19,11 @@ import httpx
 from starlette.middleware.cors import CORSMiddleware
 
 from utils import parse_bool
-from web.request_limits import MCPRequestBodyLimitMiddleware
+from web.request_limits import (
+    MCPRequestBodyLimitMiddleware,
+    is_mcp_endpoint_path,
+    is_sse_endpoint_path,
+)
 
 
 DEFAULT_MAX_MCP_REQUEST_BYTES = 4 * 1024 * 1024
@@ -64,20 +68,6 @@ class HTTPRuntimeSettings:
         )
 
 
-def merge_mcp_tool_registries(primary: Any, extra: Any) -> int:
-    """Merge FastMCP's compatibility registry into the public registry.
-
-    FastMCP does not currently expose a public registry merge API. Keeping this
-    compatibility access in one function makes the private dependency easy to
-    test and replace when the SDK adds one.
-    """
-
-    primary_tools = primary._tool_manager._tools
-    extra_tools = extra._tool_manager._tools
-    primary_tools.update(extra_tools)
-    return len(extra_tools)
-
-
 def _first_forwarded_value(value: str) -> str:
     return value.split(",", 1)[0].strip()
 
@@ -105,22 +95,31 @@ class MCPAuthMiddleware:
         *,
         auth_required: bool,
         token_validator: TokenValidator,
+        path_matcher: Callable[[object], bool] = is_mcp_endpoint_path,
     ) -> None:
         self.app = app
         self.auth_required = bool(auth_required)
         self.token_validator = token_validator
+        self.path_matcher = path_matcher
 
     async def __call__(self, scope: dict, receive: Any, send: Any) -> None:
         path = str(scope.get("path", ""))
-        if scope.get("type") == "http" and self.auth_required and path.startswith("/mcp"):
+        if (
+            scope.get("type") == "http"
+            and str(scope.get("method", "")).upper() != "OPTIONS"
+            and self.auth_required
+            and self.path_matcher(path)
+        ):
             headers = {key.lower(): value for key, value in scope.get("headers", [])}
             auth = headers.get(b"authorization", b"").decode("latin-1")
-            resource, base = _request_resource(scope, headers)
+            _request_endpoint, base = _request_resource(scope, headers)
+            # Both HTTP transports represent the same OAuth resource.
+            resource = f"{base}/mcp"
             valid = auth.startswith("Bearer ") and self.token_validator(
                 auth[7:], resource=resource
             )
             if not valid:
-                endpoint = path.strip("/")
+                endpoint = "mcp"
                 metadata_url = (
                     f"{base}/.well-known/oauth-protected-resource/{endpoint}"
                 )
@@ -156,41 +155,82 @@ class MCPAuthMiddleware:
         await self.app(scope, receive, send)
 
 
-class MCPAcceptShim:
-    """Ensure MCP clients advertise both supported response media types."""
+class MCPJSONAcceptShim:
+    """Select JSON for Streamable HTTP clients that omit or wildcard Accept."""
 
-    _REQUIRED = (b"application/json", b"text/event-stream")
+    def __init__(
+        self,
+        app: Any,
+        *,
+        path_matcher: Callable[[object], bool] = is_mcp_endpoint_path,
+    ) -> None:
+        self.app = app
+        self.path_matcher = path_matcher
+
+    @staticmethod
+    def _wildcard_allows_json(media_range: bytes) -> bool:
+        parts = [part.strip().lower() for part in media_range.split(b";")]
+        if not parts or parts[0] not in (b"*/*", b"application/*"):
+            return False
+        for parameter in parts[1:]:
+            key, separator, value = parameter.partition(b"=")
+            if separator and key.strip() == b"q":
+                try:
+                    quality = float(value.strip())
+                except ValueError:
+                    return False
+                return 0 < quality <= 1
+        return True
+
+    async def __call__(self, scope: dict, receive: Any, send: Any) -> None:
+        if scope.get("type") == "http" and self.path_matcher(scope.get("path")):
+            headers = list(scope.get("headers", []))
+            combined = b", ".join(
+                value for key, value in headers if key.lower() == b"accept"
+            ).strip()
+            raw_ranges = [item.strip() for item in combined.lower().split(b",") if item.strip()]
+            media_ranges = [item.split(b";", 1)[0].strip() for item in raw_ranges]
+            has_json = b"application/json" in media_ranges
+            accepts_wildcard = any(self._wildcard_allows_json(item) for item in raw_ranges)
+            if not combined or (accepts_wildcard and not has_json):
+                normalized = b"application/json" if not combined else combined + b", application/json"
+                headers = [(key, value) for key, value in headers if key.lower() != b"accept"]
+                headers.append((b"accept", normalized))
+                scope = dict(scope)
+                scope["headers"] = headers
+        await self.app(scope, receive, send)
+
+
+class SecurityHeadersMiddleware:
+    """Apply browser hardening headers to success and error responses."""
+
+    _HEADERS = (
+        (b"content-security-policy", b"frame-ancestors 'none'"),
+        (b"x-frame-options", b"DENY"),
+        (b"x-content-type-options", b"nosniff"),
+        (b"referrer-policy", b"no-referrer"),
+        (b"permissions-policy", b"camera=(), geolocation=(), microphone=(), payment=(), usb=()"),
+    )
 
     def __init__(self, app: Any) -> None:
         self.app = app
 
     async def __call__(self, scope: dict, receive: Any, send: Any) -> None:
-        if scope.get("type") == "http" and str(scope.get("path", "")).startswith("/mcp"):
-            headers = list(scope.get("headers", []))
-            accept_index = next(
-                (
-                    index
-                    for index, (key, _value) in enumerate(headers)
-                    if key.lower() == b"accept"
-                ),
-                -1,
-            )
-            current = headers[accept_index][1].lower() if accept_index >= 0 else b""
-            missing = [value for value in self._REQUIRED if value not in current]
-            if missing:
-                required = b", ".join(missing)
-                if accept_index >= 0 and headers[accept_index][1].strip():
-                    headers[accept_index] = (
-                        headers[accept_index][0],
-                        headers[accept_index][1] + b", " + required,
-                    )
-                elif accept_index >= 0:
-                    headers[accept_index] = (headers[accept_index][0], required)
-                else:
-                    headers.append((b"accept", required))
-                scope = dict(scope)
-                scope["headers"] = headers
-        await self.app(scope, receive, send)
+        if scope.get("type") != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_with_headers(message: dict) -> None:
+            if message.get("type") == "http.response.start":
+                headers = list(message.get("headers", []))
+                existing = {key.lower() for key, _value in headers}
+                headers.extend(
+                    (key, value) for key, value in self._HEADERS if key not in existing
+                )
+                message = {**message, "headers": headers}
+            await send(message)
+
+        await self.app(scope, receive, send_with_headers)
 
 
 @dataclass
@@ -326,24 +366,32 @@ def build_http_app(
     else:
         raise ValueError(f"HTTP app cannot be built for transport: {transport}")
 
+    mcp_path_matcher = is_sse_endpoint_path if transport == "sse" else is_mcp_endpoint_path
+
     install_runtime_lifespan(app, lifecycle)
+    app.add_middleware(
+        MCPRequestBodyLimitMiddleware,
+        max_bytes=settings.max_request_bytes,
+        path_matcher=mcp_path_matcher,
+    )
+    if transport == "streamable-http":
+        app.add_middleware(MCPJSONAcceptShim, path_matcher=mcp_path_matcher)
+    app.add_middleware(
+        MCPAuthMiddleware,
+        auth_required=settings.auth_required,
+        token_validator=token_validator,
+        path_matcher=mcp_path_matcher,
+    )
+    # Starlette wraps in reverse registration order. CORS must be outside auth
+    # so browser preflights and 401 challenges receive the expected headers.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
         allow_methods=["*"],
         allow_headers=["*"],
-        expose_headers=["*"],
+        expose_headers=["Mcp-Session-Id", "WWW-Authenticate"],
     )
-    app.add_middleware(
-        MCPRequestBodyLimitMiddleware,
-        max_bytes=settings.max_request_bytes,
-    )
-    app.add_middleware(MCPAcceptShim)
-    app.add_middleware(
-        MCPAuthMiddleware,
-        auth_required=settings.auth_required,
-        token_validator=token_validator,
-    )
+    app.add_middleware(SecurityHeadersMiddleware)
     app.state.ombre_http_settings = settings
     app.state.ombre_runtime_lifecycle = lifecycle
     return app

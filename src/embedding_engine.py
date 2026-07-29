@@ -117,30 +117,6 @@ def _humanize_api_error(e: Exception) -> str:
     return ""
 
 
-def _humanize_api_error(e: Exception) -> str:
-    """把 OpenAI 兼容后端的常见异常翻成可读中文提示，附在 OB-E001 detail 末尾。
-
-    目的：让错误面板直接看懂 401/400/404/超时该怎么办，尤其跨境 provider 选错的
-    场景（美国 VPS 连国内域名超时、国际站无某模型、key 不匹配 provider）。
-    返回空串表示无额外可补充的提示。
-    """
-    name = type(e).__name__
-    code = getattr(e, "status_code", None)
-    s = str(e).lower()
-    if code == 401 or "authentication" in name.lower() or "401" in s:
-        return "→ 401：API key 无效或无权限，确认 key 正确且属于当前 base_url 的 provider。"
-    if code == 404 or "notfound" in name.lower() or "404" in s:
-        return "→ 404/model 不存在：确认模型名与 base_url 属同一 provider（如 SiliconFlow 国际站可能没有 BAAI/bge-m3）。"
-    if code == 400 or "badrequest" in name.lower():
-        return "→ 400：请求被拒，多为模型名不存在或参数不被支持，核对 model 名。"
-    if "timeout" in name.lower() or "connect" in name.lower() or "timeout" in s:
-        return (
-            "→ 超时/连接失败：检查网络与 base_url 可达性。美国 VPS 直连国内域名"
-            "（api.siliconflow.cn）极易超时，建议改用就近 provider 或本地 ollama。"
-        )
-    return ""
-
-
 # ============================================================
 # 后端基类 / Backend Abstract Base
 # ============================================================

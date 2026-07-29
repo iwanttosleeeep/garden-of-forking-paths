@@ -2,7 +2,7 @@
 
 ## Decision
 
-Sterling journals enter the Garden only through a user-selected JSON export. Each entry is stored as a normal Markdown memo with `source_tool: sterling` and `dont_surface: true`. The MCP `journal` tool returns only a trend summary by default and reveals journal text only when the AI explicitly supplies a query.
+Sterling journals enter the Garden only through the authenticated sync/import boundary. Each entry is stored as Markdown with `source_tool: sterling` and `dont_surface: true`, and is filtered out of Memos, Breath, archives, and normal retrieval. The MCP `echo` and `read_journals` tools return only a bounded summary by default and reveal matching journal text only when the caller explicitly supplies a query.
 
 ## Why this is not cognition
 
