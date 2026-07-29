@@ -112,9 +112,13 @@ def _api_error(payload: Any) -> str:
 
 
 def _song_id_values(value: object) -> list[str]:
-    """Normalize a JSON array, Python collection, or comma-separated fallback."""
+    """Normalize one numeric ID, a collection, JSON, or comma-separated text."""
     raw_items: object = value
-    if isinstance(value, str):
+    if isinstance(value, bool):
+        raise NCMClientError("songIdList 只能包含歌曲 ID")
+    if isinstance(value, int):
+        raw_items = [value]
+    elif isinstance(value, str):
         text = value.strip()
         if text.startswith("["):
             try:
