@@ -3,10 +3,13 @@ import pytest
 from radio_library import RadioLibrary, playlist_rows, resource_reference
 from radio_service import RadioService
 
+ENCRYPTED_SONG_ID = "a" * 32
+
 
 class FakeClient:
     def __init__(self):
         self.track_calls = []
+        self.add_calls = []
         self.created = [
             {"name": "Human One", "originalId": "101", "encryptedId": "enc101", "trackCount": 2},
             {"name": "Senn One", "originalId": "202", "encryptedId": "enc202", "trackCount": 1},
@@ -26,6 +29,19 @@ class FakeClient:
 
     async def create_playlist(self, name):
         self.created.append({"name": name, "originalId": "303", "encryptedId": "enc303", "trackCount": 0})
+        return {"code": 200}
+
+    async def search(self, query, kind):
+        return {
+            "query": query,
+            "kind": kind,
+            "songs": [
+                {"name": "Echo", "originalId": 17822773, "id": ENCRYPTED_SONG_ID}
+            ],
+        }
+
+    async def add_tracks(self, playlist_id, song_ids):
+        self.add_calls.append((playlist_id, song_ids))
         return {"code": 200}
 
 
@@ -87,3 +103,25 @@ async def test_senn_created_playlist_is_registered(tmp_path):
 
     assert result["owner"] == "senn"
     assert service.library.is_senn({"original_id": "303"}) is True
+
+
+@pytest.mark.asyncio
+async def test_search_remembers_encrypted_id_and_add_resolves_original_id(tmp_path):
+    client = FakeClient()
+    service = RadioService(str(tmp_path), client)
+    service.library.register_senn_playlist({"original_id": "303"})
+
+    await service.search("Echo", "song")
+    result = await service.add_tracks({"original_id": "303"}, 17822773)
+
+    assert result["code"] == 200
+    assert client.add_calls == [("303", [ENCRYPTED_SONG_ID])]
+
+
+@pytest.mark.asyncio
+async def test_add_with_unknown_original_id_explains_that_search_is_required(tmp_path):
+    service = RadioService(str(tmp_path), FakeClient())
+    service.library.register_senn_playlist({"original_id": "303"})
+
+    with pytest.raises(ValueError, match="请先用 radio 的 search"):
+        await service.add_tracks({"original_id": "303"}, 17822773)

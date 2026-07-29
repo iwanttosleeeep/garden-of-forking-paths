@@ -2,6 +2,9 @@ import pytest
 
 from ncm_client import NCMClient, NCMClientError, _api_error, _json_from_text
 
+SONG_A = "a" * 32
+SONG_B = "b" * 32
+
 
 class FakeRunner:
     def __init__(self):
@@ -23,7 +26,7 @@ async def test_radio_client_exposes_only_bounded_music_actions():
     await client.playlist_tracks("playlist-original-id", alternate_id="playlist-encrypted-id")
     await client.search("quiet evening", "playlist")
     await client.create_playlist("Garden at dusk")
-    await client.add_tracks("playlist-id", "17822773,28254853")
+    await client.add_tracks("playlist-id", f"{SONG_A},{SONG_B}")
 
     commands = [call[0] for call in runner.calls]
     assert commands[0][:2] == ["playlist", "created"]
@@ -34,7 +37,7 @@ async def test_radio_client_exposes_only_bounded_music_actions():
     assert commands[4][3:7] == [
         "playlist-id",
         "--songIdList",
-        "[17822773,28254853]",
+        f'["{SONG_A}","{SONG_B}"]',
         "--userInput",
     ]
     assert "--songIds" not in commands[4]
@@ -45,7 +48,7 @@ async def test_radio_client_exposes_only_bounded_music_actions():
 async def test_add_tracks_normalizes_a_song_id_collection_for_the_cli_contract():
     runner = FakeRunner()
 
-    await NCMClient(runner).add_tracks("playlist-id", ["17822773", 28254853, ""])
+    await NCMClient(runner).add_tracks("playlist-id", [SONG_A, f" {SONG_B} ", ""])
 
     command = runner.calls[0][0]
     assert command[:6] == [
@@ -54,7 +57,7 @@ async def test_add_tracks_normalizes_a_song_id_collection_for_the_cli_contract()
         "--playlistId",
         "playlist-id",
         "--songIdList",
-        "[17822773,28254853]",
+        f'["{SONG_A}","{SONG_B}"]',
     ]
 
 
@@ -62,27 +65,27 @@ async def test_add_tracks_normalizes_a_song_id_collection_for_the_cli_contract()
 async def test_add_tracks_accepts_a_json_array_string():
     runner = FakeRunner()
 
-    await NCMClient(runner).add_tracks("playlist-id", '["17822773", "28254853"]')
+    await NCMClient(runner).add_tracks("playlist-id", f'["{SONG_A}", "{SONG_B}"]')
 
-    assert runner.calls[0][0][5] == "[17822773,28254853]"
-
-
-@pytest.mark.asyncio
-async def test_add_tracks_wraps_one_numeric_legacy_id_as_a_json_array():
-    runner = FakeRunner()
-
-    await NCMClient(runner).add_tracks("playlist-id", 17822773)
-
-    assert runner.calls[0][0][5] == "[17822773]"
+    assert runner.calls[0][0][5] == f'["{SONG_A}","{SONG_B}"]'
 
 
 @pytest.mark.asyncio
-async def test_add_tracks_splits_comma_separated_legacy_ids_into_numbers():
+async def test_add_tracks_wraps_one_encrypted_id_as_a_json_array():
     runner = FakeRunner()
 
-    await NCMClient(runner).add_tracks("playlist-id", "17822773,28254853")
+    await NCMClient(runner).add_tracks("playlist-id", SONG_A)
 
-    assert runner.calls[0][0][5] == "[17822773,28254853]"
+    assert runner.calls[0][0][5] == f'["{SONG_A}"]'
+
+
+@pytest.mark.asyncio
+async def test_add_tracks_splits_comma_separated_encrypted_ids():
+    runner = FakeRunner()
+
+    await NCMClient(runner).add_tracks("playlist-id", f"{SONG_A},{SONG_B}")
+
+    assert runner.calls[0][0][5] == f'["{SONG_A}","{SONG_B}"]'
 
 
 @pytest.mark.asyncio
@@ -95,10 +98,13 @@ async def test_add_tracks_retries_comma_format_only_after_a_shape_error():
             raise NCMClientError("参数错误：songIdList")
         return {"success": True}
 
-    result = await NCMClient(runner).add_tracks("playlist-id", [17822773, 28254853])
+    result = await NCMClient(runner).add_tracks("playlist-id", [SONG_A, SONG_B])
 
     assert result["success"] is True
-    assert [call[5] for call in calls] == ["[17822773,28254853]", "17822773,28254853"]
+    assert [call[5] for call in calls] == [
+        f'["{SONG_A}","{SONG_B}"]',
+        f"{SONG_A},{SONG_B}",
+    ]
 
 
 @pytest.mark.asyncio
@@ -110,7 +116,7 @@ async def test_add_tracks_does_not_retry_non_validation_failures():
         raise NCMClientError("请先登录")
 
     with pytest.raises(NCMClientError, match="请先登录"):
-        await NCMClient(runner).add_tracks("playlist-id", [17822773])
+        await NCMClient(runner).add_tracks("playlist-id", [SONG_A])
     assert len(calls) == 1
 
 
@@ -132,6 +138,8 @@ async def test_radio_client_rejects_unbounded_ids_and_unknown_modes():
 
     with pytest.raises(NCMClientError):
         await client.add_tracks("playlist", "song; arbitrary-command")
+    with pytest.raises(NCMClientError, match="encryptedId"):
+        await client.add_tracks("playlist", "17822773")
     with pytest.raises(NCMClientError):
         await client.playlists("everything")
 

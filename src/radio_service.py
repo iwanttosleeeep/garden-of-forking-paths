@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ncm_client import NCMClient
+from ncm_client import NCMClient, _song_id_tokens
 from radio_library import (
     RadioLibrary,
     RadioLibraryError,
@@ -60,12 +60,14 @@ class RadioService:
         raw = await self.client.playlist_tracks(
             ref.get("original_id", ""), alternate_id=ref.get("encrypted_id", "")
         )
+        rows = track_rows(raw)
+        self.library.remember_song_references(rows)
         return {
             "playlist": {
                 "reference": ref,
                 "note": self.library.note_for("playlist", ref),
             },
-            "tracks": [self._decorate(item, "track") for item in track_rows(raw)],
+            "tracks": [self._decorate(item, "track") for item in rows],
         }
 
     def set_exposed(self, reference: Any, exposed: bool) -> dict:
@@ -73,7 +75,9 @@ class RadioService:
         return {"reference": ref, "exposed": bool(exposed)}
 
     async def search(self, query: Any, kind: str = "all") -> Any:
-        return await self.client.search(query, kind)
+        result = await self.client.search(query, kind)
+        self.library.remember_song_references(track_rows(result))
+        return result
 
     async def create_playlist(self, name: Any, *, owner: str = "human") -> dict:
         before_ids: set[str] = set()
@@ -115,7 +119,10 @@ class RadioService:
         ref = resource_reference(reference)
         if not self.library.is_senn(ref):
             raise RadioLibraryError("Senn 只能修改自己创建的歌单")
-        return await self.client.add_tracks(ref["original_id"] or ref["encrypted_id"], song_ids)
+        encrypted_ids = self.library.resolve_encrypted_song_ids(_song_id_tokens(song_ids))
+        return await self.client.add_tracks(
+            ref["original_id"] or ref["encrypted_id"], encrypted_ids
+        )
 
     def set_note(self, target_type: str, reference: Any, note: Any) -> dict:
         if target_type == "playlist" and not self.library.can_senn_read(reference):
