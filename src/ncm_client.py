@@ -111,8 +111,8 @@ def _api_error(payload: Any) -> str:
     return ""
 
 
-def _song_id_values(value: object) -> list[str]:
-    """Normalize one numeric ID, a collection, JSON, or comma-separated text."""
+def _song_id_values(value: object) -> list[int]:
+    """Normalize Garden input to the numeric ID array required by the CLI."""
     raw_items: object = value
     if isinstance(value, bool):
         raise NCMClientError("songIdList 只能包含歌曲 ID")
@@ -130,14 +130,19 @@ def _song_id_values(value: object) -> list[str]:
     if not isinstance(raw_items, (list, tuple, set)):
         raise NCMClientError("songIdList 必须是歌曲 ID 数组")
 
-    songs: list[str] = []
-    seen: set[str] = set()
+    songs: list[int] = []
+    seen: set[int] = set()
     for item in raw_items:
-        song = str(item or "").strip()
-        if not song:
+        if isinstance(item, bool):
+            raise NCMClientError("songIdList 只能包含数字歌曲 ID")
+        song_text = str(item or "").strip()
+        if not song_text:
             continue
-        if not re.fullmatch(r"[A-Za-z0-9_-]+", song):
-            raise NCMClientError("songIdList 只能包含歌曲 ID")
+        if not song_text.isascii() or not song_text.isdecimal():
+            raise NCMClientError("songIdList 只能包含数字歌曲 ID")
+        song = int(song_text)
+        if song <= 0:
+            raise NCMClientError("songIdList 只能包含数字歌曲 ID")
         if song not in seen:
             songs.append(song)
             seen.add(song)
@@ -293,7 +298,7 @@ class NCMClient:
         songs = _song_id_values(song_ids)
         encoded_values = (
             json.dumps(songs, ensure_ascii=False, separators=(",", ":")),
-            ",".join(songs),
+            ",".join(str(song) for song in songs),
         )
         for index, encoded in enumerate(encoded_values):
             try:
