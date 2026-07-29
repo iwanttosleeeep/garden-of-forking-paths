@@ -17,6 +17,17 @@ def _json(payload: object) -> str:
     )
 
 
+def resolve_song_id_list(
+    *,
+    songIdList: list[str | int] | None = None,
+    song_ids: list[str | int] | str | int | None = None,
+) -> list[str | int] | str | int | None:
+    """Map the legacy Connector field to the backend field without losing scalars."""
+    if songIdList:
+        return songIdList
+    return song_ids
+
+
 async def dispatch(
     action: str = "playlists",
     *,
@@ -26,7 +37,7 @@ async def dispatch(
     query: str = "",
     kind: str = "all",
     name: str = "",
-    song_ids: list[str] | str | None = None,
+    songIdList: list[str | int] | str | int | None = None,
     target_type: str = "playlist",
     note: str = "",
     confirm: bool = False,
@@ -52,7 +63,7 @@ async def dispatch(
         if wanted == "add_tracks":
             if not confirm:
                 return "添加歌曲会修改 Senn 的网易云歌单。确认歌单 ID 与 songIdList 后，请再次调用并传 confirm=true。"
-            return _json(await service.add_tracks(reference, song_ids))
+            return _json(await service.add_tracks(reference, songIdList))
         if wanted == "comment":
             return _json(service.set_note(target_type, reference, note))
         return (

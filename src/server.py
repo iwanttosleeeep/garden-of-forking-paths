@@ -890,12 +890,17 @@ async def radio(
     query: Optional[str] = "",
     kind: Optional[str] = "all",
     name: Optional[str] = "",
-    songIdList: Optional[list[str]] = None,
+    songIdList: Optional[list[str | int]] = None,
+    song_ids: Optional[str | int | list[str | int]] = None,
     target_type: Optional[str] = "playlist",
     note: Optional[str] = "",
     confirm: Optional[bool] = False,
 ) -> str:
-    """RADIO / NETEASE MUSIC TOOL — use for 网易云音乐、Radio、歌单、找歌或音乐推荐。playlists lists only human playlists explicitly shared in Garden plus Senn-created playlists. playlist reads tracks using original_id and encrypted_id returned by playlists. search finds song/album/playlist/all. create_playlist creates a Senn-owned playlist; add_tracks accepts songIdList as a JSON array of song IDs and changes only Senn-owned playlists; both writes require confirm=true. comment leaves Senn's reason under a playlist or track using target_type=playlist/track and note. It never plays audio or reads Memos, journals, or chats."""
+    """RADIO / NETEASE MUSIC TOOL — use for 网易云音乐、Radio、歌单、找歌或音乐推荐。playlists lists only human playlists explicitly shared in Garden plus Senn-created playlists. playlist reads tracks using original_id and encrypted_id returned by playlists. search finds song/album/playlist/all. create_playlist creates a Senn-owned playlist. add_tracks accepts songIdList as an array; cached clients may send song_ids as one ID, a list, JSON text, or comma-separated text, and Garden maps it to songIdList. Both writes require confirm=true. comment leaves Senn's reason under a playlist or track using target_type=playlist/track and note. It never plays audio or reads Memos, journals, or chats."""
+    resolved_song_ids = _t_radio.resolve_song_id_list(
+        songIdList=songIdList,
+        song_ids=song_ids,
+    )
     return await _with_notice(
         _t_radio.dispatch(
             action,
@@ -905,7 +910,7 @@ async def radio(
             query=query or "",
             kind=kind or "all",
             name=name or "",
-            song_ids=songIdList or [],
+            songIdList=resolved_song_ids,
             target_type=target_type or "playlist",
             note=note or "",
             confirm=bool(confirm),
@@ -919,7 +924,11 @@ async def radio(
             "query": query,
             "kind": kind,
             "name_len": len(name or ""),
-            "song_count": len(songIdList or []),
+            "song_count": (
+                len(resolved_song_ids)
+                if isinstance(resolved_song_ids, list)
+                else int(resolved_song_ids not in (None, ""))
+            ),
             "target_type": target_type,
             "note_len": len(note or ""),
             "confirm": confirm,

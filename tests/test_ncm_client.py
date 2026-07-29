@@ -68,6 +68,15 @@ async def test_add_tracks_accepts_a_json_array_string():
 
 
 @pytest.mark.asyncio
+async def test_add_tracks_wraps_one_numeric_legacy_id_as_a_json_array():
+    runner = FakeRunner()
+
+    await NCMClient(runner).add_tracks("playlist-id", 17822773)
+
+    assert runner.calls[0][0][5] == '["17822773"]'
+
+
+@pytest.mark.asyncio
 async def test_add_tracks_retries_comma_format_only_after_a_shape_error():
     calls = []
 

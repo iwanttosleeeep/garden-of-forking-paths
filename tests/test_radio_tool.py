@@ -39,12 +39,12 @@ async def test_single_radio_tool_reads_and_requires_confirmation_for_writes(monk
     assert json.loads(created.split("\n", 1)[1])["owner"] == "senn"
 
     add_prompt = await radio.dispatch(
-        "add_tracks", original_id="playlist-1", song_ids=["song-a", "song-b"], confirm=False
+        "add_tracks", original_id="playlist-1", songIdList=["song-a", "song-b"], confirm=False
     )
     assert "confirm=true" in add_prompt
 
     added = await radio.dispatch(
-        "add_tracks", original_id="playlist-1", song_ids=["song-a", "song-b"], confirm=True
+        "add_tracks", original_id="playlist-1", songIdList=["song-a", "song-b"], confirm=True
     )
     added_payload = json.loads(added.split("\n", 1)[1])
     assert added_payload["reference"]["original_id"] == "playlist-1"
@@ -54,3 +54,10 @@ async def test_single_radio_tool_reads_and_requires_confirmation_for_writes(monk
         "comment", original_id="playlist-1", target_type="playlist", note="Because dusk needs strings."
     )
     assert json.loads(commented.split("\n", 1)[1])["note"].startswith("Because")
+
+
+def test_legacy_song_ids_maps_to_the_backend_song_id_list_without_losing_a_number():
+    assert radio.resolve_song_id_list(songIdList=None, song_ids=17822773) == 17822773
+    assert radio.resolve_song_id_list(
+        songIdList=["new-id"], song_ids="legacy-id"
+    ) == ["new-id"]
