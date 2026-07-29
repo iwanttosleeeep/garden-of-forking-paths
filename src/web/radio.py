@@ -2,16 +2,13 @@
 
 from __future__ import annotations
 
-import os
-
-import yaml
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 from ncm_client import NCMClient, NCMClientError
 from radio_library import RadioLibraryError
 from radio_service import RadioService
-from utils import atomic_write_text, config_file_path
+from utils import atomic_update_config_yaml
 
 from . import _shared as sh
 
@@ -31,23 +28,16 @@ def _radio_config() -> dict:
 
 def _persist_marker(configured: bool, app_id_masked: str = "") -> None:
     """Persist only connection metadata; the official CLI owns the secrets."""
-    path = config_file_path()
-    saved = {}
-    if os.path.exists(path):
-        with open(path, "r", encoding="utf-8") as handle:
-            loaded = yaml.safe_load(handle) or {}
-        if not isinstance(loaded, dict):
-            raise NCMClientError("Garden 配置文件格式不正确，无法保存 Radio 状态")
-        saved = loaded
-    saved["radio"] = {
+    marker = {
         "configured": bool(configured),
         "app_id_masked": str(app_id_masked or ""),
     }
-    atomic_write_text(
-        path,
-        yaml.safe_dump(saved, allow_unicode=True, default_flow_style=False, sort_keys=False),
-    )
-    sh.config["radio"] = dict(saved["radio"])
+
+    def _mutate(saved: dict) -> None:
+        saved["radio"] = dict(marker)
+
+    atomic_update_config_yaml(_mutate)
+    sh.config["radio"] = dict(marker)
 
 
 def _error(exc: Exception, status_code: int = 400) -> JSONResponse:

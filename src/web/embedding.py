@@ -9,10 +9,11 @@ web/embedding.py — 向量化后端摘要 / 迁移重算 / 本地 Ollama 模型
 """
 
 import asyncio
+import contextvars
+import functools
 import os
 import httpx
 import json as _json_lib
-import yaml
 
 from starlette.requests import Request
 from starlette.responses import Response
@@ -34,19 +35,20 @@ def _persist_embedding_yaml(updates: dict) -> None:
     还是旧的 → 与 embeddings.db 里已重算的向量维度不一致 → OB-W005 / 检索失效。
     """
     try:
-        from utils import config_file_path
-        _cfg_path = config_file_path()
-        _save: dict = {}
-        if os.path.exists(_cfg_path):
-            with open(_cfg_path, "r", encoding="utf-8") as _f:
-                _save = yaml.safe_load(_f) or {}
-        _sec = _save.setdefault("embedding", {})
-        for k, v in updates.items():
-            _sec[k] = v
-        with open(_cfg_path, "w", encoding="utf-8") as _f:
-            yaml.dump(_save, _f, allow_unicode=True, default_flow_style=False)
-    except Exception as e:
-        logger.error(f"[migration] persist embedding to config.yaml failed: {e}")
+        from utils import atomic_update_config_yaml
+    except ImportError:  # pragma: no cover
+        from ..utils import atomic_update_config_yaml
+
+    def _mutate(save_config: dict) -> None:
+        section = save_config.setdefault("embedding", {})
+        if not isinstance(section, dict):
+            section = {}
+            save_config["embedding"] = section
+        section.update(updates)
+
+    # Persistence is part of publishing the new index. Let failures propagate
+    # so the migration status cannot claim a fully successful deployment.
+    atomic_update_config_yaml(_mutate)
 
 
 _DEFAULT_OLLAMA_BASE = "http://ombre-ollama:11434"
@@ -58,6 +60,45 @@ _OLLAMA_MIRRORS = {
 
 _ollama_pull_state: dict = {"running": False, "model": "", "percent": 0, "status": "idle", "error": ""}
 _ollama_pull_task: "asyncio.Task | None" = None  # 持有引用防止被 GC
+_migration_request_state: contextvars.ContextVar[dict | None] = (
+    contextvars.ContextVar("garden_embedding_migration_request_state", default=None)
+)
+
+
+def _with_migration_reservation(handler):
+    """Reserve migration ownership before the request performs its first await."""
+
+    @functools.wraps(handler)
+    async def _wrapped(request: Request) -> Response:
+        from starlette.responses import JSONResponse
+
+        err = sh._require_auth(request)
+        if err:
+            return err
+        try:
+            from migration_engine import release_migration_reservation, reserve_migration
+        except ImportError:  # pragma: no cover
+            from ..migration_engine import release_migration_reservation, reserve_migration
+
+        reservation = reserve_migration()
+        if reservation is None:
+            return JSONResponse(
+                {
+                    "ok": False,
+                    "error": "另一个迁移任务正在进行；请稍后再试或等其完成",
+                },
+                status_code=409,
+            )
+        state = {"reservation": reservation, "transferred": False}
+        context_token = _migration_request_state.set(state)
+        try:
+            return await handler(request)
+        finally:
+            _migration_request_state.reset(context_token)
+            if not state["transferred"]:
+                release_migration_reservation(reservation)
+
+    return _wrapped
 
 # --- backfill（只补缺失向量，区别于 migrate 全库重算）---
 # 用途：v2.2 前建的桶（尤其 permanent）可能没有向量，
@@ -238,6 +279,7 @@ def register(mcp) -> None:
         return JSONResponse(info)
 
     @mcp.custom_route("/api/embedding/migrate", methods=["POST"])
+    @_with_migration_reservation
     async def api_embedding_migrate(request: Request) -> Response:
         """启动后台迁移任务：用目标后端重算所有 bucket 的 embedding。
 
@@ -252,14 +294,24 @@ def register(mcp) -> None:
         已有任务在跑返回 409。
         """
         from starlette.responses import JSONResponse
-        err = sh._require_auth(request)
-        if err:
-            return err
-
         try:
             body = await request.json()
         except Exception:
             return JSONResponse({"ok": False, "error": "invalid JSON"}, status_code=400)
+
+        migration_fields = (
+            "target_backend", "api_format", "api_key", "base_url", "model"
+        )
+        if any(key in body and not isinstance(body[key], str) for key in migration_fields):
+            return JSONResponse(
+                {"ok": False, "error": "migration fields must be strings"},
+                status_code=400,
+            )
+        if any(len(body.get(key, "")) > 8192 for key in migration_fields):
+            return JSONResponse(
+                {"ok": False, "error": "migration field is too large"},
+                status_code=400,
+            )
 
         target_backend_raw = str(body.get("target_backend", "")).strip().lower()
         # local/ollama 底层也是 openai_compat（backend=api），用 api_format 区分云端/本地
@@ -280,20 +332,18 @@ def register(mcp) -> None:
 
         try:
             from migration_engine import (  # type: ignore
-                MigrationConfig, start_migration, is_running,
+                MigrationConfig, start_migration,
+                reconcile_migration_files, reset_stale_migration_state,
+                staging_db_path_for, target_signature,
                 status_path_for as _mig_status_path_for,
             )
         except ImportError:
-            from .migration_engine import (  # type: ignore
-                MigrationConfig, start_migration, is_running,
+            from ..migration_engine import (  # type: ignore
+                MigrationConfig, start_migration,
+                reconcile_migration_files, reset_stale_migration_state,
+                staging_db_path_for, target_signature,
                 status_path_for as _mig_status_path_for,
             )
-
-        if is_running():
-            return JSONResponse({
-                "ok": False,
-                "error": "另一个迁移任务正在进行；请稍后再试或等其完成",
-            }, status_code=409)
 
         # 构造目标引擎（不替换 global，跑完才替）
         target_cfg = _json_lib.loads(_json_lib.dumps(sh.config))  # 深拷贝
@@ -304,7 +354,7 @@ def register(mcp) -> None:
             target_emb_cfg["api_format"] = req_api_format
         if body.get("api_key"):
             target_emb_cfg["api_key"] = str(body["api_key"]).strip()
-        if body.get("base_url"):
+        if "base_url" in body:
             target_emb_cfg["base_url"] = str(body["base_url"]).strip()
         if body.get("model"):
             target_emb_cfg["model"] = str(body["model"]).strip()
@@ -313,6 +363,13 @@ def register(mcp) -> None:
             from embedding_engine import EmbeddingEngine  # type: ignore
         except ImportError:
             from ..embedding_engine import EmbeddingEngine  # type: ignore
+        live_db_path = getattr(sh.embedding_engine, "db_path", "") or os.path.join(
+            sh.config.get("buckets_dir", "buckets"), "embeddings.db"
+        )
+        reconcile_migration_files(
+            sh.config.get("buckets_dir", "buckets"), live_db_path
+        )
+        target_emb_cfg["db_path"] = staging_db_path_for(live_db_path)
         try:
             target_engine = EmbeddingEngine(target_cfg)
         except OBStartupError as oe:
@@ -327,6 +384,19 @@ def register(mcp) -> None:
             }, status_code=400)
 
         target_backend_obj = getattr(target_engine, "_backend", None)
+
+        if target_backend_obj is not None:
+            signature = target_signature(
+                target_backend,
+                target_backend_obj.model_name(),
+                target_backend_obj.vector_dim(),
+            )
+            reset_stale_migration_state(
+                sh.config.get("buckets_dir", "buckets"),
+                live_db_path,
+                signature,
+            )
+            target_engine._init_db()
 
         # 预检（fail-fast）：先用目标引擎试嵌入一小段，确认后端真的可用，
         # 再决定要不要启动全库重算。否则切到本地但 bge-m3 没下载 / ollama 没起，
@@ -357,7 +427,7 @@ def register(mcp) -> None:
             return [(b["id"], b["content"]) for b in all_buckets]
 
         buckets_dir = sh.config.get("buckets_dir", "buckets")
-        db_path = getattr(sh.embedding_engine, "db_path", "")
+        db_path = live_db_path
 
         mig_cfg = MigrationConfig(
             buckets_dir=buckets_dir,
@@ -410,7 +480,7 @@ def register(mcp) -> None:
                 if body.get("api_key"):
                     cfg_emb["api_key"] = str(body["api_key"]).strip()
                     _yaml_updates["api_key"] = str(body["api_key"]).strip()
-                if body.get("base_url"):
+                if "base_url" in body:
                     cfg_emb["base_url"] = str(body["base_url"]).strip()
                     _yaml_updates["base_url"] = str(body["base_url"]).strip()
                 if body.get("model"):
@@ -420,21 +490,33 @@ def register(mcp) -> None:
                 logger.info(f"[migration] sh.embedding_engine swapped to backend={target_backend} format={req_api_format or '(unchanged)'}; persisted to config.yaml")
             except Exception as e:
                 logger.error(f"[migration] post-swap failed: {e}")
+                raise
             finally:
                 _restart_outbox()
 
         # Migration rewrites the same SQLite index. Stop the normal queue
         # worker for the migration window, then restart it in the callback.
-        if outbox_was_running:
-            await outbox.stop()
-
-        task = start_migration(mig_cfg, on_complete=_on_complete)
+        request_state = _migration_request_state.get()
+        if request_state is None:  # pragma: no cover - decorator invariant
+            raise RuntimeError("migration route lost its reservation")
+        try:
+            if outbox_was_running:
+                await outbox.stop()
+            task = start_migration(
+                mig_cfg,
+                on_complete=_on_complete,
+                reservation=request_state["reservation"],
+            )
+        except BaseException:
+            _restart_outbox()
+            raise
         if task is None:
             _restart_outbox()
             return JSONResponse({
                 "ok": False,
                 "error": "无法启动迁移任务（锁未获得）",
             }, status_code=409)
+        request_state["transferred"] = True
 
         return JSONResponse({
             "ok": True,
@@ -456,7 +538,7 @@ def register(mcp) -> None:
                 is_running,
             )
         except ImportError:
-            from .migration_engine import (  # type: ignore
+            from ..migration_engine import (  # type: ignore
                 status_path_for as _mig_status_path_for,
                 read_status as _mig_read_status,
                 is_running,
@@ -497,7 +579,7 @@ def register(mcp) -> None:
             from migration_engine import is_running as _mig_running  # type: ignore
         except ImportError:
             try:
-                from .migration_engine import is_running as _mig_running  # type: ignore
+                from ..migration_engine import is_running as _mig_running  # type: ignore
             except Exception:
                 _mig_running = lambda: False  # noqa: E731
         if _mig_running():

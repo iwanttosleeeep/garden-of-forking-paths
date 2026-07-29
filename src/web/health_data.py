@@ -13,7 +13,6 @@ import tempfile
 from datetime import date, datetime
 from typing import Any
 
-import yaml
 from starlette.requests import Request
 from starlette.responses import Response
 
@@ -40,18 +39,17 @@ def _timezone() -> str:
 
 def _save_config() -> None:
     try:
-        from utils import config_file_path  # type: ignore
+        from utils import atomic_update_config_yaml  # type: ignore
     except ImportError:  # pragma: no cover
-        from ..utils import config_file_path  # type: ignore
-    path = config_file_path()
-    saved: dict[str, Any] = {}
-    if os.path.exists(path):
-        with open(path, "r", encoding="utf-8") as handle:
-            saved = yaml.safe_load(handle) or {}
-    saved["health_sync"] = dict(_config())
-    saved["timezone"] = _timezone()
-    with open(path, "w", encoding="utf-8") as handle:
-        yaml.safe_dump(saved, handle, allow_unicode=True, default_flow_style=False)
+        from ..utils import atomic_update_config_yaml  # type: ignore
+    section = dict(_config())
+    timezone = _timezone()
+
+    def _mutate(saved: dict) -> None:
+        saved["health_sync"] = section
+        saved["timezone"] = timezone
+
+    atomic_update_config_yaml(_mutate)
 
 
 def _data_path() -> str:

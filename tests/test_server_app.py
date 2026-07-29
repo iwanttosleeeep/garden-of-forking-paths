@@ -1,6 +1,8 @@
 import asyncio
+import ast
 import json
 from contextlib import asynccontextmanager
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -9,12 +11,11 @@ from starlette.applications import Starlette
 from server_app import (
     DEFAULT_MAX_MCP_REQUEST_BYTES,
     HTTPRuntimeSettings,
-    MCPAcceptShim,
+    MCPJSONAcceptShim,
     MCPAuthMiddleware,
     RuntimeLifecycle,
     build_http_app,
     install_runtime_lifespan,
-    merge_mcp_tool_registries,
 )
 
 
@@ -60,6 +61,23 @@ async def _discard_send(_message):
     return None
 
 
+def test_server_registers_all_tools_on_one_fastmcp_instance():
+    tree = ast.parse(
+        (Path(__file__).resolve().parents[1] / "src" / "server.py").read_text(
+            encoding="utf-8"
+        )
+    )
+    fastmcp_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "FastMCP"
+    ]
+    assert len(fastmcp_calls) == 1
+    assert "mcp_extra" not in {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)}
+
+
 @pytest.mark.parametrize(
     ("config", "auth_required", "limit"),
     [
@@ -77,42 +95,27 @@ def test_http_runtime_settings_are_normalized(config, auth_required, limit):
     assert settings.max_request_bytes == limit
 
 
-def test_merge_mcp_tool_registries_keeps_one_public_manifest():
-    primary = SimpleNamespace(
-        _tool_manager=SimpleNamespace(_tools={"breath": object()})
-    )
-    extra = SimpleNamespace(
-        _tool_manager=SimpleNamespace(_tools={"dream": object(), "pulse": object()})
-    )
-
-    count = merge_mcp_tool_registries(primary, extra)
-
-    assert count == 2
-    assert set(primary._tool_manager._tools) == {"breath", "dream", "pulse"}
-
-
 @pytest.mark.asyncio
-async def test_accept_shim_adds_both_mcp_media_types():
+async def test_accept_shim_adds_json_for_wildcard_client():
     downstream = RecordingASGIApp()
-    middleware = MCPAcceptShim(downstream)
+    middleware = MCPJSONAcceptShim(downstream)
     messages = []
     scope = {
         "type": "http",
         "path": "/mcp",
-        "headers": [(b"accept", b"application/json")],
+        "headers": [(b"accept", b"*/*")],
     }
 
     await middleware(scope, _empty_receive, _collect_into(messages))
 
     forwarded = dict(downstream.scopes[0]["headers"])[b"accept"]
     assert b"application/json" in forwarded
-    assert b"text/event-stream" in forwarded
 
 
 @pytest.mark.asyncio
 async def test_accept_shim_leaves_non_mcp_routes_unchanged():
     downstream = RecordingASGIApp()
-    middleware = MCPAcceptShim(downstream)
+    middleware = MCPJSONAcceptShim(downstream)
     scope = {
         "type": "http",
         "path": "/health",
@@ -122,6 +125,21 @@ async def test_accept_shim_leaves_non_mcp_routes_unchanged():
     await middleware(scope, _empty_receive, _discard_send)
 
     assert downstream.scopes[0] is scope
+
+
+@pytest.mark.asyncio
+async def test_accept_shim_preserves_explicit_sse_only_accept():
+    downstream = RecordingASGIApp()
+    middleware = MCPJSONAcceptShim(downstream)
+    scope = {
+        "type": "http",
+        "path": "/mcp",
+        "headers": [(b"accept", b"text/event-stream")],
+    }
+
+    await middleware(scope, _empty_receive, _discard_send)
+
+    assert dict(downstream.scopes[0]["headers"])[b"accept"] == b"text/event-stream"
 
 
 @pytest.mark.asyncio
@@ -193,6 +211,36 @@ async def test_auth_middleware_can_be_explicitly_disabled():
         token_validator=lambda *_args, **_kwargs: False,
     )
     scope = {"type": "http", "path": "/mcp", "headers": []}
+
+    await middleware(scope, _empty_receive, _discard_send)
+
+    assert downstream.scopes == [scope]
+
+
+@pytest.mark.asyncio
+async def test_auth_middleware_allows_cors_preflight_without_bearer_token():
+    downstream = RecordingASGIApp()
+    middleware = MCPAuthMiddleware(
+        downstream,
+        auth_required=True,
+        token_validator=lambda *_args, **_kwargs: False,
+    )
+    scope = {"type": "http", "method": "OPTIONS", "path": "/mcp", "headers": []}
+
+    await middleware(scope, _empty_receive, _discard_send)
+
+    assert downstream.scopes == [scope]
+
+
+@pytest.mark.asyncio
+async def test_auth_middleware_does_not_match_mcp_lookalike_path():
+    downstream = RecordingASGIApp()
+    middleware = MCPAuthMiddleware(
+        downstream,
+        auth_required=True,
+        token_validator=lambda *_args, **_kwargs: False,
+    )
+    scope = {"type": "http", "method": "GET", "path": "/mcp-evil", "headers": []}
 
     await middleware(scope, _empty_receive, _discard_send)
 
@@ -287,9 +335,11 @@ def test_build_http_app_uses_same_managed_stack_for_both_http_transports(transpo
     assert middleware_names >= {
         "CORSMiddleware",
         "MCPRequestBodyLimitMiddleware",
-        "MCPAcceptShim",
         "MCPAuthMiddleware",
+        "SecurityHeadersMiddleware",
     }
+    if transport == "streamable-http":
+        assert "MCPJSONAcceptShim" in middleware_names
     assert app.state.ombre_http_settings is settings
     assert app.state.ombre_runtime_lifecycle is lifecycle
 

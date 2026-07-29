@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       UV_VERSION: '0.11.23'
+      UV_EXCLUDE_NEWER: '2026-07-12T04:13:06Z'
     steps:
       - uses: actions/checkout@v4
 
@@ -90,6 +91,7 @@ jobs:
             -e OMBRE_COMPRESS_API_KEY=audit-key \
             -e OMBRE_COMPRESS_BASE_URL=http://ob-ci-llm:8080/v1 \
             -e OMBRE_MCP_REQUIRE_AUTH=false \
+            -e OMBRE_SETUP_TOKEN=docker-bootstrap-secret \
             ombre-brain-ci:local
           for attempt in $(seq 1 60); do
             curl --fail --silent http://127.0.0.1:18084/health && break
@@ -110,6 +112,7 @@ jobs:
       - name: Run Docker Web management integration suite
         env:
           OMBRE_DOCKER_WEB_BASE_URL: http://127.0.0.1:18084
+          OMBRE_DOCKER_SETUP_TOKEN: docker-bootstrap-secret
         run: >-
           python -m pytest tests/test_web_api_docker_integration.py -q
           --timeout=120

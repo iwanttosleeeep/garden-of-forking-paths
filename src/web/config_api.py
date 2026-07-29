@@ -18,7 +18,6 @@ web/config_api.py — Dashboard 配置 / 环境变量 / API Key 测试 / 模型�
 
 import os
 import sys
-import yaml
 import httpx
 
 from starlette.requests import Request
@@ -29,12 +28,14 @@ from . import _shared as sh
 try:
     from utils import (  # type: ignore
         get_ai_name as _get_ai_name,
+        atomic_update_config_yaml as _atomic_update_config_yaml,
         positive_float as _positive_float,
         parse_bool as _parse_bool,
     )
 except ImportError:  # pragma: no cover
     from ..utils import (  # type: ignore
         get_ai_name as _get_ai_name,
+        atomic_update_config_yaml as _atomic_update_config_yaml,
         positive_float as _positive_float,
         parse_bool as _parse_bool,
     )
@@ -362,85 +363,75 @@ def register(mcp) -> None:
 
         # --- Persist to config.yaml if requested ---
         if persist_requested:
-            from utils import config_file_path
-            config_path = config_file_path()
             try:
-                save_config: dict[str, object] = {}
-                if os.path.exists(config_path):
-                    with open(config_path, "r", encoding="utf-8") as f:
-                        save_config = yaml.safe_load(f) or {}
+                def _persist_config(save_config: dict) -> None:
+                    if "dehydration" in body:
+                        sc_dehy = save_config.setdefault("dehydration", {})
+                        if not isinstance(sc_dehy, dict):
+                            sc_dehy = {}
+                            save_config["dehydration"] = sc_dehy
+                        for key in ("model", "base_url", "max_tokens", "temperature", "api_format", "timeout_seconds"):
+                            if key in body["dehydration"]:
+                                sc_dehy[key] = body["dehydration"][key]
 
-                if "dehydration" in body:
-                    sc_dehy = save_config.setdefault("dehydration", {})
-                    if not isinstance(sc_dehy, dict):
-                        sc_dehy = {}
-                        save_config["dehydration"] = sc_dehy
-                    for key in ("model", "base_url", "max_tokens", "temperature", "api_format", "timeout_seconds"):
-                        if key in body["dehydration"]:
-                            sc_dehy[key] = body["dehydration"][key]
-                    # Never persist api_key to yaml (use env var)
+                    if "embedding" in body:
+                        sc_emb = save_config.setdefault("embedding", {})
+                        if not isinstance(sc_emb, dict):
+                            sc_emb = {}
+                            save_config["embedding"] = sc_emb
+                        for key in ("model", "api_format", "timeout_seconds"):
+                            if key in body["embedding"]:
+                                sc_emb[key] = body["embedding"][key]
+                        if embedding_enabled is not None:
+                            sc_emb["enabled"] = embedding_enabled
+                        if embedding_backend is not None:
+                            sc_emb["backend"] = embedding_backend
 
-                if "embedding" in body:
-                    sc_emb = save_config.setdefault("embedding", {})
-                    if not isinstance(sc_emb, dict):
-                        sc_emb = {}
-                        save_config["embedding"] = sc_emb
-                    for key in ("model", "api_format", "timeout_seconds"):
-                        if key in body["embedding"]:
-                            sc_emb[key] = body["embedding"][key]
-                    if embedding_enabled is not None:
-                        sc_emb["enabled"] = embedding_enabled
-                    if embedding_backend is not None:
-                        sc_emb["backend"] = embedding_backend
+                    if "merge_threshold" in body:
+                        try:
+                            save_config["merge_threshold"] = int(body["merge_threshold"])
+                        except (TypeError, ValueError):
+                            pass
+                    if mcp_auth_value is not None:
+                        save_config["mcp_require_auth"] = mcp_auth_value
+                    if "host_port" in body:
+                        try:
+                            save_config["host_port"] = int(body["host_port"])
+                        except (TypeError, ValueError):
+                            pass
 
-                if "merge_threshold" in body:
-                    try:
-                        save_config["merge_threshold"] = int(body["merge_threshold"])
-                    except (TypeError, ValueError):
-                        pass
-
-                if mcp_auth_value is not None:
-                    save_config["mcp_require_auth"] = mcp_auth_value
-
-                if "host_port" in body:
-                    try:
-                        save_config["host_port"] = int(body["host_port"])
-                    except (TypeError, ValueError):
-                        pass
-
-                if "surfacing" in body and isinstance(body["surfacing"], dict):
-                    sc_sf = save_config.setdefault("surfacing", {})
-                    if not isinstance(sc_sf, dict):
-                        sc_sf = {}
-                        save_config["surfacing"] = sc_sf
-                    for key in ("breath_max_results", "breath_max_tokens", "feel_max_tokens"):
-                        if key in body["surfacing"]:
-                            try:
-                                sc_sf[key] = int(body["surfacing"][key])
-                            except (TypeError, ValueError):
-                                pass
-                    if "sampling" in body["surfacing"] and isinstance(body["surfacing"]["sampling"], dict):
-                        sc_samp = sc_sf.setdefault("sampling", {})
-                        if not isinstance(sc_samp, dict):
-                            sc_samp = {}
-                            sc_sf["sampling"] = sc_samp
-                        src_samp = body["surfacing"]["sampling"]
-                        if sampling_enabled is not None:
-                            sc_samp["enabled"] = sampling_enabled
-                        for key in ("top_k", "sample_k"):
-                            if key in src_samp:
+                    if "surfacing" in body and isinstance(body["surfacing"], dict):
+                        sc_sf = save_config.setdefault("surfacing", {})
+                        if not isinstance(sc_sf, dict):
+                            sc_sf = {}
+                            save_config["surfacing"] = sc_sf
+                        for key in ("breath_max_results", "breath_max_tokens", "feel_max_tokens"):
+                            if key in body["surfacing"]:
                                 try:
-                                    sc_samp[key] = int(src_samp[key])
+                                    sc_sf[key] = int(body["surfacing"][key])
                                 except (TypeError, ValueError):
                                     pass
-                        if "temperature" in src_samp:
-                            try:
-                                sc_samp["temperature"] = float(src_samp["temperature"])
-                            except (TypeError, ValueError):
-                                pass
+                        src_samp = body["surfacing"].get("sampling")
+                        if isinstance(src_samp, dict):
+                            sc_samp = sc_sf.setdefault("sampling", {})
+                            if not isinstance(sc_samp, dict):
+                                sc_samp = {}
+                                sc_sf["sampling"] = sc_samp
+                            if sampling_enabled is not None:
+                                sc_samp["enabled"] = sampling_enabled
+                            for key in ("top_k", "sample_k"):
+                                if key in src_samp:
+                                    try:
+                                        sc_samp[key] = int(src_samp[key])
+                                    except (TypeError, ValueError):
+                                        pass
+                            if "temperature" in src_samp:
+                                try:
+                                    sc_samp["temperature"] = float(src_samp["temperature"])
+                                except (TypeError, ValueError):
+                                    pass
 
-                with open(config_path, "w", encoding="utf-8") as f:
-                    yaml.dump(save_config, f, default_flow_style=False, allow_unicode=True)
+                _atomic_update_config_yaml(_persist_config)
                 updated.append("persisted_to_yaml")
             except Exception as e:
                 return JSONResponse({"error": f"persist failed: {e}", "updated": updated}, status_code=500)
@@ -744,17 +735,16 @@ def register(mcp) -> None:
 
             # 3. 持久化到 config.yaml（bind mount，重建不丢）
             try:
-                from utils import config_file_path
-                _cfg_path = config_file_path()
-                _save: dict = {}
-                if os.path.exists(_cfg_path):
-                    with open(_cfg_path, "r", encoding="utf-8") as _f:
-                        _save = yaml.safe_load(_f) or {}
                 if meta["in_memory"]:
                     section, key = meta["in_memory"]
-                    _save.setdefault(section, {})[key] = value
-                with open(_cfg_path, "w", encoding="utf-8") as _f:
-                    yaml.dump(_save, _f, allow_unicode=True, default_flow_style=False)
+                    def _persist_env(saved: dict) -> None:
+                        target = saved.setdefault(section, {})
+                        if not isinstance(target, dict):
+                            target = {}
+                            saved[section] = target
+                        target[key] = value
+
+                    _atomic_update_config_yaml(_persist_env)
             except Exception as e:
                 errors.append(f"{var}: 写 config.yaml 失败：{e}")
                 continue
@@ -863,15 +853,9 @@ def register(mcp) -> None:
 
         # 3. 持久化到 config.yaml（裸机 / 无 env 覆盖时的权威来源）。
         try:
-            from utils import config_file_path
-            cfg_path = config_file_path()
-            saved: dict = {}
-            if os.path.exists(cfg_path):
-                with open(cfg_path, "r", encoding="utf-8") as f:
-                    saved = yaml.safe_load(f) or {}
-            saved["transport"] = new_t
-            with open(cfg_path, "w", encoding="utf-8") as f:
-                yaml.dump(saved, f, allow_unicode=True, default_flow_style=False)
+            _atomic_update_config_yaml(
+                lambda saved: saved.__setitem__("transport", new_t)
+            )
         except Exception as e:
             return JSONResponse({"ok": False, "error": f"写 config.yaml 失败：{e}"}, status_code=500)
 

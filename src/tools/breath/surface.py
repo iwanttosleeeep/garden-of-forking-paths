@@ -53,6 +53,12 @@ def _can_surface(bucket: dict) -> bool:
     return _SURFACE_POLICY.evaluate_bucket(bucket, mode="spontaneous").allowed
 
 
+def _float_or_default(value: object, default: float) -> float:
+    """Preserve meaningful zeroes while defaulting missing metadata."""
+
+    return default if value is None or value == "" else float(value)
+
+
 async def surface_default(max_results: int, max_tokens: int, tag_filter: list) -> str:
     try:
         all_buckets = await rt.bucket_mgr.list_all(include_archive=False)
@@ -132,7 +138,9 @@ async def surface_default(max_results: int, max_tokens: int, tag_filter: list) -
             ).timestamp()
         except (ValueError, TypeError):
             last_ts = 0.0
-        av = float(meta.get("arousal") or 0.3) * float(meta.get("valence") or 0.5)
+        av = _float_or_default(meta.get("arousal"), 0.3) * _float_or_default(
+            meta.get("valence"), 0.5
+        )
         imp = int(meta.get("importance") or 5)
         return (score, last_ts, av, imp)
 

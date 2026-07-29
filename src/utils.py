@@ -23,6 +23,7 @@ utils.py — 整个项目共享的小工具集合
 ========================================
 """
 
+import errno
 import os
 import time
 import re
@@ -33,9 +34,10 @@ import yaml
 import logging
 import math
 import tempfile
+import threading
 from pathlib import Path
 from datetime import date, datetime
-from typing import Optional
+from typing import Callable, Optional
 
 
 # ============================================================
@@ -103,6 +105,149 @@ def config_file_path() -> str:
     if os.path.exists(cwd_cfg):
         return cwd_cfg
     return os.path.join(_project_root(), "config.yaml")
+
+
+_config_yaml_lock = threading.RLock()
+_MOUNTINFO_ESCAPES = {
+    "040": " ",
+    "011": "\t",
+    "012": "\n",
+    "134": "\\",
+}
+
+
+def _decode_mountinfo_path(value: str) -> str:
+    return re.sub(
+        r"\\(040|011|012|134)",
+        lambda match: _MOUNTINFO_ESCAPES[match.group(1)],
+        value,
+    )
+
+
+def _is_exact_linux_mount_point(path: str) -> bool:
+    """Return whether ``path`` is a regular-file mount point on Linux."""
+
+    if not sys.platform.startswith("linux") or not os.path.isfile(path):
+        return False
+    target = os.path.realpath(os.path.abspath(path))
+    try:
+        with open("/proc/self/mountinfo", "r", encoding="utf-8") as mountinfo:
+            for line in mountinfo:
+                fields = line.split()
+                if len(fields) > 4:
+                    mounted_at = _decode_mountinfo_path(fields[4])
+                    if os.path.realpath(mounted_at) == target:
+                        return True
+    except OSError:
+        return False
+    return False
+
+
+def _write_bytes_and_sync(path: str, payload: bytes) -> None:
+    with open(path, "wb") as target:
+        target.write(payload)
+        target.flush()
+        os.fsync(target.fileno())
+
+
+def _overwrite_mounted_config(tmp: str, config_path: str) -> bytes:
+    """Overwrite an unreplaceable file mount and retain bytes for rollback."""
+
+    with open(config_path, "rb") as current:
+        previous_payload = current.read()
+    with open(tmp, "rb") as source:
+        next_payload = source.read()
+    try:
+        _write_bytes_and_sync(config_path, next_payload)
+    except Exception as write_error:
+        try:
+            _write_bytes_and_sync(config_path, previous_payload)
+        except Exception as restore_error:
+            raise OSError(
+                "config.yaml bind-mount write failed and restoring the previous "
+                f"file also failed: {restore_error}"
+            ) from write_error
+        raise
+    return previous_payload
+
+
+def read_config_yaml() -> dict:
+    """Read persisted configuration under the same lock used by writers."""
+
+    config_path = config_file_path()
+    with _config_yaml_lock:
+        if not os.path.exists(config_path):
+            return {}
+        with open(config_path, "r", encoding="utf-8") as handle:
+            persisted = yaml.safe_load(handle) or {}
+        if not isinstance(persisted, dict):
+            raise ValueError("config.yaml top level must be a mapping")
+        return persisted
+
+
+def atomic_update_config_yaml(mutate: Callable[[dict], None]) -> dict:
+    """Apply a locked read-modify-write transaction to ``config.yaml``.
+
+    Normal files use a same-directory temporary file and ``os.replace``.
+    Docker single-file bind mounts cannot be renamed, so that specific EBUSY
+    case uses a locked, fsynced overwrite with rollback and read-back checks.
+    """
+
+    config_path = config_file_path()
+    tmp = ""
+    with _config_yaml_lock:
+        save_config: dict = {}
+        if os.path.exists(config_path):
+            with open(config_path, "r", encoding="utf-8") as handle:
+                save_config = yaml.safe_load(handle) or {}
+        if not isinstance(save_config, dict):
+            save_config = {}
+        mutate(save_config)
+        try:
+            parent = os.path.dirname(os.path.abspath(config_path))
+            os.makedirs(parent, exist_ok=True)
+            descriptor, tmp = tempfile.mkstemp(
+                prefix=f".{os.path.basename(config_path)}.tmp.",
+                dir=parent,
+            )
+            with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as handle:
+                yaml.dump(
+                    save_config,
+                    handle,
+                    allow_unicode=True,
+                    default_flow_style=False,
+                )
+                handle.flush()
+                os.fsync(handle.fileno())
+            fallback_backup: bytes | None = None
+            try:
+                os.replace(tmp, config_path)
+            except OSError as exc:
+                if exc.errno != errno.EBUSY or not _is_exact_linux_mount_point(config_path):
+                    raise
+                fallback_backup = _overwrite_mounted_config(tmp, config_path)
+            try:
+                with open(config_path, "r", encoding="utf-8") as handle:
+                    persisted = yaml.safe_load(handle) or {}
+                if persisted != save_config:
+                    raise OSError("config.yaml verification failed after write")
+            except Exception as verify_error:
+                if fallback_backup is not None:
+                    try:
+                        _write_bytes_and_sync(config_path, fallback_backup)
+                    except Exception as restore_error:
+                        raise OSError(
+                            "config.yaml verification failed and restoring the "
+                            f"previous bind-mounted file also failed: {restore_error}"
+                        ) from verify_error
+                raise
+        finally:
+            try:
+                if tmp and os.path.exists(tmp):
+                    os.unlink(tmp)
+            except OSError:
+                pass
+        return save_config
 
 
 def parse_bool(value, *, default=...) -> bool:

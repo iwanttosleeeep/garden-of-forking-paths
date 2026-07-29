@@ -11,9 +11,7 @@ web/buckets.py — 记忆桶管理 + 设置 + 锚点 + 自我认知读取
 ========================================
 """
 
-import os
 import re
-import yaml
 
 from starlette.requests import Request
 from starlette.responses import Response
@@ -24,9 +22,9 @@ from . import _shared as sh
 logger = sh.logger
 
 try:
-    from utils import strip_wikilinks, parse_bool  # type: ignore
+    from utils import atomic_update_config_yaml, strip_wikilinks, parse_bool  # type: ignore
 except ImportError:  # pragma: no cover
-    from ..utils import strip_wikilinks, parse_bool  # type: ignore
+    from ..utils import atomic_update_config_yaml, strip_wikilinks, parse_bool  # type: ignore
 
 try:
     from tools._common import (  # type: ignore
@@ -351,56 +349,51 @@ def register(mcp) -> None:
             body = await request.json()
         except Exception:
             return JSONResponse({"error": "invalid JSON body"}, status_code=400)
+        candidate = {
+            "enabled": parse_bool(sampling.get("enabled", False), default=False),
+            "top_k": int(sampling.get("top_k") or 5),
+            "sample_k": int(sampling.get("sample_k") or 2),
+            "temperature": float(sampling.get("temperature") or 0.7),
+        }
         # Validate ranges; reject silently-corrupt inputs at the boundary
         try:
             if "enabled" in body:
-                sampling["enabled"] = parse_bool(body["enabled"])
+                candidate["enabled"] = parse_bool(body["enabled"])
             if "top_k" in body:
                 tk = int(body["top_k"])
                 if not (1 <= tk <= 50):
                     return JSONResponse({"error": "top_k must be in [1,50]"}, status_code=400)
-                sampling["top_k"] = tk
+                candidate["top_k"] = tk
             if "sample_k" in body:
                 sk = int(body["sample_k"])
                 if not (1 <= sk <= 20):
                     return JSONResponse({"error": "sample_k must be in [1,20]"}, status_code=400)
-                sampling["sample_k"] = sk
+                candidate["sample_k"] = sk
             if "temperature" in body:
                 t = float(body["temperature"])
                 if not (0.1 <= t <= 5.0):
                     return JSONResponse({"error": "temperature must be in [0.1,5.0]"}, status_code=400)
-                sampling["temperature"] = t
+                candidate["temperature"] = t
         except (ValueError, TypeError) as e:
             return JSONResponse({"error": f"invalid field type: {e}"}, status_code=400)
 
         # --- 写回 config.yaml（iter 2.0 §10 U-03 修复：重启后设置不丢失）---
-        try:
-            from utils import config_file_path
-            _cfg_path = config_file_path()
-            _disk: dict[str, object] = {}
-            if os.path.exists(_cfg_path):
-                with open(_cfg_path, "r", encoding="utf-8") as _f:
-                    _disk = yaml.safe_load(_f) or {}
-            _disk_sf = _disk.setdefault("surfacing", {})
-            if not isinstance(_disk_sf, dict):
-                _disk_sf = {}
-                _disk["surfacing"] = _disk_sf
-            _disk_samp = _disk_sf.setdefault("sampling", {})
-            if not isinstance(_disk_samp, dict):
-                _disk_samp = {}
-                _disk_sf["sampling"] = _disk_samp
-            _disk_samp.update({
-                "enabled": sampling.get("enabled", False),
-                "top_k": sampling.get("top_k", 5),
-                "sample_k": sampling.get("sample_k", 2),
-                "temperature": sampling.get("temperature", 0.7),
-            })
-            with open(_cfg_path, "w", encoding="utf-8") as _f:
-                yaml.dump(_disk, _f, default_flow_style=False, allow_unicode=True)
-        except Exception as _e:
-            logger.warning(f"sampling persist failed: {_e}")  # 不阻断热更新响应
+        def _persist_sampling(saved: dict) -> None:
+            section = saved.setdefault("surfacing", {})
+            if not isinstance(section, dict):
+                section = {}
+                saved["surfacing"] = section
+            section["sampling"] = dict(candidate)
 
-        return JSONResponse({"ok": True, **sampling})
+        try:
+            atomic_update_config_yaml(_persist_sampling)
+        except Exception as exc:
+            return JSONResponse(
+                {"error": f"sampling persist failed: {exc}"}, status_code=500
+            )
+        sampling.clear()
+        sampling.update(candidate)
+        return JSONResponse({"ok": True, **candidate})
 
 
     # ---- iter 2.0: /api/settings/human — 读写通知称呼（human 宏）----
@@ -425,23 +418,16 @@ def register(mcp) -> None:
             return JSONResponse({"error": "human name must be ≤ 20 characters"}, status_code=400)
         # 旧称呼（默认「用户」，与 dehydrator / import 的兜底同源）—— 用于把老桶里的旧词换成新名。
         old_human = (sh.config.get("human") or "用户").strip() or "用户"
+        try:
+            atomic_update_config_yaml(lambda saved: saved.__setitem__("human", human))
+        except Exception as exc:
+            return JSONResponse(
+                {"error": f"human name persist failed: {exc}"}, status_code=500
+            )
         sh.config["human"] = human
         # 同步活的 dehydrator.human：否则改名后、重启前，新记忆仍按旧称呼脱水。
         if getattr(sh, "dehydrator", None) is not None and hasattr(sh.dehydrator, "human"):
             sh.dehydrator.human = human
-        # 写回 config.yaml
-        try:
-            from utils import config_file_path
-            _cfg_path = config_file_path()
-            _disk2: dict[str, object] = {}
-            if os.path.exists(_cfg_path):
-                with open(_cfg_path, "r", encoding="utf-8") as _f:
-                    _disk2 = yaml.safe_load(_f) or {}
-            _disk2["human"] = human
-            with open(_cfg_path, "w", encoding="utf-8") as _f:
-                yaml.dump(_disk2, _f, default_flow_style=False, allow_unicode=True)
-        except Exception as _e:
-            logger.warning(f"human name persist failed: {_e}")
         # 改名时把老桶里残留的旧称呼一起换成新名（name/content/why_remembered/user_name）。
         renamed = {"buckets_changed": 0, "replacements": 0}
         if old_human and old_human != human:

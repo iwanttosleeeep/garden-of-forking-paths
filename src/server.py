@@ -13,14 +13,14 @@ web._shared，然后以 @mcp.tool() 注册薄封装（真正的实现在 src/too
 - Dashboard / HTTP 路由全部已拆分到 src/web/<域>.py（每个模块 register(mcp)），
   本文件仅在启动时调用 web.register_all(mcp) 装配；共享依赖见 web/_shared.py
 - 仍保留在本文件：进程启动、引擎初始化、GitHub 后台同步循环、Webhook 推送、
-  MCP Bearer 鉴权中间件、单连接器 /mcp 装配（启动入口处把 mcp_extra 工具回灌进 mcp）、uvicorn 拉起
+  MCP Bearer 鉴权中间件、单连接器 /mcp 装配、uvicorn 拉起
 
 不做什么（边界）：
 - 不在这里写 hold/breath/dream 等业务逻辑（全在 tools/* 下）
 - 不写 HTTP 路由处理（全在 web/* 下）；不写 LLM prompt（dehydrator 负责）
 - 不直接读写桶文件（bucket_manager 负责）
 
-对外暴露：mcp/mcp_extra 两个实例 + 18 个 @mcp*.tool() 函数；HTTP 路由在 src/web/*
+对外暴露：一个 mcp 实例 + 18 个 @mcp*.tool() 函数；HTTP 路由在 src/web/*
 ========================================
 """
 
@@ -297,21 +297,13 @@ _gh_auto_interval: int = int(_gh_cfg.get("auto_interval_minutes") or 0)
 # host="0.0.0.0" so Docker container's SSE is externally reachable
 # stdio mode ignores host (no network)
 #
-# iter 2.2：合并回单连接器 /mcp（claude.ai 5 工具上限已解除）。
-# 历史上（iter 2.1）曾拆成主 mcp(/mcp) + 副 mcp_extra(/mcp-extra) 两个实例。
-# 现在只对外暴露主实例 mcp 的一条 /mcp 路由；mcp_extra 仅作工具分组容器保留
-# （13 个 @mcp_extra.tool() 注册不动），启动入口处把它的工具回灌进 mcp 统一暴露。
-# 两个实例共享同一进程、同一 runtime、同一 bucket_mgr；HTTP custom_route（dashboard、API）
-# 全部挂在 mcp 主实例上。
+# Every public tool registers directly on this one server instance.
 mcp = FastMCP(
     "Ombre Brain",
     host=_BIND_HOST,
     port=OMBRE_PORT,
-)
-mcp_extra = FastMCP(
-    "Ombre Brain Extra",
-    host=_BIND_HOST,
-    port=OMBRE_PORT,
+    json_response=True,
+    stateless_http=True,
 )
 
 
@@ -631,7 +623,7 @@ async def trace(
     )
 
 
-@mcp_extra.tool()
+@mcp.tool()
 async def anchor(bucket_id: str) -> str:
     """把指定桶标记为 anchor（坐标系）。坐标系条目不会自动浮现，但明确的关键词、领域或情绪条件命中时仍会返回。硬上限 24，已满时拒绝并提示先解除一个。"""
     return await _with_notice(
@@ -641,7 +633,7 @@ async def anchor(bucket_id: str) -> str:
     )
 
 
-@mcp_extra.tool()
+@mcp.tool()
 async def release(bucket_id: str) -> str:
     """解除指定桶的 anchor 标记。桶恢复为可自动浮现的普通状态；pinned 状态保留。"""
     return await _with_notice(
@@ -651,7 +643,7 @@ async def release(bucket_id: str) -> str:
     )
 
 
-@mcp_extra.tool()
+@mcp.tool()
 async def pulse(include_archive: Optional[bool] = False) -> str:
     """返回记忆系统状态摘要:固化/动态/归档/feel/plan/letter 数量、总占用、衰减引擎运行状态,以及所有桶的摘要列表。include_archive=True 同时返回归档区。"""
     return await _with_notice(
@@ -661,7 +653,7 @@ async def pulse(include_archive: Optional[bool] = False) -> str:
     )
 
 
-@mcp_extra.tool()
+@mcp.tool()
 async def plan(
     content: str,
     status: Optional[str] = "active",
@@ -684,7 +676,7 @@ async def plan(
     )
 
 
-@mcp_extra.tool()
+@mcp.tool()
 async def letter_write(
     author: str,
     content: str,
@@ -708,7 +700,7 @@ async def letter_write(
     )
 
 
-@mcp_extra.tool()
+@mcp.tool()
 async def letter_read(
     query: Optional[str] = "",
     limit: Optional[int] = 10,
@@ -730,7 +722,7 @@ async def letter_read(
     )
 
 
-@mcp_extra.tool()
+@mcp.tool()
 async def I(
     content: Optional[str] = "",
     aspect: Optional[str] = "",
@@ -788,7 +780,7 @@ async def dream(window_hours: Optional[int] = 48) -> str:
 # =============================================================
 
 
-@mcp_extra.tool()
+@mcp.tool()
 async def echo(
     query: Optional[str] = "",
     days: Optional[int] = 30,
@@ -802,7 +794,7 @@ async def echo(
     )
 
 
-@mcp_extra.tool()
+@mcp.tool()
 async def recall(title: str) -> str:
     """读取一份指定标题的 Chat History Markdown 文档。title 必填，必须与 Chat History 页面显示的标题或文件名完全匹配；不会搜索或自动读取其他聊天记录。单次最多返回 30000 字符。"""
     from web import chat_history as chat_library
@@ -822,7 +814,7 @@ async def recall(title: str) -> str:
     return f"=== Chat History · {matches[0]['title']} ===\n{content[:30000]}{suffix}"
 
 
-@mcp_extra.tool()
+@mcp.tool()
 async def check_up(days: Optional[int] = 7) -> str:
     """读取最近 days 天（1-30）的 Health 每日汇总：睡眠、步数、静息心率、HRV、运动及已授权的周期数据。仅在明确需要健康记录时调用，不会自动读取。"""
     try:
@@ -837,13 +829,13 @@ async def check_up(days: Optional[int] = 7) -> str:
     return "=== Health summary ===\n" + json.dumps(rows, ensure_ascii=False, indent=2)
 
 
-@mcp_extra.tool()
+@mcp.tool()
 async def read_journals(days: Optional[int] = 7, query: Optional[str] = "", limit: Optional[int] = 8) -> str:
     """读取最近 days 天（1-365）的 Sterling 日记。默认只返回摘要；只有提供 query 关键词时才展开匹配日记正文。"""
     return await _t_journal.dispatch(query=query, days=days, limit=limit)
 
 
-@mcp_extra.tool()
+@mcp.tool()
 async def read_book(
     action: str = "library",
     book_id: Optional[str] = "",
@@ -889,7 +881,7 @@ async def read_book(
     )
 
 
-@mcp_extra.tool()
+@mcp.tool()
 async def radio(
     action: str = "playlists",
     playlist_id: Optional[str] = "",
@@ -948,31 +940,11 @@ if __name__ == "__main__":
     transport = config.get("transport", "stdio")
     logger.info(f"Ombre Brain starting | transport: {transport}")
 
-    # iter 2.2：合并为单连接器 /mcp。
-    # 当初（iter 2.1）为客户端的少量工具加载限制拆成 /mcp + /mcp-extra；
-    # 现在统一从一条 /mcp 暴露完整 manifest，客户端仍可自行懒加载其中的子集，
-    # 同时消除「第二个连接器」在 Claude.ai 侧的 OAuth/连接器校验疑难。
-    # mcp_extra 仅作历史工具分组容器保留（13 个 @mcp_extra.tool() 注册不动），
-    # 这里把它的工具回灌进 mcp，让 stdio / sse / streamable-http 三种 transport 一致。
-    # 依赖 FastMCP._tool_manager 私有结构；若未来版本变化，降级为仅暴露主集 5 工具。
     from server_app import (
         HTTPRuntimeSettings,
         RuntimeLifecycle,
         build_http_app,
-        merge_mcp_tool_registries,
     )
-
-
-    try:
-        _extra_count = merge_mcp_tool_registries(mcp, mcp_extra)
-        logger.info(
-            f"单连接器 /mcp：已把 {_extra_count} 个副集工具回灌进主实例，共 "
-            f"{len(mcp._tool_manager._tools)} 个工具对外暴露"
-        )
-    except AttributeError as _merge_exc:
-        logger.warning(
-            f"FastMCP 内部结构变化，工具回灌失败，仅暴露主集 5 工具：{_merge_exc}"
-        )
 
     if transport in ("sse", "streamable-http"):
         import uvicorn
