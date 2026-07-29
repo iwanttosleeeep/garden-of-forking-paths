@@ -41,8 +41,8 @@ def test_radio_has_only_human_and_senn_playlist_shelves():
         '<div class="content" id="health-view"', 1
     )[0]
 
-    assert "我创建的" in radio_view
-    assert "Senn 创建的" in radio_view
+    assert "Ainsley的歌单" in radio_view
+    assert "Senn的歌单" in radio_view
     assert "展示给 Senn" in radio_view
     assert "我收藏的" not in radio_view
     assert "每日推荐" not in radio_view
@@ -56,6 +56,21 @@ def test_radio_keeps_paired_ids_and_renders_senn_notes():
     assert "data-radio-ref" in DASHBOARD
     assert "setRadioExposure(this)" in DASHBOARD
     assert "<strong>Senn：</strong>" in DASHBOARD
+
+
+def test_radio_reference_is_encoded_before_entering_html_attributes():
+    assert "encodeURIComponent(JSON.stringify(reference || {}))" in DASHBOARD
+    assert "JSON.parse(decodeURIComponent(String(value || '')))" in DASHBOARD
+    assert "esc(JSON.stringify(reference))" not in DASHBOARD
+    assert "decodeRadioReference(input.dataset.radioRef)" in DASHBOARD
+    assert "decodeRadioReference(serializedReference)" in DASHBOARD
+
+
+def test_radio_shelves_are_separate_cards():
+    assert 'class="radio-shelves"' in DASHBOARD
+    assert DASHBOARD.count('class="radio-shelf-button') == 2
+    assert '.radio-shelf-button[data-radio-view="human"]' in DASHBOARD
+    assert '.radio-shelf-button[data-radio-view="senn"]' in DASHBOARD
 
 
 def test_memo_detail_action_labels_are_centered():

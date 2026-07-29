@@ -1182,9 +1182,14 @@
   .radio-share { display:inline-flex; align-items:center; gap:6px; font-size:9px; color:#2F4F4F; cursor:pointer; }
   .radio-share input { width:14px; height:14px; margin:0; }
   .radio-note { margin-top:9px !important; padding:8px 9px; border-left:3px solid #D9A8A0; border-radius:4px; background:rgba(217,168,160,.2); color:#45391F !important; }
-  .radio-switch { display:inline-flex; padding:3px; gap:3px; border:1px solid rgba(255,253,245,.28); border-radius:999px; background:rgba(244,237,218,.08); }
-  .radio-switch button { margin:0; border-radius:999px; background:transparent !important; color:rgba(255,253,245,.72) !important; }
-  .radio-switch button.active { background:#CFE7DB !important; color:#2F4F4F !important; box-shadow:none; transform:none; }
+  .radio-shelves { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
+  .radio-shelf-button { min-height:58px; margin:0; padding:9px 11px; text-align:left; border:1px solid transparent; border-radius:8px; box-shadow:none; transform:none; }
+  .radio-shelf-button strong, .radio-shelf-button span { display:block; }
+  .radio-shelf-button strong { font-size:11px; line-height:1.35; }
+  .radio-shelf-button span { margin-top:4px; font-size:8px; line-height:1.35; opacity:.7; }
+  .radio-shelf-button[data-radio-view="human"] { background:#F4EDDA; color:#45391F; border-color:#C9B78D; }
+  .radio-shelf-button[data-radio-view="senn"] { background:#D9A8A0; color:#45391F; border-color:rgba(69,57,31,.24); }
+  .radio-shelf-button.active { outline:2px solid #CFE7DB; outline-offset:2px; }
   .radio-raw { grid-column:1/-1; max-height:420px; overflow:auto; margin:0; padding:14px; border-radius:8px; background:#F4EDDA; color:#45391F; white-space:pre-wrap; overflow-wrap:anywhere; font:11px/1.65 'Share Tech Mono',monospace; }
   .radio-login-links { display:flex; gap:7px; flex-wrap:wrap; margin-top:8px; }
   .radio-login-links a { display:inline-flex; align-items:center; min-height:30px; padding:0 10px; border-radius:5px; background:#CFE7DB; color:#2F4F4F; font-size:10px; }
@@ -1226,6 +1231,7 @@
     .weread-skill-card { grid-template-columns:1fr; }
     .radio-deck { grid-template-columns:1fr; }
   }
+  @media (max-width: 430px) { .radio-shelves { grid-template-columns:1fr; } }
   #chats-view #chat-history-list > * { background: rgba(255,255,255,.34); }
   #chats-view .config-section {
     color: #241E12;
@@ -2437,11 +2443,11 @@
         </aside>
         <section class="radio-panel">
           <h4>02 · PROGRAMME / 节目单</h4>
-          <div class="radio-switch" aria-label="歌单分区">
-            <button class="active" data-radio-view="human" onclick="loadRadioShelf('human',this)">我创建的</button>
-            <button data-radio-view="senn" onclick="loadRadioShelf('senn',this)">Senn 创建的</button>
+          <div class="radio-shelves" aria-label="歌单分区">
+            <button class="radio-shelf-button active" data-radio-view="human" onclick="loadRadioShelf('human')"><strong>Ainsley的歌单</strong><span>选择哪些歌单展示给 Senn</span></button>
+            <button class="radio-shelf-button" data-radio-view="senn" onclick="loadRadioShelf('senn')"><strong>Senn的歌单</strong><span>由 Senn 创建与整理</span></button>
           </div>
-          <p>在“我创建的”中勾选要展示给 Senn 的歌单；未勾选的不会出现在 Radio Connector。</p>
+          <p>在“Ainsley的歌单”中勾选要展示给 Senn 的歌单；未勾选的不会出现在 Radio Connector。</p>
           <div class="radio-controls" style="margin-top:11px;">
             <input id="radio-search" placeholder="歌曲、艺人、专辑或一种心情" style="flex:1;min-width:210px;" onkeydown="if(event.key==='Enter')searchRadio()">
             <select id="radio-search-kind"><option value="all">综合</option><option value="song">歌曲</option><option value="album">专辑</option><option value="playlist">歌单</option></select>
@@ -7421,6 +7427,16 @@ function radioReference(item) {
   };
 }
 
+function encodeRadioReference(reference) {
+  return encodeURIComponent(JSON.stringify(reference || {}));
+}
+
+function decodeRadioReference(value) {
+  const reference = JSON.parse(decodeURIComponent(String(value || '')));
+  if (!reference || (!reference.original_id && !reference.encrypted_id)) throw new Error('invalid radio reference');
+  return reference;
+}
+
 function radioMeta(item) {
   const parts = [];
   const artists = item.artists || item.artist || item.author || item.creator;
@@ -7452,7 +7468,7 @@ function renderRadioData(payload) {
   display.innerHTML = playlistNote + rows.map(item => {
     const id = String(radioId(item) || '');
     const reference = radioReference(item);
-    const encodedReference = esc(JSON.stringify(reference));
+    const encodedReference = encodeRadioReference(reference);
     const garden = item._garden || {};
     const playlistLike = playlistCollection || Boolean(item.playlistId || item.trackCount != null || item.coverImgUrl || item.playlistName);
     const share = playlistCollection && payload.view === 'human'
@@ -7553,7 +7569,7 @@ async function radioAction(action, extra) {
   }
 }
 
-function loadRadioShelf(view, button) {
+function loadRadioShelf(view) {
   radioCurrentView = view === 'senn' ? 'senn' : 'human';
   document.querySelectorAll('[data-radio-view]').forEach(node => node.classList.toggle('active', node.dataset.radioView === radioCurrentView));
   return radioAction('playlists', {view:radioCurrentView});
@@ -7562,8 +7578,12 @@ function loadRadioShelf(view, button) {
 async function setRadioExposure(input) {
   const message = document.getElementById('radio-message');
   let reference;
-  try { reference = JSON.parse(input.dataset.radioRef || '{}'); }
-  catch (_) { input.checked = !input.checked; return; }
+  try { reference = decodeRadioReference(input.dataset.radioRef); }
+  catch (_) {
+    input.checked = !input.checked;
+    message.textContent = '歌单 ID 无效，请刷新后重试。';
+    return;
+  }
   input.disabled = true;
   try {
     const response = await authFetch('/api/radio', {
@@ -7586,8 +7606,8 @@ function searchRadio() {
 
 function openRadioPlaylist(serializedReference) {
   try {
-    const reference = JSON.parse(serializedReference || '{}');
-    if (reference.original_id || reference.encrypted_id) radioAction('playlist', {reference:reference});
+    const reference = decodeRadioReference(serializedReference);
+    radioAction('playlist', {reference:reference});
   } catch (_) {
     document.getElementById('radio-message').textContent = '歌单 ID 无效，请刷新后重试。';
   }
