@@ -56,7 +56,7 @@
 | 【私室】健康日报 | `check_up(days=...)` — 遵私室条款 |
 | 【私室】调阅聊天史 | `recall(title)` — 精确取卷,不翻阅 |
 | 【私室】共同阅读 | `read_book(action=library/open/progress/note/review/finish, ...)` 读取 Garden 私有书架；`action=weread_shelf/weread_notebooks/weread_notes/weread_progress/weread_stats/weread_search` 按需读取微信读书 — 原书与微信读书数据均不进 Memos |
-| 【私室】音乐电台 | `radio(action=playlists/playlist/search/recommend/create_playlist/add_tracks, ...)` — 读歌单与推荐；写操作必须 `confirm=true`,不播放、不读 Garden 其它私室 |
+| 【私室】音乐电台 | `radio(action=playlists/playlist/search/create_playlist/add_tracks/comment, ...)` — 只读用户明确开放及 Senn 创建的歌单；账号写操作必须 `confirm=true`，留言保存在 Radio 私室，不播放、不读 Garden 其它私室 |
 
 参数细则以代码内 docstring 为准;本宪法只管原则与分歧点。
 

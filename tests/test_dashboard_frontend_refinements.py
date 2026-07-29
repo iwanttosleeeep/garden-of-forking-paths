@@ -36,6 +36,28 @@ def test_radio_login_copy_is_clean_and_keeps_each_url():
     assert "没有播放器，也不会把 Memos、日记或聊天内容发送给网易云。" not in DASHBOARD
 
 
+def test_radio_has_only_human_and_senn_playlist_shelves():
+    radio_view = DASHBOARD.split('<div class="content" id="radio-view"', 1)[1].split(
+        '<div class="content" id="health-view"', 1
+    )[0]
+
+    assert "我创建的" in radio_view
+    assert "Senn 创建的" in radio_view
+    assert "展示给 Senn" in radio_view
+    assert "我收藏的" not in radio_view
+    assert "每日推荐" not in radio_view
+    assert "私人 FM" not in radio_view
+    assert "雷达歌单" not in radio_view
+
+
+def test_radio_keeps_paired_ids_and_renders_senn_notes():
+    assert "original_id:String" in DASHBOARD
+    assert "encrypted_id:String" in DASHBOARD
+    assert "data-radio-ref" in DASHBOARD
+    assert "setRadioExposure(this)" in DASHBOARD
+    assert "<strong>Senn：</strong>" in DASHBOARD
+
+
 def test_memo_detail_action_labels_are_centered():
     detail_actions = DASHBOARD.split(".detail-actions button {", 1)[1].split("}", 1)[0]
 

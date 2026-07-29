@@ -892,38 +892,44 @@ async def read_book(
 @mcp_extra.tool()
 async def radio(
     action: str = "playlists",
-    scope: Optional[str] = "created",
     playlist_id: Optional[str] = "",
+    original_id: Optional[str] = "",
+    encrypted_id: Optional[str] = "",
     query: Optional[str] = "",
     kind: Optional[str] = "all",
-    mode: Optional[str] = "daily",
     name: Optional[str] = "",
     song_ids: Optional[str] = "",
+    target_type: Optional[str] = "playlist",
+    note: Optional[str] = "",
     confirm: Optional[bool] = False,
 ) -> str:
-    """RADIO / NETEASE MUSIC PLAYLIST TOOL — use this exact tool for 网易云音乐、云音乐、Radio、歌单、每日推荐、私人 FM、找歌或音乐推荐。action=playlists reads created/collected/radar playlists via scope; playlist reads tracks for playlist_id; search finds song/album/playlist/all via query and kind; recommend returns daily/fm/radar suggestions or searches playlists when query is supplied; create_playlist creates a named playlist; add_tracks adds comma-separated encrypted song_ids to playlist_id. Account-changing actions require confirm=true. It never plays audio, never reads Garden Memos/journals/chats, and sends only the current music query or playlist name to NetEase."""
+    """RADIO / NETEASE MUSIC TOOL — use for 网易云音乐、Radio、歌单、找歌或音乐推荐。playlists lists only human playlists explicitly shared in Garden plus Senn-created playlists. playlist reads tracks using original_id and encrypted_id returned by playlists. search finds song/album/playlist/all. create_playlist creates a Senn-owned playlist; add_tracks changes only Senn-owned playlists; both require confirm=true. comment leaves Senn's reason under a playlist or track using target_type=playlist/track and note. It never plays audio or reads Memos, journals, or chats."""
     return await _with_notice(
         _t_radio.dispatch(
             action,
-            scope=scope or "created",
             playlist_id=playlist_id or "",
+            original_id=original_id or "",
+            encrypted_id=encrypted_id or "",
             query=query or "",
             kind=kind or "all",
-            mode=mode or "daily",
             name=name or "",
             song_ids=song_ids or "",
+            target_type=target_type or "playlist",
+            note=note or "",
             confirm=bool(confirm),
         ),
         op="radio",
         args={
             "action": action,
-            "scope": scope,
             "playlist_id": playlist_id,
+            "original_id": original_id,
+            "encrypted_id": encrypted_id,
             "query": query,
             "kind": kind,
-            "mode": mode,
             "name_len": len(name or ""),
             "song_count": len([item for item in (song_ids or "").split(",") if item.strip()]),
+            "target_type": target_type,
+            "note_len": len(note or ""),
             "confirm": confirm,
         },
     )
