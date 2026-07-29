@@ -31,7 +31,12 @@ async def test_radio_client_exposes_only_bounded_music_actions():
     assert commands[2][:4] == ["search", "playlist", "--keyword", "quiet evening"]
     assert commands[3][:4] == ["playlist", "create", "--playlistName", "Garden at dusk"]
     assert commands[4][:3] == ["playlist", "add", "--playlistId"]
-    assert commands[4][3:7] == ["playlist-id", "--songIdList", "song-a,song-b", "--userInput"]
+    assert commands[4][3:7] == [
+        "playlist-id",
+        "--songIdList",
+        '["song-a","song-b"]',
+        "--userInput",
+    ]
     assert "--songIds" not in commands[4]
     assert all("--userInput" in command for command in commands)
 
@@ -49,8 +54,46 @@ async def test_add_tracks_normalizes_a_song_id_collection_for_the_cli_contract()
         "--playlistId",
         "playlist-id",
         "--songIdList",
-        "song-a,song-b",
+        '["song-a","song-b"]',
     ]
+
+
+@pytest.mark.asyncio
+async def test_add_tracks_accepts_a_json_array_string():
+    runner = FakeRunner()
+
+    await NCMClient(runner).add_tracks("playlist-id", '["song-a", "song-b"]')
+
+    assert runner.calls[0][0][5] == '["song-a","song-b"]'
+
+
+@pytest.mark.asyncio
+async def test_add_tracks_retries_comma_format_only_after_a_shape_error():
+    calls = []
+
+    async def runner(args, _timeout):
+        calls.append(args)
+        if args[5].startswith("["):
+            raise NCMClientError("参数错误：songIdList")
+        return {"success": True}
+
+    result = await NCMClient(runner).add_tracks("playlist-id", ["song-a", "song-b"])
+
+    assert result["success"] is True
+    assert [call[5] for call in calls] == ['["song-a","song-b"]', "song-a,song-b"]
+
+
+@pytest.mark.asyncio
+async def test_add_tracks_does_not_retry_non_validation_failures():
+    calls = []
+
+    async def runner(args, _timeout):
+        calls.append(args)
+        raise NCMClientError("请先登录")
+
+    with pytest.raises(NCMClientError, match="请先登录"):
+        await NCMClient(runner).add_tracks("playlist-id", ["song-a"])
+    assert len(calls) == 1
 
 
 @pytest.mark.asyncio

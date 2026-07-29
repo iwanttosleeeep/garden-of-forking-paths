@@ -111,6 +111,48 @@ def _api_error(payload: Any) -> str:
     return ""
 
 
+def _song_id_values(value: object) -> list[str]:
+    """Normalize a JSON array, Python collection, or comma-separated fallback."""
+    raw_items: object = value
+    if isinstance(value, str):
+        text = value.strip()
+        if text.startswith("["):
+            try:
+                raw_items = json.loads(text)
+            except ValueError as exc:
+                raise NCMClientError("songIdList 必须是歌曲 ID 数组") from exc
+        else:
+            raw_items = text.split(",")
+    if not isinstance(raw_items, (list, tuple, set)):
+        raise NCMClientError("songIdList 必须是歌曲 ID 数组")
+
+    songs: list[str] = []
+    seen: set[str] = set()
+    for item in raw_items:
+        song = str(item or "").strip()
+        if not song:
+            continue
+        if not re.fullmatch(r"[A-Za-z0-9_-]+", song):
+            raise NCMClientError("songIdList 只能包含歌曲 ID")
+        if song not in seen:
+            songs.append(song)
+            seen.add(song)
+    if not songs:
+        raise NCMClientError("请填写songIdList")
+    serialized = json.dumps(songs, ensure_ascii=False, separators=(",", ":"))
+    if len(serialized) > 2000:
+        raise NCMClientError("songIdList过长")
+    return songs
+
+
+def _song_list_shape_error(exc: NCMClientError) -> bool:
+    message = str(exc).lower()
+    return any(
+        token in message
+        for token in ("参数", "parameter", "songidlist", "array", "数组", "json")
+    )
+
+
 async def run_cli(args: list[str], timeout: float = 40.0) -> Any:
     """Run one allowlisted CLI invocation without a shell."""
     executable = os.environ.get("OMBRE_NCM_CLI", "ncm-cli").strip() or "ncm-cli"
@@ -244,21 +286,29 @@ class NCMClient:
     async def add_tracks(self, playlist_id: object, song_ids: object) -> Any:
         """Add tracks while translating Garden's ``song_ids`` to the CLI contract."""
         playlist = _bounded_text(playlist_id, "playlist_id", limit=128)
-        if isinstance(song_ids, (list, tuple, set)):
-            songs = ",".join(str(item).strip() for item in song_ids if str(item).strip())
-        else:
-            songs = str(song_ids or "").strip()
-        songs = _bounded_text(songs, "song_ids", limit=2000)
-        if not re.fullmatch(r"[A-Za-z0-9,_-]+", songs):
-            raise NCMClientError("song_ids 只能包含歌曲 ID，并用逗号分隔")
-        return await self._call(
-            [
-                "playlist",
-                "add",
-                "--playlistId",
-                playlist,
-                "--songIdList",
-                songs,
-                *self._intent("把指定歌曲加入歌单"),
-            ]
+        songs = _song_id_values(song_ids)
+        encoded_values = (
+            json.dumps(songs, ensure_ascii=False, separators=(",", ":")),
+            ",".join(songs),
         )
+        for index, encoded in enumerate(encoded_values):
+            try:
+                return await self._call(
+                    [
+                        "playlist",
+                        "add",
+                        "--playlistId",
+                        playlist,
+                        "--songIdList",
+                        encoded,
+                        *self._intent("把指定歌曲加入歌单"),
+                    ]
+                )
+            except NCMClientError as exc:
+                # A validation error means the write was rejected before it
+                # could mutate the playlist. Retry only that safe failure with
+                # the older comma-separated representation.
+                if index == 0 and _song_list_shape_error(exc):
+                    continue
+                raise
+        raise NCMClientError("添加歌曲失败")

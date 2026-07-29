@@ -39,16 +39,16 @@ async def test_single_radio_tool_reads_and_requires_confirmation_for_writes(monk
     assert json.loads(created.split("\n", 1)[1])["owner"] == "senn"
 
     add_prompt = await radio.dispatch(
-        "add_tracks", original_id="playlist-1", song_ids="song-a,song-b", confirm=False
+        "add_tracks", original_id="playlist-1", song_ids=["song-a", "song-b"], confirm=False
     )
     assert "confirm=true" in add_prompt
 
     added = await radio.dispatch(
-        "add_tracks", original_id="playlist-1", song_ids="song-a,song-b", confirm=True
+        "add_tracks", original_id="playlist-1", song_ids=["song-a", "song-b"], confirm=True
     )
     added_payload = json.loads(added.split("\n", 1)[1])
     assert added_payload["reference"]["original_id"] == "playlist-1"
-    assert added_payload["song_ids"] == "song-a,song-b"
+    assert added_payload["song_ids"] == ["song-a", "song-b"]
 
     commented = await radio.dispatch(
         "comment", original_id="playlist-1", target_type="playlist", note="Because dusk needs strings."
