@@ -9,6 +9,8 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 from ncm_client import NCMClient, NCMClientError
+from radio_library import RadioLibraryError
+from radio_service import RadioService
 from utils import atomic_write_text, config_file_path
 
 from . import _shared as sh
@@ -16,6 +18,10 @@ from . import _shared as sh
 
 def _client() -> NCMClient:
     return NCMClient()
+
+
+def _service() -> RadioService:
+    return RadioService(str(sh.config["buckets_dir"]), _client())
 
 
 def _radio_config() -> dict:
@@ -49,20 +55,21 @@ def _error(exc: Exception, status_code: int = 400) -> JSONResponse:
 
 
 async def _perform(body: dict) -> object:
-    client = _client()
+    service = _service()
     action = str(body.get("action") or "playlists").strip().lower()
     if action == "playlists":
-        return await client.playlists(str(body.get("scope") or "created"))
+        return await service.playlists(str(body.get("view") or "human"))
     if action == "playlist":
-        return await client.playlist_tracks(body.get("playlist_id"))
+        return await service.playlist(body.get("reference") or body.get("playlist_id"))
+    if action == "set_exposed":
+        exposed = body.get("exposed")
+        if not isinstance(exposed, bool):
+            raise RadioLibraryError("exposed 必须是 true 或 false")
+        return service.set_exposed(body.get("reference"), exposed)
     if action == "search":
-        return await client.search(body.get("query"), str(body.get("kind") or "all"))
-    if action == "recommend":
-        return await client.recommend(body.get("query"), str(body.get("mode") or "daily"))
+        return await service.search(body.get("query"), str(body.get("kind") or "all"))
     if action == "create_playlist":
-        return await client.create_playlist(body.get("name"))
-    if action == "add_tracks":
-        return await client.add_tracks(body.get("playlist_id"), body.get("song_ids"))
+        return await service.create_playlist(body.get("name"), owner="human")
     raise NCMClientError("未知的 Radio 操作")
 
 
@@ -89,7 +96,7 @@ def register(mcp) -> None:
             result = await _client().configure(body.get("app_id"), body.get("private_key"))
             _persist_marker(True, str(result.get("app_id_masked") or ""))
             return JSONResponse({"ok": True, **result})
-        except NCMClientError as exc:
+        except (NCMClientError, RadioLibraryError) as exc:
             return _error(exc)
         except Exception:
             sh.logger.exception("radio config save failed")
@@ -102,7 +109,7 @@ def register(mcp) -> None:
             return err
         try:
             return JSONResponse({"ok": True, "data": await _client().start_login()})
-        except NCMClientError as exc:
+        except (NCMClientError, RadioLibraryError) as exc:
             return _error(exc)
 
     @mcp.custom_route("/api/radio", methods=["POST"])
@@ -115,7 +122,7 @@ def register(mcp) -> None:
             if not isinstance(body, dict):
                 raise NCMClientError("请求格式不正确")
             return JSONResponse({"ok": True, "action": body.get("action"), "data": await _perform(body)})
-        except NCMClientError as exc:
+        except (NCMClientError, RadioLibraryError) as exc:
             return _error(exc)
         except Exception:
             sh.logger.exception("radio action failed")

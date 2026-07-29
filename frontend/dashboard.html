@@ -1178,6 +1178,13 @@
   .radio-card h5 { margin:0 0 5px; font-size:13px; line-height:1.4; color:#45391F; }
   .radio-card p { margin:4px 0; font-size:10px; line-height:1.6; color:#7A6C4C; overflow-wrap:anywhere; }
   .radio-card button { margin-top:7px; height:28px; padding:0 9px; font-size:9px; color:#2F4F4F; background:#CFE7DB; }
+  .radio-card-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:8px; }
+  .radio-share { display:inline-flex; align-items:center; gap:6px; font-size:9px; color:#2F4F4F; cursor:pointer; }
+  .radio-share input { width:14px; height:14px; margin:0; }
+  .radio-note { margin-top:9px !important; padding:8px 9px; border-left:3px solid #D9A8A0; border-radius:4px; background:rgba(217,168,160,.2); color:#45391F !important; }
+  .radio-switch { display:inline-flex; padding:3px; gap:3px; border:1px solid rgba(255,253,245,.28); border-radius:999px; background:rgba(244,237,218,.08); }
+  .radio-switch button { margin:0; border-radius:999px; background:transparent !important; color:rgba(255,253,245,.72) !important; }
+  .radio-switch button.active { background:#CFE7DB !important; color:#2F4F4F !important; box-shadow:none; transform:none; }
   .radio-raw { grid-column:1/-1; max-height:420px; overflow:auto; margin:0; padding:14px; border-radius:8px; background:#F4EDDA; color:#45391F; white-space:pre-wrap; overflow-wrap:anywhere; font:11px/1.65 'Share Tech Mono',monospace; }
   .radio-login-links { display:flex; gap:7px; flex-wrap:wrap; margin-top:8px; }
   .radio-login-links a { display:inline-flex; align-items:center; min-height:30px; padding:0 10px; border-radius:5px; background:#CFE7DB; color:#2F4F4F; font-size:10px; }
@@ -2430,13 +2437,11 @@
         </aside>
         <section class="radio-panel">
           <h4>02 · PROGRAMME / 节目单</h4>
-          <div class="radio-controls">
-            <button onclick="radioAction('playlists',{scope:'created'})">我创建的</button>
-            <button onclick="radioAction('playlists',{scope:'collected'})">我收藏的</button>
-            <button onclick="radioAction('recommend',{mode:'daily'})">每日推荐</button>
-            <button onclick="radioAction('recommend',{mode:'fm'})">私人 FM</button>
-            <button onclick="radioAction('recommend',{mode:'radar'})">雷达歌单</button>
+          <div class="radio-switch" aria-label="歌单分区">
+            <button class="active" data-radio-view="human" onclick="loadRadioShelf('human',this)">我创建的</button>
+            <button data-radio-view="senn" onclick="loadRadioShelf('senn',this)">Senn 创建的</button>
           </div>
+          <p>在“我创建的”中勾选要展示给 Senn 的歌单；未勾选的不会出现在 Radio Connector。</p>
           <div class="radio-controls" style="margin-top:11px;">
             <input id="radio-search" placeholder="歌曲、艺人、专辑或一种心情" style="flex:1;min-width:210px;" onkeydown="if(event.key==='Enter')searchRadio()">
             <select id="radio-search-kind"><option value="all">综合</option><option value="song">歌曲</option><option value="album">专辑</option><option value="playlist">歌单</option></select>
@@ -4080,7 +4085,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     if (target === 'journal') loadJournalView();
     if (target === 'chats') loadChatHistory();
     if (target === 'reading') { loadReadingLibrary(); loadWeReadConfig(); }
-    if (target === 'radio') loadRadioStatus();
+    if (target === 'radio') { loadRadioStatus(); loadRadioShelf(radioCurrentView); }
     if (target === 'health') loadHealthView();
     if (target === 'anchors') loadAnchorsView();
   });
@@ -7369,6 +7374,7 @@ async function loadWeReadView(forcedView, bookId) {
 
 // Radio is a bounded NetEase Music data surface; there is deliberately no player.
 let radioLoginPollTimer = null;
+let radioCurrentView = 'human';
 
 function radioUrls(value, found) {
   found = found || [];
@@ -7397,7 +7403,22 @@ function radioTitle(item) {
 }
 
 function radioId(item) {
-  return item.encryptedId || item.encrypted_id || item.playlistId || item.songId || item.originalId || item.id || '';
+  const ref = radioReference(item);
+  return ref.original_id || ref.encrypted_id || '';
+}
+
+function radioReference(item) {
+  const garden = item && item._garden && item._garden.reference;
+  if (garden) return {
+    original_id:String(garden.original_id || ''),
+    encrypted_id:String(garden.encrypted_id || '')
+  };
+  const original = item && (item.originalId || item.original_id);
+  const generic = item && item.id;
+  return {
+    original_id:String((original || (item && (item.playlistId || item.songId)) || generic) || ''),
+    encrypted_id:String((item && (item.encryptedId || item.encrypted_id || item.encryptId || item.encrypt_id)) || (original && generic) || '')
+  };
 }
 
 function radioMeta(item) {
@@ -7415,18 +7436,35 @@ function radioMeta(item) {
 function renderRadioData(payload) {
   const display = document.getElementById('radio-display');
   if (!display) return;
-  const rows = radioRows(payload);
+  const playlistCollection = payload && Array.isArray(payload.playlists);
+  const trackCollection = payload && Array.isArray(payload.tracks);
+  const rows = playlistCollection ? payload.playlists : (trackCollection ? payload.tracks : radioRows(payload));
   if (!rows.length) {
-    display.innerHTML = '<pre class="radio-raw">' + esc(JSON.stringify(payload, null, 2)) + '</pre>';
+    const empty = playlistCollection
+      ? (payload.view === 'senn' ? 'Senn 还没有创建歌单。' : '这里还没有可陈列的歌单。')
+      : '没有找到曲目。';
+    display.innerHTML = '<div class="radio-card"><h5>QUIET AIR</h5><p>' + esc(empty) + '</p></div>';
     return;
   }
-  display.innerHTML = rows.map(item => {
+  const playlistNote = trackCollection && payload.playlist && payload.playlist.note
+    ? '<article class="radio-card" style="grid-column:1/-1;"><h5>SENN 留言</h5><p class="radio-note">' + esc(payload.playlist.note) + '</p></article>'
+    : '';
+  display.innerHTML = playlistNote + rows.map(item => {
     const id = String(radioId(item) || '');
-    const playlistLike = Boolean(item.playlistId || item.trackCount != null || item.coverImgUrl || item.playlistName);
+    const reference = radioReference(item);
+    const encodedReference = esc(JSON.stringify(reference));
+    const garden = item._garden || {};
+    const playlistLike = playlistCollection || Boolean(item.playlistId || item.trackCount != null || item.coverImgUrl || item.playlistName);
+    const share = playlistCollection && payload.view === 'human'
+      ? '<label class="radio-share"><input type="checkbox" data-radio-ref="' + encodedReference + '" onchange="setRadioExposure(this)"' + (garden.exposed ? ' checked' : '') + '> 展示给 Senn</label>'
+      : '';
     return '<article class="radio-card"><h5>' + esc(radioTitle(item)) + '</h5>'
       + '<p>' + esc(radioMeta(item) || (id ? 'ID ' + id : '网易云音乐')) + '</p>'
       + (item.reason ? '<p>' + esc(item.reason) + '</p>' : '')
-      + (playlistLike && id ? '<button data-radio-id="' + esc(id) + '" onclick="openRadioPlaylist(this.dataset.radioId)">查看曲目</button>' : '')
+      + (garden.note ? '<p class="radio-note"><strong>Senn：</strong>' + esc(garden.note) + '</p>' : '')
+      + '<div class="radio-card-actions">'
+      + (playlistLike && id ? '<button data-radio-ref="' + encodedReference + '" onclick="openRadioPlaylist(this.dataset.radioRef)">查看曲目</button>' : '')
+      + share + '</div>'
       + '</article>';
   }).join('');
 }
@@ -7515,14 +7553,44 @@ async function radioAction(action, extra) {
   }
 }
 
+function loadRadioShelf(view, button) {
+  radioCurrentView = view === 'senn' ? 'senn' : 'human';
+  document.querySelectorAll('[data-radio-view]').forEach(node => node.classList.toggle('active', node.dataset.radioView === radioCurrentView));
+  return radioAction('playlists', {view:radioCurrentView});
+}
+
+async function setRadioExposure(input) {
+  const message = document.getElementById('radio-message');
+  let reference;
+  try { reference = JSON.parse(input.dataset.radioRef || '{}'); }
+  catch (_) { input.checked = !input.checked; return; }
+  input.disabled = true;
+  try {
+    const response = await authFetch('/api/radio', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'set_exposed', reference:reference, exposed:input.checked})
+    }).then(readJsonSafe);
+    if (!response.ok) throw new Error(response.error || '保存失败');
+    message.textContent = input.checked ? '这张歌单现在会展示给 Senn。' : '这张歌单已从 Radio Connector 隐藏。';
+  } catch (e) {
+    input.checked = !input.checked;
+    message.textContent = '授权保存失败：' + e.message;
+  } finally { input.disabled = false; }
+}
+
 function searchRadio() {
   const query = (document.getElementById('radio-search').value || '').trim();
   if (!query) { document.getElementById('radio-message').textContent = '请先写下歌曲、艺人或想听的氛围。'; return; }
   radioAction('search', {query:query, kind:document.getElementById('radio-search-kind').value});
 }
 
-function openRadioPlaylist(playlistId) {
-  if (playlistId) radioAction('playlist', {playlist_id:playlistId});
+function openRadioPlaylist(serializedReference) {
+  try {
+    const reference = JSON.parse(serializedReference || '{}');
+    if (reference.original_id || reference.encrypted_id) radioAction('playlist', {reference:reference});
+  } catch (_) {
+    document.getElementById('radio-message').textContent = '歌单 ID 无效，请刷新后重试。';
+  }
 }
 
 function createRadioPlaylist() {
@@ -7530,7 +7598,10 @@ function createRadioPlaylist() {
   if (!name) { document.getElementById('radio-message').textContent = '请先填写歌单名称。'; return; }
   if (!confirm('在你的网易云账号中创建歌单「' + name + '」吗？')) return;
   radioAction('create_playlist', {name:name}).then(data => {
-    if (data) document.getElementById('radio-playlist-name').value = '';
+    if (data) {
+      document.getElementById('radio-playlist-name').value = '';
+      loadRadioShelf('human');
+    }
   });
 }
 

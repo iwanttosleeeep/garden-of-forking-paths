@@ -98,6 +98,19 @@ def _is_logged_in(payload: Any) -> bool:
     return False
 
 
+def _api_error(payload: Any) -> str:
+    """Return an official API error even when the CLI exits with status zero."""
+    if not isinstance(payload, dict):
+        return ""
+    try:
+        code = int(payload.get("code"))
+    except (TypeError, ValueError):
+        code = 0
+    if code >= 400 or payload.get("success") is False:
+        return str(payload.get("message") or payload.get("msg") or "网易云音乐操作失败")[:500]
+    return ""
+
+
 async def run_cli(args: list[str], timeout: float = 40.0) -> Any:
     """Run one allowlisted CLI invocation without a shell."""
     executable = os.environ.get("OMBRE_NCM_CLI", "ncm-cli").strip() or "ncm-cli"
@@ -126,8 +139,9 @@ async def run_cli(args: list[str], timeout: float = 40.0) -> Any:
     if process.returncode != 0:
         message = payload.get("message") if isinstance(payload, dict) else ""
         raise NCMClientError(str(message or errors or output or "网易云音乐命令执行失败")[:500])
-    if isinstance(payload, dict) and payload.get("success") is False:
-        raise NCMClientError(str(payload.get("message") or "网易云音乐操作失败")[:500])
+    api_error = _api_error(payload)
+    if api_error:
+        raise NCMClientError(api_error)
     return payload
 
 
@@ -177,17 +191,40 @@ class NCMClient:
         return ["--userInput", text[:MAX_TEXT_LENGTH]]
 
     async def playlists(self, scope: str = "created") -> Any:
-        wanted = str(scope or "created").strip().lower()
-        if wanted not in {"created", "collected", "radar"}:
-            raise NCMClientError("scope 必须是 created / collected / radar")
-        labels = {"created": "读取我创建的歌单", "collected": "读取我收藏的歌单", "radar": "读取雷达歌单"}
-        return await self._call(["playlist", wanted, *self._intent(labels[wanted])])
-
-    async def playlist_tracks(self, playlist_id: object) -> Any:
-        value = _bounded_text(playlist_id, "playlist_id", limit=128)
+        if str(scope or "created").strip().lower() != "created":
+            raise NCMClientError("Radio 只读取我创建的歌单")
         return await self._call(
-            ["playlist", "tracks", "--playlistId", value, *self._intent("读取指定歌单曲目")]
+            ["playlist", "created", *self._intent("读取我创建的歌单")]
         )
+
+    async def playlist_tracks(self, playlist_id: object, *, alternate_id: object = "") -> Any:
+        primary = _bounded_text(playlist_id or alternate_id, "playlist_id", limit=128)
+        alternate = str(alternate_id or "").strip()
+        candidates = [primary]
+        if alternate and alternate != primary:
+            candidates.append(_bounded_text(alternate, "encrypted_id", limit=128))
+        last_error: NCMClientError | None = None
+        for index, value in enumerate(candidates):
+            try:
+                return await self._call(
+                    [
+                        "playlist",
+                        "tracks",
+                        "--playlistId",
+                        value,
+                        *self._intent("读取指定歌单曲目"),
+                    ]
+                )
+            except NCMClientError as exc:
+                last_error = exc
+                message = str(exc).lower()
+                identifier_error = any(
+                    token in message for token in ("参数", "parameter", "identifier", "playlist id")
+                )
+                if index == 0 and len(candidates) > 1 and identifier_error:
+                    continue
+                raise
+        raise last_error or NCMClientError("读取歌单曲目失败")
 
     async def search(self, query: object, kind: str = "all") -> Any:
         keyword = _bounded_text(query, "搜索关键词")
@@ -197,18 +234,6 @@ class NCMClient:
         return await self._call(
             ["search", wanted, "--keyword", keyword, *self._intent(f"搜索音乐：{keyword}")]
         )
-
-    async def recommend(self, query: object = "", mode: str = "daily") -> Any:
-        keyword = str(query or "").strip()
-        if keyword:
-            return await self.search(keyword, "playlist")
-        wanted = str(mode or "daily").strip().lower()
-        if wanted not in {"daily", "fm", "radar"}:
-            raise NCMClientError("mode 必须是 daily / fm / radar")
-        if wanted == "radar":
-            return await self.playlists("radar")
-        labels = {"daily": "读取我的每日推荐", "fm": "读取我的私人漫游推荐"}
-        return await self._call(["recommend", wanted, *self._intent(labels[wanted])])
 
     async def create_playlist(self, name: object) -> Any:
         title = _bounded_text(name, "歌单名称", limit=80)
