@@ -17,7 +17,9 @@ from typing import Any
 
 
 MAX_NOTE_LENGTH = 1200
+MAX_SONG_REFERENCES = 500
 _ID_RE = re.compile(r"[A-Za-z0-9_-]{1,128}")
+_ENCRYPTED_SONG_ID_RE = re.compile(r"[0-9A-Fa-f]{32}")
 
 
 class RadioLibraryError(ValueError):
@@ -162,7 +164,7 @@ class RadioLibrary:
 
     @staticmethod
     def _empty() -> dict:
-        return {"version": 1, "exposed": [], "senn": [], "notes": {}}
+        return {"version": 1, "exposed": [], "senn": [], "notes": {}, "song_references": []}
 
     def _read(self) -> dict:
         try:
@@ -178,6 +180,8 @@ class RadioLibrary:
             value["senn"] = []
         if not isinstance(value.get("notes"), dict):
             value["notes"] = {}
+        if not isinstance(value.get("song_references"), list):
+            value["song_references"] = []
         return value
 
     def _write(self, value: dict) -> None:
@@ -224,6 +228,55 @@ class RadioLibrary:
             state["senn"] = [item for item in state["senn"] if not self._matches(ref, item)] + [saved]
             self._write(state)
         return saved
+
+    def remember_song_references(self, items: list[dict]) -> list[dict[str, str]]:
+        """Remember only paired IDs so a later Connector write can resolve originals."""
+        remembered: list[dict[str, str]] = []
+        for item in items:
+            try:
+                ref = resource_reference(item)
+            except RadioLibraryError:
+                continue
+            if ref["original_id"] and _ENCRYPTED_SONG_ID_RE.fullmatch(ref["encrypted_id"]):
+                remembered = [saved for saved in remembered if not self._matches(ref, saved)]
+                remembered.append(ref)
+        if not remembered:
+            return []
+        with self._lock:
+            state = self._read()
+            previous = [
+                saved
+                for saved in state["song_references"]
+                if not any(self._matches(saved, ref) for ref in remembered)
+            ]
+            state["song_references"] = (previous + remembered)[-MAX_SONG_REFERENCES:]
+            self._write(state)
+        return remembered
+
+    def resolve_encrypted_song_ids(self, song_ids: list[str]) -> list[str]:
+        """Resolve original IDs learned from reads to API-facing encrypted IDs."""
+        known = self._read().get("song_references", [])
+        resolved: list[str] = []
+        for song_id in song_ids:
+            encrypted = song_id if _ENCRYPTED_SONG_ID_RE.fullmatch(song_id) else ""
+            if not encrypted:
+                encrypted = next(
+                    (
+                        str(ref.get("encrypted_id") or "")
+                        for ref in reversed(known)
+                        if str(ref.get("original_id") or "") == song_id
+                        and _ENCRYPTED_SONG_ID_RE.fullmatch(str(ref.get("encrypted_id") or ""))
+                    ),
+                    "",
+                )
+            if not encrypted:
+                raise RadioLibraryError(
+                    f"歌曲 {song_id} 是原始 ID，网易云写入需要 encryptedId；"
+                    "请先用 radio 的 search 查找这首歌后再添加"
+                )
+            if encrypted not in resolved:
+                resolved.append(encrypted)
+        return resolved
 
     def note_for(self, target_type: str, reference: Any) -> str:
         kind = "playlist" if target_type == "playlist" else "track"

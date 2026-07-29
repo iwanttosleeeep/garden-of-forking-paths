@@ -18,6 +18,7 @@ NCM_CLI_VERSION = "0.1.6"
 MAX_OUTPUT_BYTES = 2 * 1024 * 1024
 MAX_TEXT_LENGTH = 300
 _ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+_ENCRYPTED_SONG_ID_RE = re.compile(r"[0-9A-Fa-f]{32}")
 
 
 class NCMClientError(ValueError):
@@ -111,8 +112,8 @@ def _api_error(payload: Any) -> str:
     return ""
 
 
-def _song_id_values(value: object) -> list[int]:
-    """Normalize Garden input to the numeric ID array required by the CLI."""
+def _song_id_tokens(value: object) -> list[str]:
+    """Parse one ID, a collection, JSON, or comma-separated text."""
     raw_items: object = value
     if isinstance(value, bool):
         raise NCMClientError("songIdList 只能包含歌曲 ID")
@@ -130,24 +131,29 @@ def _song_id_values(value: object) -> list[int]:
     if not isinstance(raw_items, (list, tuple, set)):
         raise NCMClientError("songIdList 必须是歌曲 ID 数组")
 
-    songs: list[int] = []
-    seen: set[int] = set()
+    songs: list[str] = []
+    seen: set[str] = set()
     for item in raw_items:
         if isinstance(item, bool):
-            raise NCMClientError("songIdList 只能包含数字歌曲 ID")
-        song_text = str(item or "").strip()
-        if not song_text:
+            raise NCMClientError("songIdList 只能包含歌曲 ID")
+        song = str(item or "").strip()
+        if not song:
             continue
-        if not song_text.isascii() or not song_text.isdecimal():
-            raise NCMClientError("songIdList 只能包含数字歌曲 ID")
-        song = int(song_text)
-        if song <= 0:
-            raise NCMClientError("songIdList 只能包含数字歌曲 ID")
+        if not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", song):
+            raise NCMClientError("songIdList 只能包含歌曲 ID")
         if song not in seen:
             songs.append(song)
             seen.add(song)
     if not songs:
         raise NCMClientError("请填写songIdList")
+    return songs
+
+
+def _song_id_values(value: object) -> list[str]:
+    """Require the encrypted song IDs used by NetEase API requests."""
+    songs = _song_id_tokens(value)
+    if any(_ENCRYPTED_SONG_ID_RE.fullmatch(song) is None for song in songs):
+        raise NCMClientError("songIdList 必须使用搜索结果中的 32 位 encryptedId")
     serialized = json.dumps(songs, ensure_ascii=False, separators=(",", ":"))
     if len(serialized) > 2000:
         raise NCMClientError("songIdList过长")
@@ -298,7 +304,7 @@ class NCMClient:
         songs = _song_id_values(song_ids)
         encoded_values = (
             json.dumps(songs, ensure_ascii=False, separators=(",", ":")),
-            ",".join(str(song) for song in songs),
+            ",".join(songs),
         )
         for index, encoded in enumerate(encoded_values):
             try:
