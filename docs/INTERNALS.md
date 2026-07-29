@@ -60,7 +60,7 @@ Ombre-Brain/
 ├── tools/              # CLI 一次性脚本：backfill / migrate / reclassify / check_*
 ├── tests/              # pytest 测试套件（unit / integration / regression）
 ├── docs/               # INTERNALS / BEHAVIOR_SPEC / ENV_VARS / CLAUDE_PROMPT
-├── frontend/           # dashboard.html
+├── frontend/           # 页面、图标与按功能拆分的 Dashboard JavaScript
 ├── deploy/             # docker-compose.yml / docker-compose.user.yml
 ├── Dockerfile          # 根目录保留（平台自动识别）
 ├── render.yaml         # 根目录保留（Render 自动识别）

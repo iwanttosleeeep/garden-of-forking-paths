@@ -116,7 +116,7 @@ def build_default_legacy_profiles() -> LegacyModuleRegistry:
         ),
         LegacyModuleProfile(
             module="frontend.dashboard",
-            files=("frontend/dashboard.html",),
+            files=("frontend/*",),
             responsibilities=("dashboard-ui", "local-control-panel"),
             side_effects=("browser-api-call",),
             protected_surfaces=("oauth-toggle", "host-port-form"),

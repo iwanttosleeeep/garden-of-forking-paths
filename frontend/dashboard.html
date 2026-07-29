@@ -2017,8 +2017,6 @@
   </h1>
   <div class="header-meta">
     <span class="stats" id="stats">loading...</span>
-      <span id="heartbeat-text">…</span>
-    </span>
     <span id="anchor-counter" title="anchor = 坐标系备忘录，硬上限 24" style="font-size:11px;color:var(--text-dim);cursor:pointer;display:inline-flex;align-items:center;gap:4px;" onclick="document.querySelector('[data-tab=anchors]')?.click()">
       <i data-lucide="anchor" style="width:12px;height:12px;"></i>
       <span id="anchor-counter-text">0/24</span>
@@ -3309,6 +3307,7 @@
   </div>
 </div>
 
+<script src="/static/human-settings.js"></script>
 <script>
 // SVG icon strings — drop-in replacements for emoji in innerHTML
 const _SV = {
@@ -8402,75 +8401,6 @@ if (initialTabButton) initialTabButton.click();
 // ── 给作者反馈 ──────────────────────────────────────────────
 </script>
 
-<script>
-// ============================================================
-// Human name setting
-// ============================================================
-async function loadHumanName() {
-  try {
-    var res = await fetch(BASE + '/api/settings/human');
-    if (res.ok) {
-      var data = await res.json();
-      var el = document.getElementById('settings-human-name');
-      if (el) el.value = data.human || '';
-    }
-  } catch (e) { /* silent */ }
-}
-
-async function saveHumanName() {
-  var el = document.getElementById('settings-human-name');
-  var msg = document.getElementById('settings-human-msg');
-  var name = (el ? el.value.trim() : '') || '人类';
-  try {
-    var res = await fetch(BASE + '/api/settings/human', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ human: name }),
-    });
-    var data = await res.json();
-    if (!res.ok) throw new Error(data.error || res.statusText);
-    var changed = (data.renamed && data.renamed.buckets_changed) || 0;
-    if (msg) {
-      msg.textContent = changed > 0 ? ('已保存，并同步了 ' + changed + ' 条旧记忆') : '已保存';
-      msg.style.color = 'var(--positive)';
-    }
-    setTimeout(function() { if (msg) msg.textContent = ''; }, 4000);
-  } catch (e) {
-    if (msg) { msg.textContent = '保存失败：' + e.message; msg.style.color = 'var(--negative)'; }
-  }
-}
-
-async function syncExistingHuman() {
-  var fromEl = document.getElementById('settings-human-from');
-  var msg = document.getElementById('settings-human-sync-msg');
-  var from = fromEl ? fromEl.value.trim() : '';
-  if (!from) from = '用户';
-  if (msg) { msg.textContent = '替换中… / Replacing…'; msg.style.color = 'var(--text-dim)'; }
-  try {
-    var res = await fetch(BASE + '/api/settings/human/sync-existing', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: from }),
-    });
-    var data = await res.json();
-    if (!res.ok || data.error) throw new Error(data.error || res.statusText);
-    if (data.note) {
-      if (msg) { msg.textContent = data.note; msg.style.color = 'var(--text-dim)'; }
-      return;
-    }
-    var changed = (data.renamed && data.renamed.buckets_changed) || 0;
-    if (msg) {
-      msg.textContent = changed > 0
-        ? ('已把「' + data.from + '」→「' + data.to + '」，更新了 ' + changed + ' 条记忆')
-        : ('没有找到含「' + data.from + '」的旧记忆');
-      msg.style.color = changed > 0 ? 'var(--positive)' : 'var(--text-dim)';
-    }
-  } catch (e) {
-    if (msg) { msg.textContent = '替换失败：' + e.message; msg.style.color = 'var(--negative)'; }
-  }
-}
-</script>
-
 <!-- ── E/F 级错误自动弹窗 Modal ────────────────────────────── -->
 <div id="error-alert-popup"
   style="display:none;position:fixed;inset:0;z-index:10000;align-items:center;justify-content:center;background:rgba(44,42,38,0.65);backdrop-filter:blur(4px);"
@@ -8539,103 +8469,7 @@ async function syncExistingHuman() {
   <span class="fab-dot"></span>
 </button>
 
-<script>
-// ====== Self / I panel ======
-let _selfEntries = [];
-let _selfAspectFilter = '';
-
-async function openSelfPanel() {
-  document.getElementById('self-panel').classList.add('open');
-  document.getElementById('self-overlay').classList.add('show');
-  await loadSelfEntries();
-  if (window.lucide) lucide.createIcons();
-}
-
-function closeSelfPanel() {
-  document.getElementById('self-panel').classList.remove('open');
-  document.getElementById('self-overlay').classList.remove('show');
-}
-
-function setSelfFilter(btn) {
-  document.querySelectorAll('.self-filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  _selfAspectFilter = btn.dataset.aspect;
-  renderSelfEntries();
-}
-
-async function loadSelfEntries() {
-  const body = document.getElementById('self-panel-body');
-  try {
-    const res = await authFetch('/api/self');
-    if (!res || !res.ok) { body.innerHTML = '<div class="self-panel-empty">加载失败</div>'; return; }
-    _selfEntries = await res.json();
-    document.getElementById('self-fab').classList.toggle('has-entries', _selfEntries.length > 0);
-    renderSelfEntries();
-  } catch (e) {
-    body.innerHTML = '<div class="self-panel-empty">' + esc(e.message) + '</div>';
-  }
-}
-
-async function saveSelfEntry() {
-  const contentEl = document.getElementById('self-content');
-  const aspectEl = document.getElementById('self-aspect');
-  const msg = document.getElementById('self-compose-msg');
-  const content = (contentEl.value || '').trim();
-  if (!content) { msg.textContent = '请先写下内容。'; return; }
-  msg.textContent = '写入中…';
-  try {
-    const res = await authFetch('/api/self', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({content: content, aspect: aspectEl.value || ''}),
-    });
-    const data = await readJsonSafe(res);
-    if (!res || !data || !data.ok) throw new Error((data && data.error) || '写入失败');
-    contentEl.value = '';
-    msg.textContent = '已写入。';
-    await loadSelfEntries();
-  } catch (e) {
-    msg.textContent = e.message || '写入失败';
-  }
-}
-
-function renderSelfEntries() {
-  const body = document.getElementById('self-panel-body');
-  const filtered = _selfAspectFilter
-    ? _selfEntries.filter(e => e.aspect === _selfAspectFilter)
-    : _selfEntries;
-
-  if (!filtered.length) {
-    body.innerHTML = '<div class="self-panel-empty">' + (_selfAspectFilter ? '该维度暂无条目' : '尚未写下任何自我认知') + '</div>';
-    return;
-  }
-
-  body.innerHTML = filtered.map(e => {
-    const ts = (e.created || '').slice(0, 16).replace('T', ' ');
-    const aspectHtml = e.aspect
-      ? '<span class="self-entry-aspect">' + esc(e.aspect) + '</span>'
-      : '';
-    return '<div class="self-entry">'
-      + '<div class="self-entry-meta">' + aspectHtml + '<span class="self-entry-time">' + esc(ts) + '</span></div>'
-      + '<div class="self-entry-content">' + esc(e.content) + '</div>'
-      + '</div>';
-  }).join('');
-}
-
-// 初始化：检测是否有条目，给 FAB 加小圆点
-(async function initSelfFab() {
-  try {
-    const res = await authFetch('/api/self');
-    if (res && res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        document.getElementById('self-fab').classList.add('has-entries');
-        _selfEntries = data;
-      }
-    }
-  } catch (_) {}
-})();
-</script>
+<script src="/static/self-panel.js"></script>
 
 </body>
 </html>

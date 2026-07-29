@@ -1267,17 +1267,6 @@ class BucketManager:
         return True
 
     # ---------------------------------------------------------
-    # Wikilink injection — DISABLED
-    # 自动添加 Obsidian 双链 — 已禁用
-    # Now handled by LLM prompts (Gemini adds [[]] for proper nouns)
-    # 现在由 LLM prompt 处理（Gemini 对人名/地名/专有名词加 [[]]）
-    # ---------------------------------------------------------
-    # def _apply_wikilinks(self, content, tags, domain, name): ...
-    # def _collect_wikilink_keywords(self, content, tags, domain, name): ...
-    # def _normalize_keywords(self, keywords): ...
-    # def _extract_auto_keywords(self, content): ...
-
-    # ---------------------------------------------------------
     # Delete bucket
     # 删除桶
     # ---------------------------------------------------------

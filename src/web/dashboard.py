@@ -19,6 +19,27 @@ from starlette.responses import Response
 from . import _shared as sh
 
 
+STATIC_ASSETS = {
+    "icon.svg": "image/svg+xml",
+    "favicon.svg": "image/svg+xml",
+    "favicon-32.png": "image/png",
+    "icon-180.png": "image/png",
+    "icon-192.png": "image/png",
+    "icon-512.png": "image/png",
+    "islands-user.png": "image/png",
+    "manifest.json": "application/manifest+json",
+    "human-settings.js": "application/javascript",
+    "self-panel.js": "application/javascript",
+}
+
+VERSIONED_ASSETS = (
+    "/static/favicon-32.png",
+    "/static/icon-180.png",
+    "/static/human-settings.js",
+    "/static/self-panel.js",
+)
+
+
 def register(mcp) -> None:
 
     async def serve_frontend_page(filename: str) -> Response:
@@ -28,7 +49,7 @@ def register(mcp) -> None:
         try:
             with open(path, "r", encoding="utf-8") as f:
                 page = f.read()
-            for asset in ("/static/favicon-32.png", "/static/icon-180.png"):
+            for asset in VERSIONED_ASSETS:
                 page = page.replace(asset, f"{asset}?v={sh.version}")
             return HTMLResponse(page, headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
         except FileNotFoundError:
@@ -55,22 +76,12 @@ def register(mcp) -> None:
     async def static_asset(request: Request) -> Response:
         from starlette.responses import Response as _Resp, JSONResponse
         name = request.path_params.get("name", "")
-        allowed = {
-            "icon.svg": "image/svg+xml",
-            "favicon.svg": "image/svg+xml",
-            "favicon-32.png": "image/png",
-            "icon-180.png": "image/png",
-            "icon-192.png": "image/png",
-            "icon-512.png": "image/png",
-            "islands-user.png": "image/png",
-            "manifest.json": "application/manifest+json",
-        }
-        if name not in allowed:
+        if name not in STATIC_ASSETS:
             return JSONResponse({"error": "not found"}, status_code=404)
         path = os.path.join(sh.repo_root, "frontend", name)
         try:
             with open(path, "rb") as f:
-                return _Resp(f.read(), media_type=allowed[name])
+                return _Resp(f.read(), media_type=STATIC_ASSETS[name])
         except FileNotFoundError:
             return JSONResponse({"error": "not found"}, status_code=404)
 
