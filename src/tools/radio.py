@@ -26,7 +26,7 @@ async def dispatch(
     query: str = "",
     kind: str = "all",
     name: str = "",
-    song_ids: str = "",
+    song_ids: list[str] | str | None = None,
     target_type: str = "playlist",
     note: str = "",
     confirm: bool = False,
@@ -51,7 +51,7 @@ async def dispatch(
             return _json(await service.create_playlist(name, owner="senn"))
         if wanted == "add_tracks":
             if not confirm:
-                return "添加歌曲会修改 Senn 的网易云歌单。确认歌单 ID 与 song_ids 后，请再次调用并传 confirm=true。"
+                return "添加歌曲会修改 Senn 的网易云歌单。确认歌单 ID 与 songIdList 后，请再次调用并传 confirm=true。"
             return _json(await service.add_tracks(reference, song_ids))
         if wanted == "comment":
             return _json(service.set_note(target_type, reference, note))
