@@ -93,6 +93,15 @@ def test_senn_playlist_shelf_uses_the_neutral_radio_card_surface():
     assert "#D9A8A0" not in senn_shelf
 
 
+def test_senn_notes_use_the_radio_seafoam_palette():
+    note_style = DASHBOARD.split(".radio-note {", 1)[1].split("}", 1)[0]
+
+    assert "border-left:3px solid #6E9486;" in note_style
+    assert "background:rgba(207,231,219,.55);" in note_style
+    assert "#D9A8A0" not in note_style
+    assert "rgba(217,168,160" not in note_style
+
+
 def test_memo_detail_action_labels_are_centered():
     detail_actions = DASHBOARD.split(".detail-actions button {", 1)[1].split("}", 1)[0]
 
