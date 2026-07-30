@@ -72,12 +72,16 @@ chmod 700 "$RADIO_STATE_DIR" "$RADIO_STATE_DIR/ncm-cli" 2>/dev/null || true
 if [ ! -e /root/.config/ncm-cli ] && [ ! -L /root/.config/ncm-cli ]; then
     ln -s "$RADIO_STATE_DIR/ncm-cli" /root/.config/ncm-cli
 fi
-if [ ! -e "$RADIO_STATE_DIR/device.json" ]; then
-    : > "$RADIO_STATE_DIR/device.json"
-    chmod 600 "$RADIO_STATE_DIR/device.json" 2>/dev/null || true
+# ncm-cli creates this JSON itself.  An empty placeholder is not valid JSON and
+# makes the official client log "Unexpected end of JSON input" during QR login.
+# Preserve any non-empty identity; quarantine only the old zero-byte placeholder
+# left by previous Garden images so the CLI can generate a valid replacement.
+RADIO_DEVICE_FILE="$RADIO_STATE_DIR/device.json"
+if [ -f "$RADIO_DEVICE_FILE" ] && [ ! -s "$RADIO_DEVICE_FILE" ]; then
+    mv "$RADIO_DEVICE_FILE" "$RADIO_DEVICE_FILE.empty"
 fi
 if [ ! -e /root/.netease_mcp_device.json ] && [ ! -L /root/.netease_mcp_device.json ]; then
-    ln -s "$RADIO_STATE_DIR/device.json" /root/.netease_mcp_device.json
+    ln -s "$RADIO_DEVICE_FILE" /root/.netease_mcp_device.json
 fi
 
 # ============================================================

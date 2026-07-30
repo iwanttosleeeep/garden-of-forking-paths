@@ -83,6 +83,16 @@ def test_radio_light_controls_override_the_dark_section_text_color():
     assert "#radio-view .btn-primary { color:#45391F !important; text-shadow:none; }" in DASHBOARD
 
 
+def test_senn_playlist_shelf_uses_the_neutral_radio_card_surface():
+    senn_shelf = DASHBOARD.split(
+        '#radio-view .radio-shelf-button[data-radio-view="senn"] {', 1
+    )[1].split("}", 1)[0]
+
+    assert "background:#F4EDDA !important;" in senn_shelf
+    assert "border:1px solid #6E9486 !important;" in senn_shelf
+    assert "#D9A8A0" not in senn_shelf
+
+
 def test_memo_detail_action_labels_are_centered():
     detail_actions = DASHBOARD.split(".detail-actions button {", 1)[1].split("}", 1)[0]
 
