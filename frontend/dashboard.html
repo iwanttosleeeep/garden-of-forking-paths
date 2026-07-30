@@ -4533,6 +4533,11 @@ function initConceptNetwork(canvas, ctx, W, H, data) {
 
   animateConceptNetwork(canvas, ctx, W, H, data);
 
+  ensureNetworkInteractions(canvas);
+}
+
+// Concept 和 Fernweh 共用完全相同的点击展开/返回全局交互。
+function ensureNetworkInteractions(canvas) {
   // 事件只注册一次（切 tab 不重复绑定）
   if (!_netListenersAttached) {
     _netListenersAttached = true;
@@ -4660,13 +4665,6 @@ function hitTest(mx, my, W, H) {
     var cos = Math.cos(-_netRotAngle), sin = Math.sin(-_netRotAngle);
     rx = cx + (mx - cx) * cos - (my - cy) * sin;
     ry = cy + (mx - cx) * sin + (my - cy) * cos;
-  } else if (networkState.mode === 'fernweh' && networkState.focusNode) {
-    var visible = (networkData.nodes || []).filter(function (n) {
-      return networkState.visibleNodes && networkState.visibleNodes.has(n.id);
-    });
-    var viewport = _fwViewport(W, H, visible, networkState.positions, networkState.focusNode, networkState.depth);
-    rx = viewport.cx + (mx - W / 2) / viewport.scale;
-    ry = viewport.cy + (my - H / 2) / viewport.scale;
   }
   var nodes = networkData.nodes || [];
   var hit = null;
@@ -4989,27 +4987,6 @@ function _fwColor(valence) {
           Math.round(mid[2] + (a[2] - mid[2]) * k)];
 }
 
-// 聚焦星群时以滑块深度控制镜头：近层放大，展开越深越接近全局比例。
-function _fwViewport(W, H, nodes, positions, focusNode, depth) {
-  if (!focusNode || !nodes.length) return { cx: W / 2, cy: H / 2, scale: 1 };
-
-  var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  nodes.forEach(function (n) {
-    var p = positions[n.id];
-    if (!p) return;
-    minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
-    maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
-  });
-  if (!Number.isFinite(minX)) return { cx: W / 2, cy: H / 2, scale: 1 };
-
-  var normalizedDepth = Math.max(1, Math.min(4, Number(depth) || 2));
-  return {
-    cx: (minX + maxX) / 2,
-    cy: (minY + maxY) / 2,
-    scale: 1 + (4 - normalizedDepth) * 0.10,
-  };
-}
-
 function startFernweh(canvas, ctx, W, H, data) {
   var nodes = (data.nodes || []).slice();
   var edges = (data.edges || []).filter(function (e) { return (e.weight || 0) >= 0.62; });
@@ -5018,6 +4995,7 @@ function startFernweh(canvas, ctx, W, H, data) {
   networkState.positions = {};
   networkState.visibleNodes = new Set();
   injectNetworkControls();
+  ensureNetworkInteractions(canvas);
   if (!nodes.length) {
     ctx.fillStyle = '#0A1120'; ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = '#5E7896'; ctx.textAlign = 'center';
@@ -5028,8 +5006,8 @@ function startFernweh(canvas, ctx, W, H, data) {
   var termEl = document.getElementById('network-terminal');
   if (termEl) termEl.classList.add('star-active');
 
-  // 与 Concept 共用焦点/深度状态，但只沿实际绘制的星座线展开。
-  buildAdjacency(data, edges);
+  // 与 Concept 一样沿数据中的完整关系网按 depth 展开。
+  buildAdjacency(data);
   var brightest = nodes.slice().sort(function (a, b) {
     return ((b.importance || 0) - (a.importance || 0)) || ((b.score || 0) - (a.score || 0));
   });
@@ -5103,11 +5081,7 @@ function startFernweh(canvas, ctx, W, H, data) {
     var visible = networkState.visibleNodes || new Set(nodes.map(function (n) { return n.id; }));
     var visibleNodes = nodes.filter(function (n) { return visible.has(n.id); });
     var visibleEdges = edges.filter(function (e) { return visible.has(e.source) && visible.has(e.target); });
-    var viewport = _fwViewport(W, H, visibleNodes, pos, networkState.focusNode, networkState.depth);
     ctx.save();
-    ctx.translate(W / 2, H / 2);
-    ctx.scale(viewport.scale, viewport.scale);
-    ctx.translate(-viewport.cx, -viewport.cy);
     // 星座线
     visibleEdges.forEach(function (e) {
       var a = pos[e.source], b = pos[e.target]; if (!a || !b) return;
@@ -5155,7 +5129,7 @@ function startFernweh(canvas, ctx, W, H, data) {
     ctx.font = "10px 'Share Tech Mono', monospace";
     ctx.textAlign = 'center';
     ctx.fillText(networkState.focusNode
-      ? ('DEPTH ' + networkState.depth + ' · ' + visibleNodes.length + ' STARS · ' + viewport.scale.toFixed(1) + '× · 点击焦点返回全局')
+      ? ('DEPTH ' + networkState.depth + ' · ' + visibleNodes.length + ' STARS · 点击焦点返回全局')
       : ('TOP ' + visibleNodes.length + ' STARS · 点击展开星群'), W / 2, 22);
     _netRAF = requestAnimationFrame(frame);
   }
