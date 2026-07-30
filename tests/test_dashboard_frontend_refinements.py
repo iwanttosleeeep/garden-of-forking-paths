@@ -73,6 +73,16 @@ def test_radio_shelves_are_separate_cards():
     assert '.radio-shelf-button[data-radio-view="senn"]' in DASHBOARD
 
 
+def test_radio_light_controls_override_the_dark_section_text_color():
+    assert '#radio-view .radio-shelf-button[data-radio-view="human"]' in DASHBOARD
+    assert '#radio-view .radio-shelf-button[data-radio-view="senn"]' in DASHBOARD
+    assert "color:#45391F !important;" in DASHBOARD
+    assert "#radio-view .radio-card button" in DASHBOARD
+    assert "color:#2F4F4F !important;" in DASHBOARD
+    assert "background:#CFE7DB !important;" in DASHBOARD
+    assert "#radio-view .btn-primary { color:#45391F !important; text-shadow:none; }" in DASHBOARD
+
+
 def test_memo_detail_action_labels_are_centered():
     detail_actions = DASHBOARD.split(".detail-actions button {", 1)[1].split("}", 1)[0]
 
