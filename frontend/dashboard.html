@@ -4445,6 +4445,9 @@ var networkData = null;
 var _netRAF = null;
 var _netListenersAttached = false;
 var _netRotAngle = 0;
+var NETWORK_OVERVIEW_LIMIT = 30;
+var NETWORK_MAX_DEPTH = 4;
+var FERNWEH_NEIGHBORS_PER_NODE = 2;
 var networkState = {
   mode: 'concept',       // concept / fernweh / embedding
   focusNode: null,      // 当前聚焦的节点 id，null = 全局视图
@@ -4516,12 +4519,8 @@ function initConceptNetwork(canvas, ctx, W, H, data) {
   buildAdjacency(data);
   networkState.mode = 'concept';
 
-  var nodes = data.nodes || [];
-  var sorted = nodes.slice().sort(function (a, b) { return (b.freq || 1) - (a.freq || 1); });
-  var defaultVisible = new Set(sorted.slice(0, 30).map(function (n) { return n.id; }));
-
   networkState.focusNode    = null;
-  networkState.visibleNodes = defaultVisible;
+  networkState.visibleNodes = getNetworkOverview(data, 'concept', networkState.depth);
   networkState.positions    = {};
   networkState.needsLayout  = true;
   _netRotAngle              = 0;
@@ -4545,17 +4544,12 @@ function ensureNetworkInteractions(canvas) {
     canvas.addEventListener('click', function (e) {
       if (!networkData || networkState.mode === 'embedding') return;
       var d = networkData;
-      var sortedAll = (d.nodes || []).slice().sort(function (a, b) {
-        return networkState.mode === 'fernweh'
-          ? ((b.importance || 0) - (a.importance || 0)) || ((b.score || 0) - (a.score || 0))
-          : (b.freq || 1) - (a.freq || 1);
-      });
       var rect = canvas.getBoundingClientRect();
       var hit  = hitTest(e.clientX - rect.left, e.clientY - rect.top, canvas.offsetWidth, canvas.offsetHeight);
       if (hit) {
         if (networkState.focusNode === hit) {
           networkState.focusNode    = null;
-          networkState.visibleNodes = new Set(sortedAll.slice(0, 30).map(function (n) { return n.id; }));
+          networkState.visibleNodes = getNetworkOverview(d, networkState.mode, networkState.depth);
         } else {
           networkState.focusNode    = hit;
           networkState.visibleNodes = getNeighbors(hit, networkState.depth, d);
@@ -4566,7 +4560,7 @@ function ensureNetworkInteractions(canvas) {
         } else {
           setNetTerminal(networkState.focusNode
             ? ('FERNWEH · DEPTH ' + networkState.depth + ' · ' + networkState.visibleNodes.size + ' 颗可见星')
-            : ('FERNWEH · TOP ' + networkState.visibleNodes.size + ' 颗星'));
+            : ('FERNWEH · DEPTH ' + networkState.depth + ' · ' + networkState.visibleNodes.size + ' 颗可见星'));
         }
       }
     });
@@ -4653,6 +4647,51 @@ function getNeighbors(startId, depth, data) {
     if (!frontier.length) break;
   }
   return visited;
+}
+
+// Fernweh 的语义相似度边天然较密：每颗星只保留最强的少数关联用于逐层展开，
+// 否则 depth=1 就会立即覆盖整片星空。绘制仍可使用完整的高置信度星座线。
+function buildFernwehAdjacency(data, edges) {
+  var adjacency = {}, strongest = {};
+  (data.nodes || []).forEach(function (n) {
+    adjacency[n.id] = new Set();
+    strongest[n.id] = [];
+  });
+  (edges || []).forEach(function (e) {
+    if (strongest[e.source]) strongest[e.source].push(e);
+    if (strongest[e.target]) strongest[e.target].push(e);
+  });
+  Object.keys(strongest).forEach(function (id) {
+    strongest[id]
+      .sort(function (a, b) { return (b.weight || 0) - (a.weight || 0); })
+      .slice(0, FERNWEH_NEIGHBORS_PER_NODE)
+      .forEach(function (e) {
+        var other = e.source === id ? e.target : e.source;
+        if (!adjacency[other]) return;
+        adjacency[id].add(other);
+        adjacency[other].add(id);
+      });
+  });
+  data._adj = {};
+  Object.keys(adjacency).forEach(function (id) {
+    data._adj[id] = Array.from(adjacency[id]);
+  });
+}
+
+// 两种模式共用全局态选择；Fernweh 的 1–4 档会逐步显示候选星的 1/4–4/4。
+function getNetworkOverview(data, mode, depth) {
+  var sorted = (data.nodes || []).slice().sort(function (a, b) {
+    return mode === 'fernweh'
+      ? ((b.importance || 0) - (a.importance || 0)) || ((b.score || 0) - (a.score || 0))
+      : (b.freq || 1) - (a.freq || 1);
+  });
+  var maxVisible = Math.min(NETWORK_OVERVIEW_LIMIT, sorted.length);
+  var count = maxVisible;
+  if (mode === 'fernweh') {
+    var normalizedDepth = Math.max(1, Math.min(NETWORK_MAX_DEPTH, Number(depth) || 2));
+    count = Math.ceil(maxVisible * normalizedDepth / NETWORK_MAX_DEPTH);
+  }
+  return new Set(sorted.slice(0, count).map(function (n) { return n.id; }));
 }
 
 // –– 碰撞检测（返回被点击的节点 id 或 null） ––
@@ -4955,8 +4994,10 @@ function injectNetworkControls() {
     var v = parseInt(this.value);
     document.getElementById('depth-label').textContent = v;
     networkState.depth = v;
-    if (networkState.focusNode && networkData) {
-      networkState.visibleNodes = getNeighbors(networkState.focusNode, v, networkData);
+    if (networkData) {
+      networkState.visibleNodes = networkState.focusNode
+        ? getNeighbors(networkState.focusNode, v, networkData)
+        : getNetworkOverview(networkData, networkState.mode, v);
       if (networkState.mode === 'concept') {
         networkState.positions    = {};
         networkState.needsLayout  = true;
@@ -5006,12 +5047,9 @@ function startFernweh(canvas, ctx, W, H, data) {
   var termEl = document.getElementById('network-terminal');
   if (termEl) termEl.classList.add('star-active');
 
-  // 与 Concept 一样沿数据中的完整关系网按 depth 展开。
-  buildAdjacency(data);
-  var brightest = nodes.slice().sort(function (a, b) {
-    return ((b.importance || 0) - (a.importance || 0)) || ((b.score || 0) - (a.score || 0));
-  });
-  networkState.visibleNodes = new Set(brightest.slice(0, 30).map(function (n) { return n.id; }));
+  // 与 Concept 一样按图的层级做 BFS；Fernweh 使用最强关联组成稀疏展开图。
+  buildFernwehAdjacency(data, edges);
+  networkState.visibleNodes = getNetworkOverview(data, 'fernweh', networkState.depth);
   networkState.needsLayout = false;
   _netRotAngle = 0;
 
@@ -5130,7 +5168,7 @@ function startFernweh(canvas, ctx, W, H, data) {
     ctx.textAlign = 'center';
     ctx.fillText(networkState.focusNode
       ? ('DEPTH ' + networkState.depth + ' · ' + visibleNodes.length + ' STARS · 点击焦点返回全局')
-      : ('TOP ' + visibleNodes.length + ' STARS · 点击展开星群'), W / 2, 22);
+      : ('DEPTH ' + networkState.depth + ' · ' + visibleNodes.length + ' STARS · 点击展开星群'), W / 2, 22);
     _netRAF = requestAnimationFrame(frame);
   }
   _netRAF = requestAnimationFrame(frame);
