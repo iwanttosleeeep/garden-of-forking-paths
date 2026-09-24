@@ -6,27 +6,6 @@ DASHBOARD = (
 ).read_text(encoding="utf-8")
 
 
-def test_fernweh_reuses_the_concept_depth_interaction():
-    assert "networkState.mode = 'fernweh';" in DASHBOARD
-    assert "ensureNetworkInteractions(canvas);" in DASHBOARD
-    assert "function ensureNetworkInteractions(canvas)" in DASHBOARD
-    assert "networkState.visibleNodes = getNeighbors(hit, networkState.depth, d);" in DASHBOARD
-    assert "? getNeighbors(networkState.focusNode, v, networkData)" in DASHBOARD
-    assert "var visibleEdges = edges.filter(function (e)" in DASHBOARD
-    assert "FERNWEH · DEPTH " in DASHBOARD
-    assert "buildFernwehAdjacency(data, edges);" in DASHBOARD
-    assert "function buildFernwehAdjacency(data, edges)" in DASHBOARD
-    assert "function getNetworkOverview(data, mode, depth)" in DASHBOARD
-    assert "getNetworkOverview(networkData, networkState.mode, v)" in DASHBOARD
-    assert "adjacency[n.id] = new Set();" in DASHBOARD
-    assert "data._adj[id] = Array.from(adjacency[id]);" in DASHBOARD
-    assert "var FERNWEH_NEIGHBORS_PER_NODE = 2;" in DASHBOARD
-    assert "Math.ceil(maxVisible * normalizedDepth / NETWORK_MAX_DEPTH)" in DASHBOARD
-    assert "function _fwViewport(" not in DASHBOARD
-    assert "ctx.scale(viewport.scale, viewport.scale);" not in DASHBOARD
-    assert "networkState.depth = v;" in DASHBOARD
-
-
 def test_reading_uses_senn_and_the_shorter_copy():
     assert ">已读完</button>" in DASHBOARD
     assert "这一段读完了" not in DASHBOARD

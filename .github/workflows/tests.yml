@@ -15,9 +15,17 @@ jobs:
     runs-on: ubuntu-latest
     env:
       UV_VERSION: '0.11.23'
-      UV_EXCLUDE_NEWER: '2026-07-12T04:13:06Z'
+      UV_EXCLUDE_NEWER: '2026-09-23T07:36:10Z'
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up Node for frontend behavior tests
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Test memory network interactions
+        run: node --test tests/frontend/network-behavior.test.cjs
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
