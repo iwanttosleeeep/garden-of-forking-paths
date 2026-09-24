@@ -1,4 +1,5 @@
 import json
+from datetime import date, timedelta
 
 import pytest
 
@@ -116,9 +117,10 @@ async def test_sterling_unix_milliseconds_keep_a_local_calendar_date(monkeypatch
 @pytest.mark.asyncio
 async def test_journal_tool_only_reveals_text_for_explicit_query():
     manager = FakeBucketManager()
+    journal_date = (date.today() - timedelta(days=1)).isoformat()
     manager.buckets = [{
-        "id": "journal-1", "content": "Sterling 日记 · 2026-07-01 · 心情 4/5\n\nfinished a task",
-        "metadata": {"source_tool": "sterling", "journal_date": "2026-07-01", "journal_mood": 4, "tags": ["work"]},
+        "id": "journal-1", "content": f"Sterling 日记 · {journal_date} · 心情 4/5\n\nfinished a task",
+        "metadata": {"source_tool": "sterling", "journal_date": journal_date, "journal_mood": 4, "tags": ["work"]},
     }]
     old = rt.bucket_mgr
     rt.bucket_mgr = manager
