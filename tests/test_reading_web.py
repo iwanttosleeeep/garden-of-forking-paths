@@ -20,7 +20,8 @@ class FakeMcp:
 class FakeUpload:
     filename = "shared.md"
 
-    async def read(self):
+    async def read(self, size=-1):
+        assert size == reading.MAX_BOOK_BYTES + 1
         return "# First\n\nA quiet opening.\n\n# Second\n\nA different path.".encode()
 
 

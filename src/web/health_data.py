@@ -10,8 +10,9 @@ import os
 import re
 import secrets
 import tempfile
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from starlette.requests import Request
 from starlette.responses import Response
@@ -62,12 +63,21 @@ def _read_store() -> dict[str, Any]:
     try:
         with open(_data_path(), "r", encoding="utf-8") as handle:
             value = json.load(handle)
-        return value if isinstance(value, dict) and isinstance(value.get("daily"), dict) else {"version": 1, "daily": {}}
     except FileNotFoundError:
         return {"version": 1, "daily": {}}
     except (OSError, json.JSONDecodeError):
         sh.logger.warning("health summary store is unreadable", exc_info=True)
         return {"version": 1, "daily": {}}
+    if not isinstance(value, dict) or not isinstance(value.get("daily"), dict):
+        return {"version": 1, "daily": {}}
+    # Expiry also applies when the companion stops syncing.  Return the pruned
+    # view even if a temporarily read-only disk prevents persisting the cleanup.
+    if _prune_daily(value):
+        try:
+            _write_store(value)
+        except OSError:
+            sh.logger.warning("expired health summaries could not be removed from disk", exc_info=True)
+    return value
 
 
 def _write_store(store: dict[str, Any]) -> None:
@@ -162,11 +172,38 @@ def _clean_day(item: Any) -> dict[str, Any]:
     return result
 
 
-def _prune_daily(store: dict[str, Any]) -> None:
-    """Keep only the newest daily summaries; Health is a short rolling view."""
+def _today() -> date:
+    return datetime.now(ZoneInfo(_timezone())).date()
+
+
+def _day_in_window(key: str, first: date, last: date) -> bool:
+    try:
+        return first <= date.fromisoformat(key) <= last
+    except (TypeError, ValueError):
+        return False
+
+
+def _prune_daily(store: dict[str, Any]) -> bool:
+    """Expire records older than 30 calendar days, including today.
+
+    Future-dated source records are preserved, not silently destroyed because
+    of a clock discrepancy.  Readers exclude them until their date arrives.
+    """
+    first = _today() - timedelta(days=_MAX_RETAINED_DAYS - 1)
     daily = store["daily"]
-    for obsolete_date in sorted(daily, reverse=True)[_MAX_RETAINED_DAYS:]:
+    expired = [key for key in daily if _day_in_window(key, date.min, first - timedelta(days=1))]
+    for obsolete_date in expired:
         del daily[obsolete_date]
+    return bool(expired)
+
+
+def read_daily_summaries(days: int = _MAX_RETAINED_DAYS) -> list[dict[str, Any]]:
+    """Read a bounded local-calendar slice without changing source date labels."""
+    count = max(1, min(_MAX_RETAINED_DAYS, days))
+    today = _today()
+    first = today - timedelta(days=count - 1)
+    daily = _read_store()["daily"]
+    return [daily[key] for key in sorted(daily, reverse=True) if _day_in_window(key, first, today)]
 
 
 def _sync_key_ok(request: Request) -> bool:
@@ -226,9 +263,8 @@ def register(mcp) -> None:
         err = sh._require_auth(request)
         if err:
             return err
-        daily = _read_store()["daily"]
-        entries = [daily[key] for key in sorted(daily, reverse=True)[:30]]
-        return JSONResponse({"ok": True, "days": entries, "count": len(daily)})
+        entries = read_daily_summaries()
+        return JSONResponse({"ok": True, "days": entries, "count": len(entries)})
 
     @mcp.custom_route("/api/health/sync/status", methods=["GET"])
     async def health_status(request: Request) -> Response:
