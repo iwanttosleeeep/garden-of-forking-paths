@@ -822,8 +822,7 @@ async def check_up(days: Optional[int] = 7) -> str:
     except (TypeError, ValueError, OverflowError):
         return "days 必须是 1 到 30 的数字。"
     from web import health_data
-    store = health_data._read_store()
-    rows = [store["daily"][key] for key in sorted(store["daily"], reverse=True)[:count]]
+    rows = health_data.read_daily_summaries(count)
     if not rows:
         return "没有已同步的 Health 记录。"
     return "=== Health summary ===\n" + json.dumps(rows, ensure_ascii=False, indent=2)

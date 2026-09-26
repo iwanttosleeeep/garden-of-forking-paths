@@ -1,4 +1,9 @@
 import pytest
+import ast
+import json
+from datetime import date, datetime
+from pathlib import Path
+from typing import Optional
 
 from web.health_data import _clean_day, _prune_daily
 from web import health_data
@@ -33,7 +38,8 @@ def test_health_daily_summary_rejects_invalid_or_implausible_data(payload):
         _clean_day(payload)
 
 
-def test_health_daily_store_keeps_only_the_newest_30_days():
+def test_health_daily_store_keeps_only_the_newest_30_days(monkeypatch):
+    monkeypatch.setattr(health_data, "_today", lambda: date(2026, 7, 31))
     store = {"daily": {
         f"2026-07-{day:02d}": {"date": f"2026-07-{day:02d}"}
         for day in range(1, 32)
@@ -44,6 +50,76 @@ def test_health_daily_store_keeps_only_the_newest_30_days():
     assert len(store["daily"]) == 30
     assert "2026-07-01" not in store["daily"]
     assert "2026-07-31" in store["daily"]
+
+
+def test_health_retention_expires_sparse_old_days_but_preserves_future_dates(monkeypatch):
+    monkeypatch.setattr(health_data, "_today", lambda: date(2026, 9, 26))
+    dates = ["2025-01-01", "2026-08-27", "2026-08-28", "2026-09-26", "2026-10-01"]
+    store = {"daily": {day: {"date": day} for day in dates}}
+
+    assert _prune_daily(store) is True
+    assert list(store["daily"]) == dates[2:]
+    assert _prune_daily(store) is False
+
+
+def test_health_read_expires_records_without_another_sync(tmp_path, monkeypatch):
+    path = tmp_path / "health.json"
+    path.write_text(json.dumps({"version": 1, "daily": {
+        "2026-08-27": {"date": "2026-08-27"},
+        "2026-09-26": {"date": "2026-09-26"},
+    }}), encoding="utf-8")
+    monkeypatch.setattr(health_data, "_data_path", lambda: str(path))
+    monkeypatch.setattr(health_data, "_today", lambda: date(2026, 9, 26))
+
+    assert list(health_data._read_store()["daily"]) == ["2026-09-26"]
+    assert list(json.loads(path.read_text(encoding="utf-8"))["daily"]) == ["2026-09-26"]
+    monkeypatch.setattr(health_data, "_today", lambda: date(2026, 10, 26))
+    assert health_data.read_daily_summaries() == []
+    assert json.loads(path.read_text(encoding="utf-8"))["daily"] == {}
+
+
+def test_health_query_uses_calendar_days_not_record_count(monkeypatch):
+    monkeypatch.setattr(health_data, "_today", lambda: date(2026, 9, 26))
+    dates = ["2026-09-27", "2026-09-26", "2026-09-20", "2026-09-19", "2026-08-28"]
+    monkeypatch.setattr(health_data, "_read_store", lambda: {
+        "daily": {day: {"date": day} for day in dates},
+    })
+
+    assert [row["date"] for row in health_data.read_daily_summaries(7)] == dates[1:3]
+    assert [row["date"] for row in health_data.read_daily_summaries(1)] == dates[1:2]
+
+
+def test_health_calendar_uses_configured_timezone(monkeypatch):
+    class FixedDatetime:
+        @staticmethod
+        def now(zone):
+            return datetime.fromisoformat("2026-09-25T17:00:00+00:00").astimezone(zone)
+
+    monkeypatch.setattr(health_data, "datetime", FixedDatetime)
+    monkeypatch.setattr(health_data.sh, "config", {"timezone": "Asia/Hong_Kong"})
+    assert health_data._today() == date(2026, 9, 26)
+    monkeypatch.setattr(health_data.sh, "config", {"timezone": "UTC"})
+    assert health_data._today() == date(2026, 9, 25)
+
+
+@pytest.mark.asyncio
+async def test_check_up_uses_shared_calendar_reader(monkeypatch):
+    # Load only this tool function: importing server starts real runtime services.
+    source = Path(__file__).resolve().parents[1] / "src" / "server.py"
+    tree = ast.parse(source.read_text(encoding="utf-8"))
+    function = next(node for node in tree.body if isinstance(node, ast.AsyncFunctionDef) and node.name == "check_up")
+    function.decorator_list = []
+    namespace = {"Optional": Optional, "json": json}
+    exec(compile(ast.Module(body=[function], type_ignores=[]), str(source), "exec"), namespace)
+    requested = []
+
+    def read_days(days):
+        requested.append(days)
+        return [{"date": "2026-09-26"}]
+
+    monkeypatch.setattr(health_data, "read_daily_summaries", read_days)
+    assert "2026-09-26" in await namespace["check_up"](7)
+    assert requested == [7]
 
 
 @pytest.mark.asyncio

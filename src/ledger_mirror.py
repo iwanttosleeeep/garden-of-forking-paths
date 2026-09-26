@@ -4,11 +4,15 @@ from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
+import threading
 from typing import Any, Iterator
 
 
 LEDGER_SCHEMA_VERSION = 1
 LEDGER_ROLE = "mirror"
+# Coordinate instances as well as threads in this process.  Separate processes
+# must still arrange a single writer, as before.
+_LEDGER_LOCK = threading.RLock()
 
 
 class LedgerMirror:
@@ -20,6 +24,15 @@ class LedgerMirror:
 
     def __init__(self, path: str | Path):
         self.path = Path(path)
+        self._sequence_fingerprint: tuple[int, ...] | None = None
+        self._cached_sequence: int | None = None
+
+    def _fingerprint(self) -> tuple[int, ...] | None:
+        try:
+            stat = self.path.stat()
+        except FileNotFoundError:
+            return None
+        return (stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns)
 
     def append_event(
         self,
@@ -29,6 +42,24 @@ class LedgerMirror:
         trace_kind: str,
         payload: dict[str, Any] | None = None,
         body: str = "",
+    ) -> dict[str, Any]:
+        with _LEDGER_LOCK:
+            return self._append_event_locked(
+                event_type=event_type,
+                trace_id=trace_id,
+                trace_kind=trace_kind,
+                payload=payload,
+                body=body,
+            )
+
+    def _append_event_locked(
+        self,
+        *,
+        event_type: str,
+        trace_id: str,
+        trace_kind: str,
+        payload: dict[str, Any] | None,
+        body: str,
     ) -> dict[str, Any]:
         body_hash = _hash_body(body)
         event = {
@@ -46,18 +77,25 @@ class LedgerMirror:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._ensure_append_starts_on_new_line()
         with self.path.open("a", encoding="utf-8", newline="\n") as f:
-            f.write(json.dumps(event, ensure_ascii=False, sort_keys=True))
-            f.write("\n")
+            f.write(json.dumps(event, ensure_ascii=False, sort_keys=True) + "\n")
+        self._cached_sequence = event["seq"]
+        self._sequence_fingerprint = self._fingerprint()
         return event
 
     def latest_seq(self) -> int:
-        latest = 0
-        for event in self.iter_events():
-            try:
-                latest = max(latest, int(event.get("seq", 0)))
-            except (TypeError, ValueError):
-                continue
-        return latest
+        with _LEDGER_LOCK:
+            fingerprint = self._fingerprint()
+            if self._cached_sequence is not None and fingerprint == self._sequence_fingerprint:
+                return self._cached_sequence
+            latest = 0
+            for event in self.iter_events():
+                try:
+                    latest = max(latest, int(event.get("seq", 0)))
+                except (TypeError, ValueError, OverflowError):
+                    continue
+            self._cached_sequence = latest
+            self._sequence_fingerprint = fingerprint
+            return latest
 
     def iter_events(self) -> Iterator[dict[str, Any]]:
         if not self.path.exists():
@@ -68,9 +106,11 @@ class LedgerMirror:
                 if not line:
                     continue
                 try:
-                    yield json.loads(line)
+                    event = json.loads(line)
                 except json.JSONDecodeError:
                     continue
+                if isinstance(event, dict):
+                    yield event
 
     def verify_integrity(self) -> dict[str, Any]:
         valid_events = 0
@@ -99,14 +139,14 @@ class LedgerMirror:
                 except json.JSONDecodeError:
                     invalid_lines.append(lineno)
                     continue
+                if not isinstance(event, dict):
+                    invalid_lines.append(lineno)
+                    continue
                 valid_events += 1
                 try:
                     latest_seq = max(latest_seq, int(event.get("seq", 0)))
-                except (TypeError, ValueError):
-                    invalid_lines.append(lineno)
-                try:
                     schema_versions.add(int(event.get("schema_version")))
-                except (TypeError, ValueError):
+                except (TypeError, ValueError, OverflowError):
                     invalid_lines.append(lineno)
 
         return {

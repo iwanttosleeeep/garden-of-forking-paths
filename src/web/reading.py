@@ -8,7 +8,7 @@ import os
 from starlette.requests import Request
 from starlette.responses import JSONResponse, PlainTextResponse, Response
 
-from reading_library import ReadingLibrary, ReadingLibraryError
+from reading_library import MAX_BOOK_BYTES, ReadingLibrary, ReadingLibraryError
 from utils import atomic_update_config_yaml, clean_llm_json
 from weread_client import (
     WEREAD_SKILL_VERSION,
@@ -211,7 +211,7 @@ def register(mcp) -> None:
             upload = form.get("file")
             if upload is None or not hasattr(upload, "read"):
                 raise ReadingLibraryError("请选择 EPUB、TXT 或 Markdown 文件")
-            data = await upload.read()
+            data = await upload.read(MAX_BOOK_BYTES + 1)
             library = _library()
             book = library.import_book(
                 str(getattr(upload, "filename", "")),

@@ -1092,6 +1092,7 @@ class BucketManager:
         # --- Pinned/protected buckets: lock importance to 10, ignore importance changes ---
         # --- 钉选/保护桶：importance 不可修改，强制保持 10 ---
         was_pinned = parse_bool(post.get("pinned", False), default=False)
+        previous_type = post.get("type")
         is_pinned = was_pinned or parse_bool(
             post.get("protected", False), default=False
         )
@@ -1203,8 +1204,28 @@ class BucketManager:
             post["last_active"] = now_iso()
             post["activation_count"] = int(post.get("activation_count") or 0) + 1
 
+        # Resolve pin lifecycle before the single write. The caller may already
+        # have supplied the new type, so the old type governs unpinning.
+        target_type_dir = None
+        if kwargs.get("pinned"):
+            post["type"] = "permanent"
+            target_type_dir = self.permanent_dir
+        elif (
+            "pinned" in kwargs
+            and not kwargs["pinned"]
+            and was_pinned
+            and not parse_bool(post.get("protected", False), default=False)
+            and previous_type == "permanent"
+        ):
+            post["type"] = "dynamic"
+            target_type_dir = self.dynamic_dir
+
         try:
             _atomic_write_text(file_path, frontmatter.dumps(post))
+            if target_type_dir is not None:
+                file_path = self._move_bucket(
+                    file_path, target_type_dir, post.get("domain") or ["未分类"]
+                )
         except OSError as e:
             logger.error(f"Failed to write bucket update / 写入桶更新失败: {file_path}: {e}")
             return False
@@ -1216,30 +1237,6 @@ class BucketManager:
                 activation_count=post["activation_count"],
                 file_path=file_path,
             )
-
-        # --- Auto-move: pinned → permanent/ ---
-        # --- 自动移动：钉选 → permanent/ ---
-        # NOTE: resolved buckets are NOT auto-archived here.
-        # They stay in dynamic/ and decay naturally until score < threshold.
-        # 注意：resolved 桶不在此自动归档，留在 dynamic/ 随衰减引擎自然归档。
-        domain: list[str] = post.get("domain") or ["未分类"]  # type: ignore[assignment]
-        if kwargs.get("pinned") and post.get("type") != "permanent":
-            post["type"] = "permanent"
-            _atomic_write_text(file_path, frontmatter.dumps(post))
-            self._move_bucket(file_path, self.permanent_dir, domain)
-        # --- Reverse: unpin → demote only buckets that were actually pinned.
-        # `type=permanent` is also a first-class bucket type, so an idempotent
-        # pinned=False update must not move explicit permanent memories.
-        elif (
-            "pinned" in kwargs
-            and not kwargs.get("pinned")
-            and was_pinned
-            and not parse_bool(post.get("protected", False), default=False)
-            and post.get("type") == "permanent"
-        ):
-            post["type"] = "dynamic"
-            _atomic_write_text(file_path, frontmatter.dumps(post))
-            self._move_bucket(file_path, self.dynamic_dir, domain)
 
         logger.info(f"Updated bucket / 更新记忆桶: {bucket_id}")
 

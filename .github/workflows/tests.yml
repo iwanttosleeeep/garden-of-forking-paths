@@ -24,8 +24,8 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Test memory network interactions
-        run: node --test tests/frontend/network-behavior.test.cjs
+      - name: Test dashboard interactions
+        run: node --test tests/frontend/*.test.cjs
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5

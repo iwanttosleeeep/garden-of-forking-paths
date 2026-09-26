@@ -1,12 +1,13 @@
-"""Private Markdown chat-history library, deliberately outside memos and MCP."""
+"""Private Markdown chat-history library, read explicitly through recall."""
+import hashlib
 import json
 import os
 import re
-import tempfile
 from datetime import datetime
 
 from starlette.requests import Request
 from starlette.responses import Response
+from utils import atomic_write_text
 
 from . import _shared as sh
 
@@ -33,23 +34,22 @@ def _index() -> dict:
 
 
 def _write_index(value: dict) -> None:
-    fd, temporary = tempfile.mkstemp(prefix="chat-index-", dir=_directory())
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            json.dump(value, handle, ensure_ascii=False, indent=2)
-        os.replace(temporary, _index_path())
-    finally:
-        if os.path.exists(temporary):
-            os.unlink(temporary)
+    atomic_write_text(_index_path(), json.dumps(value, ensure_ascii=False, indent=2))
 
 
 def _safe_name(value: str) -> str:
-    name = re.sub(r"[^A-Za-z0-9._ -]+", "_", os.path.basename(value)).strip(" .")
+    name = re.sub(r"[^\w. -]+", "_", os.path.basename(value.replace("\\", "/"))).strip(" .")
     if not name.lower().endswith(".md"):
         raise ValueError("只接受 .md 文件")
     if not name or name == ".md":
         raise ValueError("文件名无效")
-    return name[:160]
+    # Keep the extension and distinguish long names sharing the same prefix.
+    # Bound UTF-8 bytes, not characters, for portable filesystem limits.
+    if len(name.encode("utf-8")) > 160:
+        digest = hashlib.sha256(name.encode("utf-8")).hexdigest()[:12]
+        stem = name[:-3].encode("utf-8")[:144].decode("utf-8", errors="ignore")
+        name = f"{stem}-{digest}{name[-3:]}"
+    return name
 
 
 def _list() -> list[dict]:
@@ -83,14 +83,15 @@ def register(mcp) -> None:
             if upload is None or not hasattr(upload, "read"):
                 raise ValueError("请选择 Markdown 文件")
             name = _safe_name(str(getattr(upload, "filename", "")))
-            content = await upload.read()
+            content = await upload.read(_MAX_BYTES + 1)
             if not content or len(content) > _MAX_BYTES:
                 raise ValueError("文件必须介于 1 B 与 10 MB 之间")
-            content.decode("utf-8")
-            with open(os.path.join(_directory(), name), "wb") as handle:
-                handle.write(content)
+            text = content.decode("utf-8")
+            atomic_write_text(os.path.join(_directory(), name), text)
             index = _index()
-            index[name] = {"title": name[:-3], "description": "", "uploaded_at": datetime.now().isoformat(timespec="seconds")}
+            previous = index.get(name)
+            metadata = previous if isinstance(previous, dict) else {}
+            index[name] = {"title": metadata.get("title", name[:-3]), "description": metadata.get("description", ""), "uploaded_at": datetime.now().isoformat(timespec="seconds")}
             _write_index(index)
             return JSONResponse({"ok": True, "documents": _list()})
         except (UnicodeDecodeError, ValueError) as exc:
@@ -106,6 +107,8 @@ def register(mcp) -> None:
             if not os.path.isfile(os.path.join(_directory(), name)):
                 raise ValueError("未找到文件")
             body = await request.json()
+            if not isinstance(body, dict):
+                raise ValueError("请求格式必须是对象")
             index = _index()
             item = index.setdefault(name, {})
             for field, maximum in (("title", 160), ("description", 1000)):

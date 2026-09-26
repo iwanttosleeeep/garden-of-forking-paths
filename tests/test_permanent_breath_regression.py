@@ -288,6 +288,21 @@ async def test_repair_pinned_desync_does_not_demote_explicit_permanent_bucket(bu
 
 
 @pytest.mark.asyncio
+async def test_explicit_type_with_pin_update_keeps_storage_directory_in_sync(bucket_mgr):
+    bucket_id = await bucket_mgr.create(content="Pin from dashboard edit", bucket_type="dynamic")
+    assert await bucket_mgr.update(bucket_id, pinned=True, type="permanent")
+    pinned = await bucket_mgr.get(bucket_id)
+    assert pinned["metadata"]["type"] == "permanent"
+    assert f"{os.sep}permanent{os.sep}" in pinned["path"]
+
+    assert await bucket_mgr.update(bucket_id, pinned=False, type="dynamic")
+    unpinned = await bucket_mgr.get(bucket_id)
+    assert unpinned["metadata"]["type"] == "dynamic"
+    assert f"{os.sep}dynamic{os.sep}" in unpinned["path"]
+    assert unpinned["content"] == "Pin from dashboard edit"
+
+
+@pytest.mark.asyncio
 async def test_idempotent_unpinned_update_preserves_explicit_permanent_bucket(bucket_mgr):
     bucket_id = await bucket_mgr.create(
         content="Permanent buckets should survive an idempotent pinned false update.",
