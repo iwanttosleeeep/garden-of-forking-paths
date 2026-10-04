@@ -30,6 +30,11 @@ STATIC_ASSETS = {
     "manifest.json": "application/manifest+json",
     "human-settings.js": "application/javascript",
     "self-panel.js": "application/javascript",
+    "voice.css": "text/css",
+    "voice-bridge.js": "application/javascript",
+    "voice-endpoint.js": "application/javascript",
+    "voice-app.js": "application/javascript",
+    "voice-delivery.js": "application/javascript",
 }
 
 VERSIONED_ASSETS = (
@@ -37,6 +42,11 @@ VERSIONED_ASSETS = (
     "/static/icon-180.png",
     "/static/human-settings.js",
     "/static/self-panel.js",
+    "/static/voice.css",
+    "/static/voice-bridge.js",
+    "/static/voice-endpoint.js",
+    "/static/voice-app.js",
+    "/static/voice-delivery.js",
 )
 
 
@@ -68,6 +78,21 @@ def register(mcp) -> None:
     async def garden_dashboard(request: Request) -> Response:
         """Serve the authenticated Garden dashboard after the map entry."""
         return await serve_frontend_page("dashboard.html")
+
+    @mcp.custom_route("/voice", methods=["GET"])
+    async def voice_page(request: Request) -> Response:
+        """Standalone local voice controls; no Garden data or OAuth changes."""
+        response = await serve_frontend_page("voice.html")
+        response.headers["Permissions-Policy"] = (
+            "camera=(), geolocation=(), microphone=(self), payment=(), usb=(), "
+            "local-network-access=(self), loopback-network=(self)"
+        )
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; script-src 'self'; style-src 'self'; "
+            "connect-src 'self' http://127.0.0.1:8765; media-src 'self' blob:; "
+            "object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+        )
+        return response
 
     # iter 1.7 §C/§H: serve frontend static assets (app icons / manifest)
     # 安全要点：必须白名单过滤文件名，绝不能让 request 直接拼路径，

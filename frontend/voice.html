@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>传声小屋 · Signal Hut · Garden</title>
+  <meta name="referrer" content="no-referrer">
+  <link rel="icon" href="/static/favicon.svg">
+  <script src="/static/voice-bridge.js" defer></script>
+  <link rel="stylesheet" href="/static/voice.css">
+  <script src="/static/voice-endpoint.js" defer></script>
+  <script src="/static/voice-delivery.js" defer></script>
+  <script src="/static/voice-app.js" defer></script>
+</head>
+<body>
+<main>
+  <header><a class="brand" href="/">GARDEN <span>OF FORKING PATHS</span></a><nav aria-label="返回导航"><a href="/">岛屿地图 ↗</a><a href="/garden">回到花园 ↗</a></nav></header>
+  <section class="intro">
+    <div><p class="eyebrow">FIELD STATION № 12 &nbsp; / &nbsp; SIGNAL HUT</p><h1>传声小屋<span>Something to tell you.</span></h1><p class="lead">把今天的一小句话，<br>连同说话的样子，一起捎过去。</p><p class="intro-note">StackChan 收音 · 本机识别 · 核对后发送</p></div>
+    <div class="field-recorder" aria-hidden="true"><div class="recorder-handle"></div><div class="recorder-top"><span>GARDEN / PORTABLE VOICE</span><span>№ 012</span></div><div class="recorder-body"><div class="speaker"></div><div class="recorder-meter"><span>VOICE LEVEL</span><div class="meter-arc"><i></i></div><small>−20 &nbsp; −10 &nbsp; 0 &nbsp; +3</small></div></div><div class="recorder-bottom"><span class="record-dot"></span><span>PRESS TO TALK</span><b></b><b></b></div><div class="recorder-caption">A little outpost for things left unsaid.</div></div>
+  </section>
+  <section class="connection" aria-labelledby="bridge-title">
+    <div><p class="eyebrow">THE LOCAL LINE</p><h2 id="bridge-title">先接通这台电脑。</h2><p id="bridge-status" role="status" aria-live="polite">录音与识别留在 Mac；不需要另外打开声音小实验网页。</p></div>
+    <button id="bridge-connect" type="button">连接这台电脑 <span aria-hidden="true">→</span></button>
+    <details id="bridge-help"><summary>第一次使用，或没有接通？</summary><p>请在运行声音小实验后台服务的 Mac 上打开本页，并保持服务运行。若浏览器询问本地网络访问权限，请允许 Garden 连接这台电脑；只有使用电脑麦克风时，才会另外询问麦克风权限。</p><p>连接失败：先启动本机声音服务，再点连接。也可以使用最新版 Chrome 重试。不要关闭浏览器安全限制。手机上的“本机”是手机自己，不能借此连接 Mac 的 USB。</p><p>当前只接入 <code>127.0.0.1:8765</code>，不扫描局域网、不自动录音、不自动发送。重启 Mac 后仍需启动后台服务；本页不会远程启动本机程序。</p></details>
+  </section>
+  <fieldset id="voice-workspace" disabled><legend class="sr-only">声音工作台 · 连接本机服务后使用</legend>
+  <div class="workspace">
+    <section class="panel record-panel" aria-labelledby="record-title">
+      <p class="eyebrow">01 / 留下一句话</p><h2 id="record-title">随便说点什么。</h2><p class="muted">例如：“今天终于忙完了。”<br>再换一种语气说说看。</p>
+      <div class="record-stage"><div id="orb" class="orb" aria-hidden="true"><svg viewBox="0 0 48 48"><rect x="18" y="7" width="12" height="24" rx="6"/><path d="M12 24v2a12 12 0 0 0 24 0v-2M24 38v5M17 43h14"/></svg></div><div id="timer">00:00 <span>/ 00:30</span></div></div>
+      <button id="record" class="primary" type="button">电脑麦克风录音</button>
+      <fieldset class="record-options"><legend>用 StackChan 的麦克风</legend>
+        <p id="usb-status" class="small muted" role="status">通过 USB 数据线连接后，先检查连接。</p>
+        <div class="secondary-row"><button id="usb-probe" type="button">检查连接</button><button id="usb-record" type="button">StackChan 录 5 秒</button></div>
+        <p class="small muted">看到机器人显示 USB REC 再开口。仅点击后收音，5 秒后自动关闭；声音通过 USB 回到本机，不发送 Claude。上方按钮使用电脑麦克风。</p>
+      </fieldset>
+      <fieldset class="record-options"><legend>按你的节奏来</legend>
+        <label><input id="auto-stop" type="checkbox"> 停顿后自动结束（可选）</label>
+        <div class="option-row"><label for="patience">等多久</label><select id="patience"><option value="1600">1.6 秒</option><option value="2200" selected>2.2 秒</option><option value="3500">3.5 秒 · 慢慢想</option></select></div>
+        <div class="option-row"><label for="sensitivity">说话环境</label><select id="sensitivity"><option value="normal">普通</option><option value="soft">轻声 / 较远</option><option value="noisy">背景较吵</option></select></div>
+        <label class="small muted" for="mic-level">麦克风电平</label><meter id="mic-level" min="-80" max="0" value="-80">未录音</meter>
+        <p id="listening" class="small muted" role="status">点击后才录音，不会在后台偷听。</p>
+      </fieldset>
+      <div class="secondary-row"><label class="upload" for="file">上传录音<input id="file" type="file" accept="audio/*,.wav,.m4a,.mp3,.webm,.ogg"></label><button id="demo" type="button">试试模拟音频</button></div>
+      <p class="small muted">录音最长 30 秒。支持浏览器可解码的 WAV、MP3、M4A 等格式。请先停止音乐，再靠近麦克风说话。</p>
+      <div id="status" role="status" aria-live="polite">准备好了就开始吧。</div><p id="error" role="alert" hidden></p>
+    </section>
+    <section class="panel result-panel" aria-labelledby="result-title">
+      <div class="section-top"><div><p class="eyebrow">02 / 看看结果</p><h2 id="result-title">它听到了什么？</h2></div><span id="model" class="tag">转写模型准备中</span></div>
+      <div id="empty"><span class="empty-wave" aria-hidden="true">▂ ▄ ▆ ▃ ▇ ▅ ▂</span><p>你的一句话，会出现在这里。</p><small>连接本机模型后即可识别，无需填写 API Key。<br>原始录音不上传外部服务，也不自动保存。</small></div>
+      <div id="result" hidden>
+        <p id="source" class="small muted"></p><audio id="player" controls></audio>
+        <div class="text-label"><label for="transcript">识别文字 <span>· 可以修改</span></label><button id="retry" class="text-button" type="button">重新转写</button></div>
+        <textarea id="transcript" rows="3" placeholder="识别结果会出现在这里，也可以手动填写。"></textarea><p id="transcript-status" class="small muted" role="status"></p>
+        <details class="transcription-comparison"><summary>看看两份原始转写 · SenseVoice 优先</summary>
+          <p class="small muted">两份都是模型估计，不自动拼接或改写。上方文字可以修改，重试也会保留你的修改。</p>
+          <h3>SenseVoice · 主转写</h3><p id="sense-text">暂无可用文字</p>
+          <h3>Whisper · 备用 / 对照</h3><p id="whisper-text">暂无可用文字</p>
+        </details>
+        <div class="metrics"><div><span>音高中位数</span><strong id="pitch">—</strong><small id="pitch-range">等待声音分析</small></div><div><span>平均录音电平</span><strong id="level">—</strong><small>相对数字满幅，不是环境分贝</small></div><div><span>低能量间隙</span><strong id="gaps">—</strong><small>句内至少 0.3 秒的较轻片段</small></div></div>
+        <p id="summary" class="summary"></p><p id="warnings" class="small"></p>
+        <section class="annotation"><h3>这句话，听起来是什么样？</h3>
+          <div class="text-label"><span id="emotion-model" class="tag">自动标签准备中</span><button id="emotion-retry" class="text-button" type="button">重新识别标签</button></div>
+          <p id="emotion-status" class="small muted" role="status">录音后自动分析。</p>
+          <p class="auto-labels">模型原始判断：<strong id="auto-emotion">尚未分析</strong><br><span id="auto-events" class="small muted"></span></p>
+          <p class="small muted">模型仅估计声音线索，不代表你的真实心情，也不提供准确率百分比。下面可以补充或修正；不会覆盖模型原始结果，也不会自动训练模型。</p>
+          <label for="self-tone">我的语气补充 / 修正（可选）</label><select id="self-tone"><option value="">使用自动标签 · 不修改</option><option value="__reject__">无法判断 · 不采用自动标签</option><option>中性</option><option>平静</option><option>开心</option><option>疲惫</option><option>难过</option><option>生气</option><option>害怕</option><option>惊讶</option><option>厌恶</option><option>撒娇</option><option>开玩笑</option><option>其他</option></select>
+          <button id="emotion-reset" class="text-button" type="button">恢复自动标签</button>
+          <label for="self-note">补充说明</label><input id="self-note" type="text" maxlength="240" placeholder="例如：我是在笑着说，不是真的生气。">
+          <p id="effective-emotion" class="summary" role="status"></p>
+          <details><summary>看看本地完整分析 · 不会整份上传</summary><pre id="context-preview"></pre></details>
+        </section>
+        <section class="annotation" aria-labelledby="delivery-title">
+          <h3 id="delivery-title">把这句话告诉 Claude</h3>
+          <p id="delivery-config" class="small muted">正在检查接入配置…</p>
+          <p class="small muted">只发送下方文字与声音摘要，原始录音和两份原始转写不上传。VPS 只保留最近一句：新句替换旧句，读后删除，未读 10 分钟过期。当前读取不验证身份，任何能访问连接器接口的人都可能读取；不要发送敏感内容。</p>
+          <details><summary>预览实际发送内容</summary><pre id="delivery-preview"></pre></details>
+          <label><input id="delivery-confirm" type="checkbox"> 我已核对当前文字，同意发送以上内容。</label>
+          <button id="voice-send" class="primary" type="button" disabled>发送这句话</button>
+        </section>
+        <button id="export" type="button">保存这次结果 · JSON</button>
+        <button id="clear" type="button">清空本次录音</button>
+      </div>
+    </section>
+  </div>
+  <section id="delivery-receipt" class="panel delivery-receipt" hidden aria-label="语音消息发送状态">
+    <h2>回到原来的 Claude 对话</h2>
+    <p id="delivery-status" role="status"></p>
+    <p class="small muted">不需要复制领取码，也不会自动启动 Claude 回复。回到原对话让它调用 stackchan_receive_voice 即可。清空录音不会撤回已发送的消息。</p>
+    <button id="voice-withdraw" type="button">撤回本句</button>
+    <p class="small muted">撤回只删除仍在等待的这一句；Claude 已收到的内容仍保留在对话中。可以直接录制并发送下一句，它会替换未读旧句。刷新页面会丢失本次撤回按钮，但远端消息仍会到期删除。</p>
+  </section>
+  <section class="panel charts" id="charts" hidden>
+    <div class="section-top"><div><p class="eyebrow">03 / 声音的轮廓</p><h2>同一句话，哪里不一样？</h2></div><span class="tag">横轴：录音时间</span></div>
+    <div class="chart-grid"><div><h3>音高变化 <span>Hz</span></h3><canvas id="pitch-chart" aria-label="音高随录音时间变化的曲线"></canvas><p class="small muted">断线表示该处无法稳定估计音高。普通话和粤语的声调也会形成起伏。</p></div><div><h3>声音轻重 <span>dBFS</span></h3><canvas id="energy-chart" aria-label="录音电平随录音时间变化的曲线"></canvas><p class="small muted">阴影标记低能量间隙。麦克风距离、增益和环境噪声都会影响电平。</p></div></div>
+  </section>
+  </fieldset>
+  <footer><span class="footer-station">SIGNAL HUT / GARDEN FIELD STATION</span><br>本页不把录音、文字或分析写入 Garden 记忆库。<br>声音标签不是对真实心情的定论。没有个人基线时，不推断“比平时开心或低落”。<br><span>本地 SenseVoice 主转写与声音标签 + Whisper base 备用对照 · 准确度请以实际录音为准。</span></footer>
+</main>
+</body>
+</html>
