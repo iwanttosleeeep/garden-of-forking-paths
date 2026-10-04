@@ -61,3 +61,15 @@ def test_voice_links_do_not_enter_dashboard_tab_switcher(client):
     page = client.get("/garden").text
     assert 'href="/voice" class="voice-link"' in page
     assert 'data-tab="voice"' not in page
+
+
+def test_map_voice_landmark_uses_marked_island_position_and_english_only(client):
+    page = client.get("/").text
+    landmark = page.split('href="/voice"', 1)[1].split("</a>", 1)[0]
+    assert 'left:81.875%;top:27.1%' in landmark
+    assert ">VOICE</div>" in landmark
+    assert ">Signal Hut</div>" in landmark
+    assert "传声小屋" not in landmark
+    assert "M 720 268 C 870 236, 935 194, 1006 208 S 1122 223, 1179 225" in page
+    assert "传声小屋" in client.get("/voice").text
+    assert "传声小屋" in client.get("/garden").text
