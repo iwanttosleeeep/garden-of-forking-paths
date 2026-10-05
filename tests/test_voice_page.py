@@ -59,8 +59,12 @@ def test_voice_assets_are_whitelisted_versioned_and_available(client):
 def test_voice_links_do_not_enter_dashboard_tab_switcher(client):
     assert 'href="/voice"' in client.get("/").text
     page = client.get("/garden").text
-    assert 'href="/voice" class="voice-link"' in page
+    assert 'href="/voice" class="tab voice-link"' in page
     assert 'data-tab="voice"' not in page
+    assert "document.querySelectorAll('.tab[data-tab]').forEach(tab =>" in page
+    landmark = page.split('href="/voice"', 1)[1].split("</a>", 1)[0]
+    assert "style=" not in landmark
+    assert "↗" not in landmark
 
 
 def test_map_voice_landmark_uses_marked_island_position_and_english_only(client):
