@@ -39,7 +39,8 @@ message already in a Claude conversation. Avoid sensitive content.
    primary validation target. Browser microphone permission is separate.
 4. A phone cannot use the Mac service through its own 127.0.0.1. The page explains
    this, offline startup, old bridge versions, and denied permissions. It does not
-   install a login item or auto-start the Mac service after reboot.
+   install a login item itself. If the Mac companion has a user-approved login
+   agent, it starts after login; otherwise the service must be started manually.
 
 Only `/voice` overrides the default microphone-deny header, retaining camera,
 USB, geolocation, payment denial and frame restrictions. Its CSP permits exactly

@@ -39,7 +39,8 @@ const GardenVoice = (() => {
       button.disabled = true;
       document.getElementById('bridge-status').textContent = '正在连接；若浏览器询问本地网络权限，请选择允许。';
       try {
-        const response = await request('/api/status');
+        // Give the user time to answer the browser's first local-network prompt.
+        const response = await request('/api/status', {signal: AbortSignal.timeout(30000)});
         const data = await response.json();
         if (!response.ok || data.app !== 'stackchan-voice-lab' || data.bridge_protocol !== 'garden-voice-v1') {
           throw new Error('本机服务版本不匹配，请更新并重启声音服务。');

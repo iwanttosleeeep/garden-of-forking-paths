@@ -22,7 +22,7 @@
   <section class="connection" aria-labelledby="bridge-title">
     <div><p class="eyebrow">THE LOCAL LINE</p><h2 id="bridge-title">先接通这台电脑。</h2><p id="bridge-status" role="status" aria-live="polite">录音与识别留在 Mac；不需要另外打开声音小实验网页。</p></div>
     <button id="bridge-connect" type="button">连接这台电脑 <span aria-hidden="true">→</span></button>
-    <details id="bridge-help"><summary>第一次使用，或没有接通？</summary><p>请在运行声音小实验后台服务的 Mac 上打开本页，并保持服务运行。若浏览器询问本地网络访问权限，请允许 Garden 连接这台电脑；只有使用电脑麦克风时，才会另外询问麦克风权限。</p><p>连接失败：先启动本机声音服务，再点连接。也可以使用最新版 Chrome 重试。不要关闭浏览器安全限制。手机上的“本机”是手机自己，不能借此连接 Mac 的 USB。</p><p>当前只接入 <code>127.0.0.1:8765</code>，不扫描局域网、不自动录音、不自动发送。重启 Mac 后仍需启动后台服务；本页不会远程启动本机程序。</p></details>
+    <details id="bridge-help"><summary>第一次使用，或没有接通？</summary><p>请在运行声音小实验后台服务的 Mac 上打开本页，并保持服务运行。若浏览器询问本地网络访问权限，请允许 Garden 连接这台电脑；只有使用电脑麦克风时，才会另外询问麦克风权限。</p><p>连接失败：先确认本机声音服务正在运行，再点连接。已设置登录启动的 Mac 会在登录后自动运行；未设置时，需要先启动声音服务。也可以使用最新版 Chrome 重试。不要关闭浏览器安全限制。手机上的“本机”是手机自己，不能借此连接 Mac 的 USB。</p><p>当前只接入 <code>127.0.0.1:8765</code>，不扫描局域网、不自动录音、不自动发送。本页只连接已运行的服务，不会远程启动本机程序。</p></details>
   </section>
   <fieldset id="voice-workspace" disabled><legend class="sr-only">声音工作台 · 连接本机服务后使用</legend>
   <div class="workspace">
