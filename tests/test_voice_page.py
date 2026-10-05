@@ -74,6 +74,7 @@ def test_map_voice_landmark_uses_marked_island_position_and_english_only(client)
     assert ">VOICE</div>" in landmark
     assert ">Signal Hut</div>" in landmark
     assert "传声小屋" not in landmark
-    assert "M 720 268 C 870 236, 935 194, 1006 208 S 1122 223, 1179 225" in page
+    # One broad curve, without the old short reverse bend above Memos.
+    assert 'd="M 720 268 C 870 208, 1020 184, 1179 225"' in page
     assert "传声小屋" in client.get("/voice").text
     assert "传声小屋" in client.get("/garden").text
