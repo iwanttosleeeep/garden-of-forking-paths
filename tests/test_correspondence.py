@@ -249,3 +249,77 @@ async def test_real_mcp_schema_and_dispatch(test_config, monkeypatch):
     await mcp.call_tool("bottle_write", {"author": "Senn (test)", "to": "MCP-reader", "content": "reference"})
     await mcp.call_tool("bottle_read", {"to": "MCP-reader"})
     assert not web_mail.store().read_bottles("MCP-reader")["bottles"]
+
+
+def test_observer_sees_all_recipients_and_whole_threads_without_receipts(mail):
+    root = mail.write_bottle("A", "B", " first\n")
+    reply = mail.write_bottle("B", "A", "reply", root["id"])
+    new = mail.write_bottle("A", "B", "A separate opening")
+    public = mail.write_bottle("C", "anyone", "for everyone")
+    mail.read_bottles("B")
+    before = {p.name: p.read_bytes() for p in (mail.base / "bottles").glob("*.md")}
+    result = mail.browse_bottle_threads()
+    assert result["total"] == 3 and result["total_messages"] == 4
+    threads = {t["id"]: t for t in result["threads"]}
+    assert [r["id"] for r in threads[root["id"]]["messages"]] == [root["id"], reply["id"]]
+    assert threads[root["id"]]["messages"][0]["content"] == " first\n"
+    assert "B" in threads[root["id"]]["messages"][0]["read_by"]
+    assert not threads[root["id"]]["messages"][1]["read_by"]
+    assert threads[new["id"]]["messages"][0]["id"] == new["id"]
+    assert public["id"] in threads
+    mail.browse_bottle_threads()
+    assert before == {p.name: p.read_bytes() for p in (mail.base / "bottles").glob("*.md")}
+    # The actual instance, not the dashboard observer, still controls its receipt.
+    assert len(mail.read_bottles("A")["bottles"]) == 2
+
+
+def test_observer_pages_conversations_not_messages_and_keeps_parent_order(mail, monkeypatch):
+    root = mail.write_bottle("A", "B", "root")
+    rows = [{**root, "id": "root", "thread_id": "root"}]
+    # Reverse lexical IDs and identical timestamps must not reverse the reply chain.
+    for i in range(105):
+        rows.append({**root, "id": f"reply_{105-i:03}", "thread_id": "root",
+                     "reply_to": rows[-1]["id"], "content": f"reply {i}"})
+    rows.append({**root, "id": "other", "thread_id": "other", "created": "2099-01-01T00:00:00"})
+    monkeypatch.setattr(mail, "_rows", lambda kind: list(reversed(rows)))
+    first = mail.browse_bottle_threads(limit=1)
+    assert first["threads"][0]["id"] == "other" and first["has_more"]
+    second = mail.browse_bottle_threads(limit=1, offset=first["next_offset"])
+    assert not second["has_more"]
+    assert [r["id"] for r in second["threads"][0]["messages"]] == [r["id"] for r in rows[:-1]]
+    assert mail.browse_bottle_threads(offset=999)["threads"] == []
+
+
+def test_observer_keeps_orphaned_and_malformed_imported_replies_visible(mail, monkeypatch):
+    base = {"type": "bottle", "author": "A", "to": "B", "created": "2026-10-10", "content": "text", "read_by": {}}
+    monkeypatch.setattr(mail, "_rows", lambda kind: [
+        {**base, "id": "orphan", "thread_id": "missing", "reply_to": "missing"},
+        {**base, "id": "cycle_a", "thread_id": "cycle", "reply_to": "cycle_b"},
+        {**base, "id": "cycle_b", "thread_id": "cycle", "reply_to": "cycle_a"},
+    ])
+    result = mail.browse_bottle_threads()
+    assert result["total_messages"] == 3
+    assert all(t["root_missing"] for t in result["threads"])
+    assert sum(len(t["messages"]) for t in result["threads"]) == 3
+
+
+@pytest.mark.parametrize("kwargs", [{"limit": 0}, {"limit": 101}, {"limit": True}, {"offset": -1}, {"offset": True}])
+def test_observer_validates_pagination(mail, kwargs):
+    with pytest.raises(ValueError):
+        mail.browse_bottle_threads(**kwargs)
+
+
+def test_authenticated_observer_http_is_read_only_and_does_not_filter_recipient(client):
+    assert client.get("/api/bottles/threads").status_code == 401
+    headers = {"x-test-auth": "yes"}
+    for who in ("A", "B", "anyone"):
+        assert client.post("/api/bottles", json={"author": "sender", "to": who, "content": "body"}, headers=headers).status_code == 200
+    before = {p.name: p.read_bytes() for p in (web_mail.store().base / "bottles").glob("*.md")}
+    for _ in range(2):
+        result = client.get("/api/bottles/threads", headers=headers).json()
+        assert result["total"] == 3 and result["total_messages"] == 3
+        assert all(not row["read_by"] for t in result["threads"] for row in t["messages"])
+    assert before == {p.name: p.read_bytes() for p in (web_mail.store().base / "bottles").glob("*.md")}
+    assert client.post("/api/bottles/threads", headers=headers).status_code == 405
+    for query in ("limit=0", "offset=-1", "limit=bad"):
+        assert client.get("/api/bottles/threads?" + query, headers=headers).status_code == 400

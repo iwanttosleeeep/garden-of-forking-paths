@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from datetime import date as Date
 import fcntl
 import hashlib
+import heapq
 import json
 import os
 from pathlib import Path
@@ -191,6 +192,56 @@ class Correspondence:
                 row["unread"] = to not in row.get("read_by", {})
         return {"bottles": selected, "total": len(rows), "has_more": len(rows) > MAX_READ,
                 "notice": BOTTLE_NOTICE}
+
+    def browse_bottle_threads(self, limit=20, offset=0):
+        """Dashboard observer view: all recipients, full threads, no read receipts.
+
+        Pagination counts conversations, never individual messages, so a long
+        exchange cannot lose its opening or replies at the MCP 100-message cap.
+        This is deliberately separate from the instance-scoped MCP reader.
+        """
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= MAX_READ:
+            raise ValueError("limit must be between 1 and 100")
+        if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:
+            raise ValueError("offset must be a non-negative integer")
+        with self._lock():
+            rows = self._rows("bottles")
+        groups = {}
+        for row in rows:
+            key = (row.get("thread_id") or row["id"]) if row.get("reply_to") else row["id"]
+            groups.setdefault(key, []).append(row)
+        ordered = sorted(groups.items(), key=lambda item: (
+            max(str(r.get("created", "")) for r in item[1]), item[0]), reverse=True)
+        threads = []
+        for identifier, messages in ordered[offset:offset + limit]:
+            # Oldest available first, with parents before replies even when
+            # multiple writes share the same timestamp. No recursion depth cap.
+            by_id = {r["id"]: r for r in messages}
+            children = {}
+            ready = []
+            for row in messages:
+                parent = row.get("reply_to")
+                if parent in by_id:
+                    children.setdefault(parent, []).append(row)
+                else:
+                    heapq.heappush(ready, (str(row.get("created", "")), row["id"]))
+            result = []
+            seen = set()
+            while ready:
+                _, key = heapq.heappop(ready)
+                result.append(by_id[key])
+                seen.add(key)
+                for child in children.get(key, []):
+                    heapq.heappush(ready, (str(child.get("created", "")), child["id"]))
+            # Preserve visibility of malformed imported cycles, without changing
+            # their files or discarding messages from the owner's overview.
+            result.extend(sorted((r for r in messages if r["id"] not in seen),
+                                 key=lambda r: (str(r.get("created", "")), r["id"])))
+            threads.append({"id": identifier, "messages": result,
+                            "root_missing": identifier not in by_id})
+        next_offset = offset + len(threads)
+        return {"threads": threads, "total": len(groups), "total_messages": len(rows),
+                "has_more": next_offset < len(groups), "next_offset": next_offset}
 
     async def migrate_walk_letters(self, bucket_mgr, *, apply=False):
         """Prefix-only, no count/date assumption. Byte-verify before erasing.

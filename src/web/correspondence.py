@@ -65,6 +65,17 @@ def register(mcp):
         except (ValueError, TypeError) as exc:
             return JSONResponse({"error": str(exc)}, status_code=400)
 
+    @mcp.custom_route("/api/bottles/threads", methods=["GET"])
+    async def bottle_threads(request):
+        if error := sh._require_auth(request):
+            return error
+        try:
+            q = request.query_params
+            result = store().browse_bottle_threads(int(q.get("limit", "20")), int(q.get("offset", "0")))
+            return JSONResponse({"ok": True, **result})
+        except (ValueError, TypeError) as exc:
+            return JSONResponse({"error": str(exc)}, status_code=400)
+
     @mcp.custom_route("/api/bottles/read", methods=["POST"])
     async def read_bottles(request):
         if error := sh._require_auth(request):

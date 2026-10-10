@@ -77,6 +77,23 @@ def test_desktop_management_api_first_run_and_authenticated_flow():
             "setup_needed": False,
         }
 
+        # Owner browsing is a separate read-only surface from instance receipts.
+        opening = client.post("/api/bottles", json={
+            "author": "Docker A", "to": "Docker B", "content": "Original opening",
+        }).json()
+        answer = client.post("/api/bottles", json={
+            "author": "Docker B", "to": "Docker A", "content": "Original reply",
+            "reply_to": opening["id"],
+        }).json()
+        for _ in range(2):
+            overview = client.get("/api/bottles/threads?limit=100")
+            assert overview.status_code == 200
+            thread = next(t for t in overview.json()["threads"] if t["id"] == opening["id"])
+            assert [m["id"] for m in thread["messages"]] == [opening["id"], answer["id"]]
+            assert all(not m["read_by"] for m in thread["messages"])
+        unread = client.get("/api/bottles", params={"to": "Docker B", "unread_only": "true", "thread_id": opening["id"]})
+        assert unread.json()["total"] == 1
+
         config = client.get("/api/config")
         assert config.status_code == 200
         config_payload = config.json()
