@@ -38,6 +38,11 @@ function luminance(hex) {
     .map(n => n <= .04045 ? n/12.92 : ((n+.055)/1.055)**2.4);
   return values[0]*.2126+values[1]*.7152+values[2]*.0722;
 }
+test('bottle trail is a single smooth arc without an S-bend', () => {
+  const path = read('front-page.html').match(/data-trail="bottle" d="([^"]+)"/)[1];
+  // One quadratic segment has no inflection; preserve the branch and icon endpoints.
+  assert.equal(path, 'M 720 268 Q 710 105, 545 110');
+});
 test('both new sector colors are distinct with readable light labels', () => {
   const colors = ['A65442','75647E'];
   const existing = ['E8A33D','D96C2C','8A9A3B','D9A8A0','B8860B','7B3F1E','A8B0A0','7FCDBB','8A8065','6E9486','2F4F4F','577183'];
