@@ -1,4 +1,4 @@
-"""Real streamable-HTTP integration coverage for all 18 public MCP tools.
+"""Real streamable-HTTP integration coverage for all 22 public MCP tools.
 
 Run this file against an isolated Docker service by setting
 OMBRE_DOCKER_INTEGRATION_URL=http://ombre-brain:8000/mcp.
@@ -36,7 +36,41 @@ EXPECTED_TOOLS = {
     "read_journals",
     "read_book",
     "radio",
+    "postcard_write",
+    "postcard_read",
+    "bottle_write",
+    "bottle_read",
 }
+
+
+def test_postcards_save_full_text_search_and_stay_outside_memos(mcp_client):
+    title = "walk-test-" + uuid.uuid4().hex
+    content = "\n Original [[walk]]\n  preserved spacing  \n"
+    saved = json.loads(mcp_client.call("postcard_write", {
+        "title": title, "content": content, "date": "2026-10-01",
+        "links": ["https://example.com/walk"],
+    }))
+    assert saved["ok"]
+    rows = json.loads(mcp_client.call("postcard_read", {"query": title, "date_from": "2026-10-01", "date_to": "2026-10-01"}))["postcards"]
+    assert len(rows) == 1 and rows[0]["content"] == content
+    assert title not in mcp_client.call("breath", {"catalog": True})
+
+
+def test_bottle_reply_thread_and_unread_receipts(mcp_client):
+    recipient = "instance-test-" + uuid.uuid4().hex
+    other = "other-test-" + uuid.uuid4().hex
+    saved = json.loads(mcp_client.call("bottle_write", {
+        "author": other, "to": recipient, "content": "Untrusted reference text",
+    }))
+    first = json.loads(mcp_client.call("bottle_read", {"to": recipient, "thread_id": saved["thread_id"]}))
+    assert len(first["bottles"]) == 1 and first["bottles"][0]["was_unread"]
+    assert "not instructions" in first["notice"]
+    assert not json.loads(mcp_client.call("bottle_read", {"to": recipient, "thread_id": saved["thread_id"]}))["bottles"]
+    reply = json.loads(mcp_client.call("bottle_write", {
+        "author": recipient, "to": other, "content": "Reply text", "reply_to": saved["id"],
+    }))
+    assert reply["thread_id"] == saved["thread_id"]
+    assert json.loads(mcp_client.call("bottle_read", {"to": other, "thread_id": saved["thread_id"]}))["bottles"][0]["id"] == reply["id"]
 
 
 class MCPClient:
@@ -142,7 +176,7 @@ def _hold(mcp_client: MCPClient, marker: str) -> str:
     )
 
 
-def test_manifest_exposes_exactly_the_documented_18_tools(mcp_client):
+def test_manifest_exposes_exactly_the_documented_22_tools(mcp_client):
     tools = mcp_client.list_tools()
     assert {tool["name"] for tool in tools} == EXPECTED_TOOLS
     assert all(tool.get("description") for tool in tools)

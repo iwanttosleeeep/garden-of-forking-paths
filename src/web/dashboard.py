@@ -35,6 +35,8 @@ STATIC_ASSETS = {
     "voice-endpoint.js": "application/javascript",
     "voice-app.js": "application/javascript",
     "voice-delivery.js": "application/javascript",
+    "correspondence.js": "application/javascript",
+    "correspondence.css": "text/css",
 }
 
 VERSIONED_ASSETS = (
@@ -47,6 +49,8 @@ VERSIONED_ASSETS = (
     "/static/voice-endpoint.js",
     "/static/voice-app.js",
     "/static/voice-delivery.js",
+    "/static/correspondence.js",
+    "/static/correspondence.css",
 )
 
 

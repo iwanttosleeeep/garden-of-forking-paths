@@ -99,11 +99,11 @@ class PublicToolDesignContract:
     @classmethod
     def default(cls) -> "PublicToolDesignContract":
         return cls(
-            normal_tools=frozenset({"hold", "grow", "trace", "breath", "pulse", "dream", "anchor", "i", "letter", "plan", "echo", "radio"}),
+            normal_tools=frozenset({"hold", "grow", "trace", "breath", "pulse", "dream", "anchor", "i", "letter", "plan", "echo", "radio", "postcard_write", "bottle_write"}),
             # These are deliberately bounded readers of private user-owned
             # sources. They remain public MCP tools so Claude Connectors can
             # call them, but never perform discovery or automatic retrieval.
-            explicit_private_readers=frozenset({"recall", "check_up", "read_journals", "read_book"}),
+            explicit_private_readers=frozenset({"recall", "check_up", "read_journals", "read_book", "postcard_read", "bottle_read"}),
             compatibility_public_names={
                 "release": "anchor",
                 "letter_write": "letter",

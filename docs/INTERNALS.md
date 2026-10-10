@@ -107,7 +107,7 @@ Ombre-Brain/
 
 每个模块「干什么、边界在哪、依赖谁」：
 
-- **server.py**（约 1000 行）— MCP 服务入口。创建所有组件后调 `tools._runtime.init(...)` 注入依赖；18 个薄封装全部以 `@mcp.tool()` 注册到同一个 FastMCP 实例，不复制 SDK 私有 registry；对外只暴露 **单连接器 `/mcp`**。启动段调 `web.register_all(mcp)` 装配所有 HTTP 路由，并起 `mcp.streamable_http_app()` 一个 uvicorn 进程。
+- **server.py** — MCP 服务入口。创建所有组件后调 `tools._runtime.init(...)` 注入依赖；22 个薄封装全部以 `@mcp.tool()` 注册到同一个 FastMCP 实例，不复制 SDK 私有 registry；对外只暴露 **单连接器 `/mcp`**。启动段调 `web.register_all(mcp)` 装配所有 HTTP 路由，并起 `mcp.streamable_http_app()` 一个 uvicorn 进程。
 - **tools/**（MCP 工具应用层）— 详见下面「1.x tools/ 包结构」。
 - **web/**（HTTP/Dashboard 路由层）— 详见下面「1.y web/ 包结构」。从旧 server.py 巨石里拆出的 16 个域模块，每个导出 `register(mcp)`；cookie/CSRF/会话鉴权等共享依赖在 `web/_shared.py`（类比 `tools/_runtime.py`）。
 - **bucket_manager.py** — 桶 CRUD + 多维加权搜索 + `touch()` 激活刷新 + `_time_ripple()` 时间涟漪 + 文件搬运（archive/permanent 之间）。
@@ -265,12 +265,13 @@ feel 桶自身：
 
 ---
 
-## 3. MCP 工具规格（共 18 个）
+## 3. MCP 工具规格（共 22 个）
 
-> **单连接器**：18 个工具全部直接注册到同一个 `mcp`；stdio / sse / streamable-http 使用同一份 manifest。
+> **单连接器**：22 个工具全部直接注册到同一个 `mcp`；stdio / sse / streamable-http 使用同一份 manifest。
 > - 记忆与自我 —— `breath` / `hold` / `grow` / `trace` / `dream` / `anchor` / `release` / `pulse` / `plan` / `letter_write` / `letter_read` / `I`
 > - 显式私人读取 —— `echo` / `read_journals` / `recall` / `check_up` / `read_book`
 > - 音乐协作 —— `radio`
+> - 独立通信 —— `postcard_write` / `postcard_read` / `bottle_write` / `bottle_read`，详见 [Postcard 与 Bottle](POSTCARDS_AND_BOTTLES.md)。不进入 Memos 或 SessionStart。
 
 ### 3.1 `breath` — 检索/浮现
 
@@ -408,7 +409,7 @@ feel 桶自身：
 
 ### 3.18 Connector 传输约束
 
-18 个工具由一个 FastMCP 实例直接注册。Streamable HTTP 使用 stateless JSON 响应；省略或通配 `Accept` 的客户端会被补为 `application/json`，显式只接受 SSE 的请求不会被改写。MCP CORS 预检不要求 Bearer token，实际工具请求仍按配置鉴权。
+22 个工具由一个 FastMCP 实例直接注册。Streamable HTTP 使用 stateless JSON 响应；省略或通配 `Accept` 的客户端会被补为 `application/json`，显式只接受 SSE 的请求不会被改写。MCP CORS 预检不要求 Bearer token，实际工具请求仍按配置鉴权。
 
 ---
 
