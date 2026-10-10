@@ -47,5 +47,6 @@
 .bottle-reply { margin-bottom:8px; }
 .bottle-receipt { margin-top:12px; color:#65546E; font-size:12px; line-height:1.7; overflow-wrap:anywhere; }
 .bottle-library > button { margin-top:18px; }
+#bottle-view .bottle-library button { color:#45391F!important; }
 .mail-room button[hidden] { display:none!important; }
 @media(max-width:760px) { .mail-layout { grid-template-columns:1fr; } .mail-room .mail-section { padding:16px; } .mail-paper { padding:15px; } }
