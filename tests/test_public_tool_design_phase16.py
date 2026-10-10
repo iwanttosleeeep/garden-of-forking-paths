@@ -3,7 +3,7 @@ import pytest
 
 @pytest.mark.parametrize(
     "tool_name",
-    ["hold", "grow", "trace", "breath", "pulse", "dream", "anchor", "I", "letter", "plan", "echo", "radio"],
+    ["hold", "grow", "trace", "breath", "pulse", "dream", "anchor", "I", "letter", "plan", "echo", "radio", "postcard_write", "bottle_write"],
 )
 def test_public_tool_contract_accepts_normal_organ_tools(tool_name):
     from ombrebrain.protocol import PublicToolDesignContract, PublicToolSpec
@@ -15,7 +15,7 @@ def test_public_tool_contract_accepts_normal_organ_tools(tool_name):
     assert decision.tool_class == "normal"
 
 
-@pytest.mark.parametrize("tool_name", ["recall", "check_up", "read_journals", "read_book"])
+@pytest.mark.parametrize("tool_name", ["recall", "check_up", "read_journals", "read_book", "postcard_read", "bottle_read"])
 def test_public_tool_contract_accepts_explicit_private_readers(tool_name):
     from ombrebrain.protocol import PublicToolDesignContract, PublicToolSpec
 

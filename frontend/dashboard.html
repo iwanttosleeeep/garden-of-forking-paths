@@ -1993,6 +1993,8 @@
   }
   .self-overlay.show { opacity: 1; pointer-events: auto; }
 </style>
+<link rel="stylesheet" href="/static/correspondence.css">
+<script src="/static/correspondence.js"></script>
 </head>
 <body>
 
@@ -2045,6 +2047,8 @@
   <div class="tab" data-tab="network"><span>记忆网络</span><span class="tab-en">Network</span></div>
   <div class="tab" data-tab="plan"><span>计划</span><span class="tab-en">Plans</span></div>
   <div class="tab" data-tab="letters"><span>信</span><span class="tab-en">Letters</span></div>
+  <div class="tab" data-tab="postcard"><span>明信片</span><span class="tab-en">Postcard</span></div>
+  <div class="tab" data-tab="bottle"><span>漂流瓶</span><span class="tab-en">Bottle</span></div>
   <div class="tab" data-tab="journal"><span>日记</span><span class="tab-en">Journal</span></div>
   <div class="tab" data-tab="chats"><span>聊天记录</span><span class="tab-en">Chat History</span></div>
   <div class="tab" data-tab="reading"><span>共读</span><span class="tab-en">Reading</span></div>
@@ -2275,6 +2279,8 @@
 
 <!-- ====== iter 1.7 §H: About / Author note ====== -->
 <!-- ====== Letters tab (iter 1.6 follow-up): 把原 letters.html 合并进来 ====== -->
+<div class="content" id="postcard-view" style="display:none"></div>
+<div class="content" id="bottle-view" style="display:none"></div>
 <div class="content" id="letters-view" style="display:none">
   <div style="max-width:920px;margin:0 auto;">
     <div class="config-section">
@@ -4078,6 +4084,8 @@ document.querySelectorAll('.tab[data-tab]').forEach(tab => {
     document.getElementById('v3-debug-view').style.display = target === 'v3-debug' ? '' : 'none';
     document.getElementById('settings-view').style.display = target === 'settings' ? '' : 'none';
     document.getElementById('letters-view').style.display = target === 'letters' ? '' : 'none';
+    document.getElementById('postcard-view').style.display = target === 'postcard' ? '' : 'none';
+    document.getElementById('bottle-view').style.display = target === 'bottle' ? '' : 'none';
     document.getElementById('journal-view').style.display = target === 'journal' ? '' : 'none';
     document.getElementById('chats-view').style.display = target === 'chats' ? '' : 'none';
     document.getElementById('reading-view').style.display = target === 'reading' ? '' : 'none';
@@ -4111,6 +4119,7 @@ document.querySelectorAll('.tab[data-tab]').forEach(tab => {
       renderMcpUrls();
     }
     if (target === 'letters') loadLetters();
+    if (target === 'postcard' || target === 'bottle') loadCorrespondence(target);
     if (target === 'journal') loadJournalView();
     if (target === 'chats') loadChatHistory();
     if (target === 'reading') { loadReadingLibrary(); loadWeReadConfig(); }

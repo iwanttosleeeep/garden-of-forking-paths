@@ -22,6 +22,7 @@ from . import meta
 from . import search
 from . import plans
 from . import letters
+from . import correspondence
 from . import hooks
 from . import buckets
 from . import import_api
@@ -46,6 +47,7 @@ _WEB_MODULES = (
     ("web.search", search.register),
     ("web.plans", plans.register),
     ("web.letters", letters.register),
+    ("web.correspondence", correspondence.register),
     ("web.hooks", hooks.register),
     ("web.buckets", buckets.register),
     ("web.import_api", import_api.register),

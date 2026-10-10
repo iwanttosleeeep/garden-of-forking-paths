@@ -58,7 +58,7 @@ RUN chmod +x ./entrypoint.sh
 # 导致「使用宪法」（README）指向的 docs/GARDEN_PROMPT.md 拿不到，
 # 出现「服务装完了但模型没拿到使用约定」的 onboarding 断点。内部设计稿
 # （docs/superpowers、docs/secrets 等）不在此列，仍被 .dockerignore 挡在外面。
-COPY docs/GARDEN_PROMPT.md docs/INTERNALS.md docs/OPERATIONS.md docs/CONTRIBUTING.md ./docs/
+COPY docs/GARDEN_PROMPT.md docs/INTERNALS.md docs/OPERATIONS.md docs/CONTRIBUTING.md docs/POSTCARDS_AND_BOTTLES.md ./docs/
 COPY docs/adr/ ./docs/adr/
 COPY README.md ./README.md
 COPY CHANGELOG.md ./CHANGELOG.md
