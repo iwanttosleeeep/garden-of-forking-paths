@@ -64,3 +64,4 @@ logs/
 tmp/
 scratchpad/
 !docs/CONTRIBUTING.md
+!docs/POSTCARDS_AND_BOTTLES.md
