@@ -54,7 +54,7 @@
 | 自我认知 | `I(content, aspect=...)` — nature / values / patterns / limits / becoming / uncertainty / stance;写进去的规律同样适用原则 1 |
 | 【私室】Sterling 日记 | `echo(query=...)` 回响 / `read_journals(days=..., query=...)` 读取 — 遵私室条款 |
 | 【私室】健康日报 | `check_up(days=...)` — 遵私室条款 |
-| 【私室】调阅聊天史 | `recall(title)` — 精确取卷,不翻阅 |
+| 【私室】调阅聊天史 | `recall(title, offset=0, limit=2000)` — 精确取卷,按需分段；根据返回的 offset 继续，读到足够信息即停止；正文占用当前上下文 |
 | 【私室】共同阅读 | `read_book(action=library/open/progress/note/review/finish, ...)` 读取 Garden 私有书架；`action=weread_shelf/weread_notebooks/weread_notes/weread_progress/weread_stats/weread_search` 按需读取微信读书 — 原书与微信读书数据均不进 Memos |
 | 【私室】音乐电台 | `radio(action=playlists/playlist/search/create_playlist/add_tracks/comment, ...)` — 只读用户明确开放及 Senn 创建的歌单；账号写操作必须 `confirm=true`，留言保存在 Radio 私室，不播放、不读 Garden 其它私室 |
 

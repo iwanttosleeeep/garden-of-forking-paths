@@ -796,23 +796,10 @@ async def echo(
 
 
 @mcp.tool()
-async def recall(title: str) -> str:
-    """读取一份指定标题的 Chat History Markdown 文档。title 必填，必须与 Chat History 页面显示的标题或文件名完全匹配；不会搜索或自动读取其他聊天记录。单次最多返回 30000 字符。"""
+async def recall(title: str, offset: int = 0, limit: int = 30000) -> str:
+    """按需分段读取一份指定的 Chat History Markdown 文档。title 必须与标题或文件名完全匹配，重名时用文件名。offset=从 0 开始的字符位置（不是字节），默认 0；limit=本次正文字符数，1–30000，默认 30000。返回字符范围、下一段调用参数或末尾标记；节省上下文时可用 limit=2000，只在需要时继续。不会搜索或自动读取其他记录；返回的正文会占用当前对话上下文。"""
     from web import chat_history as chat_library
-    wanted = str(title or "").strip()
-    if not wanted:
-        return "请提供 Chat History 文档的 title。"
-    documents = chat_library._list()
-    matches = [doc for doc in documents if wanted == doc["title"] or wanted == doc["file"]]
-    if not matches:
-        return f"未找到标题为「{wanted}」的 Chat History 文档。"
-    if len(matches) > 1:
-        return "标题不唯一，请改用文件名：" + "、".join(doc["file"] for doc in matches)
-    path = os.path.join(chat_library._directory(), matches[0]["file"])
-    with open(path, "r", encoding="utf-8") as handle:
-        content = handle.read(30001)
-    suffix = "\n\n[已截断至 30000 字符]" if len(content) > 30000 else ""
-    return f"=== Chat History · {matches[0]['title']} ===\n{content[:30000]}{suffix}"
+    return chat_library.read_document(title, offset=offset, limit=limit)
 
 
 @mcp.tool()
