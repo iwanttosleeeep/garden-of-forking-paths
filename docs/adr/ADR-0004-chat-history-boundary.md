@@ -2,7 +2,9 @@
 
 ## Decision
 
-Uploaded Chat History files remain private Markdown documents outside Memos. The MCP `recall(title)` tool requires an exact title or filename and returns only that document, capped at 30,000 characters.
+Uploaded Chat History files remain private Markdown documents outside Memos. The MCP `recall(title, offset=0, limit=30000)` tool requires an exact title or filename and returns only a requested portion of that document, capped at 30,000 body characters per call. Offsets count decoded characters, not bytes. Results identify the returned range and provide an explicit continuation call or end-of-document marker. Smaller limits allow selective reading; continuation is never automatic. Existing title-only calls retain the 30,000-character default. Pagination assumes an unchanged document; restart after replacing its content.
+
+Stored transcripts do not automatically enter model context. Explicitly returned pages do consume the current conversation's context; this tool cannot remove earlier tool results from the client.
 
 ## Why this is not cognition
 

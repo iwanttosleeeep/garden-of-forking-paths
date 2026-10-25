@@ -12,6 +12,7 @@ from utils import atomic_write_text
 from . import _shared as sh
 
 _MAX_BYTES = 10 * 1024 * 1024
+_MAX_READ_CHARS = 30000
 
 
 def _directory() -> str:
@@ -62,6 +63,45 @@ def _list() -> list[dict]:
         meta = metadata if isinstance(metadata, dict) else {}
         rows.append({"file": name, "title": meta.get("title") or name[:-3], "description": meta.get("description") or "", "uploaded_at": meta.get("uploaded_at") or "", "size": os.path.getsize(path)})
     return sorted(rows, key=lambda row: row["uploaded_at"], reverse=True)
+
+
+def read_document(title: str, offset: int = 0, limit: int = _MAX_READ_CHARS) -> str:
+    """Return one explicit transcript page; offsets count decoded Unicode characters."""
+    wanted = str(title or "").strip()
+    if not wanted:
+        return "请提供 Chat History 文档的 title。"
+    if type(offset) is not int or offset < 0:
+        return "offset 必须是大于或等于 0 的整数（字符位置）。"
+    if type(limit) is not int or not 1 <= limit <= _MAX_READ_CHARS:
+        return f"limit 必须是 1 到 {_MAX_READ_CHARS} 之间的整数（字符数）。"
+    matches = [doc for doc in _list() if wanted == doc["title"] or wanted == doc["file"]]
+    if not matches:
+        return f"未找到标题为「{wanted}」的 Chat History 文档。"
+    if len(matches) > 1:
+        return "标题不唯一，请改用文件名：" + "、".join(doc["file"] for doc in matches)
+    document = matches[0]
+    path = os.path.join(_directory(), document["file"])
+    with open(path, "r", encoding="utf-8") as handle:
+        # Text-mode seek offsets are not Unicode character offsets. Discard
+        # bounded chunks instead of loading the entire preceding transcript.
+        remaining = offset
+        while remaining:
+            skipped = handle.read(min(remaining, _MAX_READ_CHARS))
+            if not skipped:
+                return "offset 超出文档长度，请使用上一段返回的 offset 或从 offset=0 开始。"
+            remaining -= len(skipped)
+        content = handle.read(limit + 1)
+    page = content[:limit]
+    next_offset = offset + len(page)
+    if len(content) > limit:
+        filename = json.dumps(document["file"], ensure_ascii=False)
+        status = f"还有后续内容；按需继续：recall(title={filename}, offset={next_offset}, limit={limit})"
+    else:
+        status = "已到文档末尾"
+    return (
+        f"=== Chat History · {document['title']} ===\n{page}"
+        f"\n\n[字符范围 [{offset}, {next_offset})；{status}]"
+    )
 
 
 def register(mcp) -> None:

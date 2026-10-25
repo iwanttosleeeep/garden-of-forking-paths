@@ -1,9 +1,93 @@
 import json
+import re
 
 import pytest
 
 from web import _shared as sh
 from web import chat_history
+
+
+@pytest.fixture
+def transcript(tmp_path, monkeypatch):
+    monkeypatch.setattr(chat_history, "_directory", lambda: str(tmp_path))
+
+    def write(content, name="conversation.md", title="Our chat"):
+        (tmp_path / name).write_text(content, encoding="utf-8")
+        index = chat_history._index()
+        index[name] = {"title": title}
+        chat_history._write_index(index)
+
+    return write
+
+
+def _page_body(result):
+    return result.split("\n", 1)[1].rsplit("\n\n[字符范围 ", 1)[0]
+
+
+def test_recall_unicode_pages_reconstruct_original_without_gaps(transcript):
+    original = "中文🙂 café e\u0301\n  保留空白  \n" * 2400
+    transcript(original)
+    offset = 0
+    bodies = []
+    while True:
+        result = chat_history.read_document("Our chat", offset=offset, limit=1999)
+        body = _page_body(result)
+        assert len(body) <= 1999
+        bodies.append(body)
+        if "已到文档末尾" in result:
+            break
+        continuation = re.search(r'recall\(title="conversation.md", offset=(\d+), limit=1999\)', result)
+        assert continuation is not None
+        next_offset = int(continuation.group(1))
+        assert next_offset > offset
+        offset = next_offset
+    assert "".join(bodies) == original
+
+
+def test_recall_default_limit_and_reading_previously_truncated_tail(transcript):
+    transcript("首" * 30000 + "这是原来无法读取的末尾🙂")
+    first = chat_history.read_document("Our chat")
+    assert _page_body(first) == "首" * 30000
+    assert 'recall(title="conversation.md", offset=30000, limit=30000)' in first
+    last = chat_history.read_document("conversation.md", offset=30000, limit=100)
+    assert _page_body(last) == "这是原来无法读取的末尾🙂"
+    assert "已到文档末尾" in last
+
+
+@pytest.mark.parametrize("content", ["", "中🙂文"])
+def test_recall_exact_end_empty_document_and_out_of_range(transcript, content):
+    transcript(content)
+    result = chat_history.read_document("Our chat", limit=3)
+    assert _page_body(result) == content
+    assert "已到文档末尾" in result
+    assert "按需继续" not in result
+    end = chat_history.read_document("Our chat", offset=len(content))
+    assert _page_body(end) == ""
+    assert "已到文档末尾" in end
+    assert "offset 超出文档长度" in chat_history.read_document("Our chat", offset=len(content) + 1)
+
+
+@pytest.mark.parametrize("offset,limit,error", [
+    (-1, 10, "offset"), (1.5, 10, "offset"), (True, 10, "offset"),
+    (0, 0, "limit"), (0, -1, "limit"), (0, 30001, "limit"),
+    (0, 1.5, "limit"), (0, False, "limit"),
+])
+def test_recall_rejects_invalid_pagination_before_reading(monkeypatch, offset, limit, error):
+    def unexpected_read():
+        raise AssertionError("Invalid parameters must not read the library")
+
+    monkeypatch.setattr(chat_history, "_list", unexpected_read)
+    assert f"{error} 必须" in chat_history.read_document("Our chat", offset=offset, limit=limit)
+
+
+def test_recall_keeps_exact_selection_and_handles_duplicate_titles(transcript):
+    transcript("first document")
+    assert "请提供" in chat_history.read_document("")
+    assert "未找到" in chat_history.read_document("Our")
+    transcript("second document", name="other.md")
+    assert "标题不唯一" in chat_history.read_document("Our chat")
+    assert _page_body(chat_history.read_document("conversation.md")) == "first document"
+    assert _page_body(chat_history.read_document("other.md")) == "second document"
 
 
 class FakeMcp:
